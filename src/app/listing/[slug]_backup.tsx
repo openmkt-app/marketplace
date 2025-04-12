@@ -7,9 +7,7 @@ import Link from 'next/link';
 import { type MarketplaceListing } from '@/lib/marketplace-client';
 
 interface ListingPageProps {
-  params: {
-    slug: string;
-  };
+  params: Record<string, string>; // Updated type for params
 }
 
 export default function ListingPage({ params }: ListingPageProps) {
