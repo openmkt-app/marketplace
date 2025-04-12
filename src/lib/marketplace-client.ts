@@ -31,6 +31,13 @@ export type MarketplaceListing = {
 
 export type CreateListingParams = Omit<MarketplaceListing, 'createdAt'>;
 
+export type SessionData = {
+  did: string;
+  handle: string;
+  accessJwt: string;
+  refreshJwt: string;
+};
+
 export class MarketplaceClient {
   agent: BskyAgent;
   isLoggedIn: boolean;
@@ -54,6 +61,34 @@ export class MarketplaceClient {
       console.error('Login failed:', error);
       return { success: false, error: error as Error };
     }
+  }
+
+  async resumeSession(sessionData: SessionData): Promise<{ success: boolean; data?: any; error?: Error }> {
+    try {
+      this.agent.session = {
+        did: sessionData.did,
+        handle: sessionData.handle,
+        accessJwt: sessionData.accessJwt,
+        refreshJwt: sessionData.refreshJwt,
+      };
+      
+      // Verify the session is valid
+      const result = await this.agent.getProfile({
+        actor: sessionData.did,
+      });
+      
+      this.isLoggedIn = true;
+      return { success: true, data: { user: result.data } };
+    } catch (error) {
+      console.error('Resume session failed:', error);
+      this.agent.session = undefined;
+      return { success: false, error: error as Error };
+    }
+  }
+
+  logout(): void {
+    this.agent.session = undefined;
+    this.isLoggedIn = false;
   }
 
   async createListing(listingData: CreateListingParams): Promise<any> {
