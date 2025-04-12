@@ -1,6 +1,7 @@
 // src/lib/marketplace-client.ts
 import { BskyAgent } from '@atproto/api';
 import type { AtpSessionEvent, AtpSessionData } from '@atproto/api';
+import logger from './logger';
 
 // Define types for our marketplace listings
 export type ListingLocation = {
@@ -51,14 +52,32 @@ export class MarketplaceClient {
 
   async login(username: string, password: string): Promise<{ success: boolean; data?: any; error?: Error }> {
     try {
+      logger.info(`Attempting login for user: ${username}`);
+      logger.logApiRequest('POST', 'login', { identifier: username });
+      
       const result = await this.agent.login({
         identifier: username,
         password: password,
       });
+      
       this.isLoggedIn = true;
-      return { success: true, data: result };
+      logger.info(`Login successful for user: ${username}`);
+      logger.logApiResponse('POST', 'login', 200, { did: result.data.did, handle: result.data.handle });
+      
+      console.log('Login response data:', result.data);
+      
+      // Ensure we're returning the data in the expected format
+      return { 
+        success: true, 
+        data: {
+          did: result.data.did,
+          handle: result.data.handle,
+          accessJwt: result.data.accessJwt,
+          refreshJwt: result.data.refreshJwt
+        } 
+      };
     } catch (error) {
-      console.error('Login failed:', error);
+      logger.error(`Login failed for user: ${username}`, error as Error);
       return { success: false, error: error as Error };
     }
   }
@@ -92,21 +111,44 @@ export class MarketplaceClient {
   }
 
   async createListing(listingData: CreateListingParams): Promise<any> {
-    if (!this.isLoggedIn) {
+    if (!this.isLoggedIn || !this.agent.session) {
       throw new Error('User must be logged in to create a listing');
     }
 
     try {
-      // Upload images first if they exist
-      const processedImages = await this.processImages(listingData.images);
-
+      // Upload images first if they exist (handling File objects from form)
+      let processedImages;
+      if (listingData.images && Array.isArray(listingData.images)) {
+        processedImages = await this.processImages(listingData.images);
+      }
+      
+      // Create a copy of the listing data without the images property
+      // This prevents issues with the original File objects being passed to the API
+      const {
+        images: _images, // Extract and ignore the original images
+        ...listingDataWithoutImages
+      } = listingData;
+      
       // Create the listing record
+      logger.info('Creating listing', {
+        meta: {
+          title: listingDataWithoutImages.title,
+          category: listingDataWithoutImages.category,
+          imageCount: processedImages ? processedImages.length : 0,
+        }
+      });
+      
+      logger.logApiRequest('POST', 'com.atproto.repo.createRecord', {
+        collection: 'com.example.marketplace.listing',
+        imageCount: processedImages ? processedImages.length : 0,
+      });
+      
       const result = await this.agent.api.com.atproto.repo.createRecord({
-        repo: this.agent.session!.did,
+        repo: this.agent.session.did,
         collection: 'com.example.marketplace.listing',
         record: {
-          ...listingData,
-          images: processedImages,
+          ...listingDataWithoutImages,
+          images: processedImages, // Add the processed images
           createdAt: new Date().toISOString(),
         },
       });
@@ -127,20 +169,60 @@ export class MarketplaceClient {
 
     for (const file of imageFiles) {
       try {
+        logger.debug(`Processing image: ${file.name}`, {
+        meta: {
+          name: file.name,
+          size: file.size,
+          type: file.type
+        }
+      });
+        
+        // Check file size to prevent errors
+        if (file.size > 980000) { // Slightly below 1MB to be safe
+          logger.warn(`Image ${file.name} is too large (${file.size} bytes), skipping`);
+          continue;
+        }
+        
+        // Check file type to ensure it's an image
+        if (!file.type.startsWith('image/')) {
+          logger.warn(`File ${file.name} is not an image (${file.type}), skipping`);
+          continue;
+        }
+        
         const arrayBuffer = await file.arrayBuffer();
-        const result = await this.agent.uploadBlob(new Uint8Array(arrayBuffer), {
+        const bytes = new Uint8Array(arrayBuffer);
+        
+        logger.debug(`Uploading image: ${file.name}, bytes length: ${bytes.length}`);
+        logger.logApiRequest('POST', 'com.atproto.repo.uploadBlob', {
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: bytes.length
+        });
+        
+        const result = await this.agent.uploadBlob(bytes, {
           encoding: file.type,
         });
 
         if (result.success) {
+          logger.debug('Image upload successful', {
+            meta: {
+              blob: result.data.blob
+            }
+          });
+          logger.logApiResponse('POST', 'com.atproto.repo.uploadBlob', 200, {
+            blobRef: result.data.blob.ref.$link
+          });
           processedImages.push(result.data.blob);
+        } else {
+          logger.error('Image upload failed without throwing an error');
         }
       } catch (error) {
-        console.error('Failed to upload image:', error);
+        logger.error('Failed to upload image', error as Error);
         // Continue with other images even if one fails
       }
     }
 
+    logger.info(`Processed ${processedImages.length} images successfully`);
     return processedImages.length > 0 ? processedImages : undefined;
   }
 

@@ -45,11 +45,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Check for stored credentials
     const checkAuth = async () => {
       try {
-        // In a real app, you might check for stored credentials
-        // For now, just initialize the state
-        setIsLoading(false);
+        const sessionData = localStorage.getItem('atproto_session');
+        
+        if (sessionData) {
+          console.log('Found session data in localStorage');
+          const parsedData = JSON.parse(sessionData);
+          const result = await newClient.resumeSession(parsedData);
+          
+          if (result.success) {
+            console.log('Session successfully resumed');
+            setIsLoggedIn(true);
+            setUser(parsedData.handle || parsedData.did);
+          } else {
+            console.error('Failed to resume session:', result.error);
+            // Clear invalid session data
+            localStorage.removeItem('atproto_session');
+          }
+        } else {
+          console.log('No session data found in localStorage');
+        }
       } catch (error) {
         console.error('Authentication check failed:', error);
+        localStorage.removeItem('atproto_session');
+      } finally {
         setIsLoading(false);
       }
     };
@@ -64,9 +82,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setIsLoading(true);
       const result = await client.login(username, password);
       
-      if (result.success) {
+      if (result.success && result.data) {
         setIsLoggedIn(true);
-        setUser(result.data?.did || username);
+        setUser(result.data.handle || result.data.did || username);
+        
+        // Save session data to localStorage
+        const sessionData = {
+          did: result.data.did,
+          handle: result.data.handle,
+          accessJwt: result.data.accessJwt,
+          refreshJwt: result.data.refreshJwt
+        };
+        
+        console.log('Saving session data:', sessionData);
+        localStorage.setItem('atproto_session', JSON.stringify(sessionData));
+        
         return true;
       }
       
@@ -82,7 +112,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = () => {
     setIsLoggedIn(false);
     setUser(null);
-    // In a real app, you might clear tokens or call client.logout()
+    
+    // Clear session data
+    localStorage.removeItem('atproto_session');
+    
+    // Clear client session
+    if (client) {
+      client.logout();
+    }
   };
 
   const value = {

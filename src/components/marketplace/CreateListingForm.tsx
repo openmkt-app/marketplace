@@ -1,8 +1,9 @@
 // src/components/marketplace/CreateListingForm.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import MarketplaceClient from '@/lib/marketplace-client';
+import { validateImage, compressImage } from '@/lib/image-utils';
 
 interface CreateListingFormProps {
   client: MarketplaceClient;
@@ -13,49 +14,121 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [imageErrors, setImageErrors] = useState<string[]>([]);
+
+  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    
+    setImageErrors([]);
+    
+    // Limit to 4 images maximum
+    const newFiles: File[] = [];
+    const newPreviewUrls: string[] = [];
+    const newErrors: string[] = [];
+    
+    // Add new files (up to 4 total)
+    const remainingSlots = 4 - selectedImages.length;
+    const filesToAdd = Math.min(remainingSlots, files.length);
+    
+    for (let i = 0; i < filesToAdd; i++) {
+      const file = files[i];
+      
+      try {
+        // Validate the image
+        const validationResult = await validateImage(file, {
+          maxSize: 980000, // Slightly under 1MB to be safe
+          acceptedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+        });
+        
+        if (validationResult.valid && validationResult.file && validationResult.dataUrl) {
+          // Try to compress the image if needed
+          const processedFile = await compressImage(validationResult.file);
+          newFiles.push(processedFile);
+          newPreviewUrls.push(validationResult.dataUrl); // Use the data URL from validation
+        } else if (validationResult.error) {
+          newErrors.push(`${file.name}: ${validationResult.error}`);
+        }
+      } catch (error) {
+        newErrors.push(`Failed to process ${file.name}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    
+    if (newErrors.length > 0) {
+      setImageErrors(newErrors);
+    }
+    
+    if (newFiles.length > 0) {
+      setSelectedImages([...selectedImages, ...newFiles]);
+      setPreviewUrls([...previewUrls, ...newPreviewUrls]);
+    }
+  };
+  
+  const removeImage = (index: number) => {
+    // Remove the image at the specified index
+    const newImages = [...selectedImages];
+    const newPreviews = [...previewUrls];
+    
+    // Revoke the object URL to avoid memory leaks
+    URL.revokeObjectURL(newPreviews[index]);
+    
+    newImages.splice(index, 1);
+    newPreviews.splice(index, 1);
+    
+    setSelectedImages(newImages);
+    setPreviewUrls(newPreviews);
+  };
   
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    
+    // Simple form access - don't try to be fancy
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    
     setIsSubmitting(true);
     setError(null);
     setSuccess(false);
-    
-    const formData = new FormData(event.currentTarget);
-    
+
     try {
-      // For demo purposes, we'll simulate a successful creation
-      // In a real app, this would call the actual client
+      // Use the real client to create the listing
+      const result = await client.createListing({
+        title: formData.get('title') as string,
+        description: formData.get('description') as string,
+        price: formData.get('price') as string,
+        location: {
+          state: formData.get('state') as string,
+          county: formData.get('county') as string,
+          locality: formData.get('locality') as string,
+          zipPrefix: formData.get('zipPrefix') as string || undefined,
+        },
+        category: formData.get('category') as string,
+        condition: formData.get('condition') as string,
+        images: selectedImages.length > 0 ? selectedImages : undefined,
+      });
       
-      // Simulate network request
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      console.log('Listing created:', result);
       
-      // Uncomment this in a real app
-      // await client.createListing({
-      //   title: formData.get('title') as string,
-      //   description: formData.get('description') as string,
-      //   price: formData.get('price') as string,
-      //   location: {
-      //     state: formData.get('state') as string,
-      //     county: formData.get('county') as string,
-      //     locality: formData.get('locality') as string,
-      //     zipPrefix: formData.get('zipPrefix') as string || undefined,
-      //   },
-      //   category: formData.get('category') as string,
-      //   condition: formData.get('condition') as string,
-      // });
-      
+      // Show the success message
       setSuccess(true);
       
-      // Reset form
-      event.currentTarget.reset();
-      
-      // Call onSuccess callback after a delay
+      // Clean up image preview URLs
+      previewUrls.forEach(url => URL.revokeObjectURL(url));
+      setPreviewUrls([]);
+      setSelectedImages([]);
+
+      // Use setTimeout to allow the success message to be seen
       if (onSuccess) {
         setTimeout(() => {
-          onSuccess();
+          window.location.href = '/browse';
         }, 1500);
       }
     } catch (err) {
+      console.error('Error creating listing:', err);
       setError(`Failed to create listing: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setIsSubmitting(false);
@@ -70,13 +143,83 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
         </div>
       )}
       
+      {imageErrors.length > 0 && (
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6">
+          <p className="font-medium mb-1">Issues with selected images:</p>
+          <ul className="list-disc pl-5 text-sm">
+            {imageErrors.map((err, index) => (
+              <li key={index}>{err}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      
       {success && (
         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
           Listing created successfully! Redirecting to browse page...
         </div>
       )}
       
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Images (optional, max 4)
+          </label>
+          
+          {/* Image previews */}
+          {previewUrls.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+              {previewUrls.map((url, index) => (
+                <div key={index} className="relative group">
+                  <img
+                    src={url}
+                    alt={`Preview ${index + 1}`}
+                    className="h-24 w-24 object-cover rounded-md border border-gray-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Add image button */}
+          {selectedImages.length < 4 && (
+            <div>
+              <input
+                type="file"
+                id="images"
+                name="images"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleImageChange}
+                ref={fileInputRef}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Add {selectedImages.length > 0 ? 'More ' : ''}Images
+              </button>
+              <p className="mt-1 text-xs text-gray-500">
+                Supported formats: JPG, PNG, GIF (max 1MB each)
+              </p>
+            </div>
+          )}
+        </div>
+        
         <div>
           <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
             Title

@@ -20,15 +20,8 @@ export default function LoginPage() {
     setIsSubmitting(true);
     
     try {
-      // For demonstration purposes, we'll simulate a successful login
-      // In a real app, this would use the actual login function from the auth context
-      
-      // Uncomment this in a real app
-      // const success = await login(username, password);
-      
-      // Mock successful login for demo purposes
-      await new Promise(resolver => setTimeout(resolver, 1000));
-      const success = true;
+      // Use the real login function from the auth context
+      const success = await login(username, password);
       
       if (success) {
         router.push('/');
@@ -143,29 +136,28 @@ export default function LoginPage() {
 
             <div className="mt-6">
               <div className="rounded-md bg-blue-50 p-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3 flex flex-col">
-                    <h3 className="text-sm font-medium text-blue-800">Demo Mode</h3>
-                    <div className="mt-1 text-sm text-blue-700">
-                      <p>
-                        Since this is a demo application, you can use any username and password to sign in.
-                        Real authentication would be implemented in a production application.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={autofillDemo}
-                        className="mt-2 font-medium text-blue-600 hover:text-blue-500 focus:outline-none"
-                      >
-                        Fill with demo credentials
-                      </button>
-                    </div>
-                  </div>
-                </div>
+              <div className="flex">
+              <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              </div>
+              <div className="ml-3 flex flex-col">
+              <h3 className="text-sm font-medium text-blue-800">Authentication Instructions</h3>
+              <div className="mt-1 text-sm text-blue-700">
+              <p>
+              Please use your AT Protocol account credentials to sign in. If you have a Bluesky account, you can use those credentials here.
+              </p>
+              <button
+                type="button"
+              onClick={autofillDemo}
+              className="mt-2 font-medium text-blue-600 hover:text-blue-500 focus:outline-none"
+              >
+                Fill with demo credentials (for testing only)
+              </button>
+              </div>
+              </div>
+              </div>
               </div>
             </div>
           </div>

@@ -10,8 +10,8 @@ export default function CreateListingPage() {
   const router = useRouter();
   
   const handleCreateSuccess = () => {
-    // Redirect to listings page after successful creation
-    router.push('/browse');
+    // This will be handled directly in the form
+    console.log('Listing creation successful');
   };
   
   if (isLoading) {
@@ -71,11 +71,14 @@ export default function CreateListingPage() {
       <div className="max-w-3xl mx-auto px-4 py-12">
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="bg-gradient-to-r from-indigo-600 to-blue-500 px-6 py-4">
-            <h1 className="text-2xl font-bold text-white">Create New Listing</h1>
+            <h1 className="text-2xl font-bold text-white">Create New Listing!</h1>
           </div>
           
           <div className="p-6">
-            <CreateListingForm client={client} onSuccess={handleCreateSuccess} />
+            <CreateListingForm 
+              client={client} 
+              onSuccess={handleCreateSuccess} 
+            />
           </div>
         </div>
       </div>
