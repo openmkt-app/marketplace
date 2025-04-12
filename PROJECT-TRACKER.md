@@ -6,38 +6,38 @@ A local marketplace application built on the AT Protocol (Authenticated Transfer
 ## Features to Implement
 
 ### Authentication
-- [ ] Implement login functionality with AT Protocol credentials
-- [ ] Create persistent session management
-- [ ] Add logout functionality
-- [ ] Display current user information in header/navbar
-- [ ] Handle authentication errors appropriately
-- [ ] Add registration guidance for new users
+- [x] Implement login functionality with AT Protocol credentials
+- [x] Create persistent session management
+- [x] Add logout functionality
+- [x] Display current user information in header/navbar
+- [x] Handle authentication errors appropriately
+- [x] Add registration guidance for new users
 
 ### Browsing Listings
-- [ ] Create browsing interface with filters
-- [ ] Implement location-based search (state, county, city)
-- [ ] Add category filtering
-- [ ] Create listing card components
+- [x] Create browsing interface with filters
+- [x] Implement location-based search (state, county, city)
+- [x] Add category filtering
+- [x] Create listing card components
 - [ ] Implement pagination for listing results
 - [ ] Add sorting options (price, date posted, etc.)
-- [ ] Create loading states for async operations
+- [x] Create loading states for async operations
 
 ### Listing Details
-- [ ] Create detailed view for individual listings
-- [ ] Display listing images in a gallery/carousel
-- [ ] Show seller information
-- [ ] Display location information
-- [ ] Add condition and category badges
-- [ ] Implement contact seller functionality
+- [x] Create detailed view for individual listings
+- [x] Display listing images in a gallery/carousel
+- [x] Show seller information
+- [x] Display location information
+- [x] Add condition and category badges
+- [x] Implement contact seller functionality
 - [ ] Add share listing option
 
 ### User Profile
-- [ ] Create profile page template
-- [ ] Display user's active listings
+- [x] Create profile page template
+- [x] Display user's active listings
 - [ ] Allow editing of profile information
 - [ ] Show user reputation/feedback (future)
 - [ ] Implement user-specific settings
-- [ ] Add listing management for user's posts
+- [x] Add listing management for user's posts
 
 ### Additional Features (Future)
 - [ ] Image upload and management
