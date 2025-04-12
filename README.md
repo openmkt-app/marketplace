@@ -11,6 +11,14 @@ This project demonstrates how to build a marketplace application using the Authe
 3. Contact sellers about items
 4. All while maintaining privacy and leveraging the decentralized nature of AT Protocol
 
+## Features
+
+- **Authentication** - Login and session management using AT Protocol credentials
+- **Browse Listings** - Filter by location, category, condition, and price range
+- **Listing Details** - View detailed information about a listing
+- **User Profiles** - User-specific pages with profile information and listings management
+- **Responsive Design** - Mobile-friendly interface for users on any device
+
 ## Getting Started
 
 ### Prerequisites
@@ -55,7 +63,18 @@ at-marketplace/
 │   └── validate-lexicon.js # Lexicon validation script
 ├── src/
 │   ├── app/                # Next.js app router
+│   │   ├── browse/         # Browsing listings
+│   │   ├── create-listing/ # Create new listing
+│   │   ├── listing/        # Listing details page
+│   │   ├── login/          # Authentication
+│   │   ├── my-listings/    # User's active listings
+│   │   ├── profile/        # User profile
 │   ├── components/         # React components
+│   │   ├── auth/           # Authentication components
+│   │   ├── layout/         # Layout components (navbar, etc.)
+│   │   ├── marketplace/    # Marketplace components
+│   ├── contexts/           # React contexts
+│   │   └── AuthContext.tsx # Authentication context
 │   ├── lib/                # Utility functions and client
 │   │   └── marketplace-client.ts  # AT Protocol client
 │   └── types/              # TypeScript type definitions
@@ -92,6 +111,25 @@ To create a custom lexicon:
 1. Define your lexicon JSON schema in the `lexicons` directory
 2. Validate it with `npm run lexicon:validate`
 3. Use it in your code to create and query records
+
+### Authentication
+
+The application uses the AT Protocol authentication system via the `BskyAgent` class:
+
+```typescript
+// Login
+const client = new MarketplaceClient();
+const result = await client.login('username', 'password');
+
+// Session management
+const sessionData = {
+  did: 'user-did',
+  handle: 'username',
+  accessJwt: 'access-token',
+  refreshJwt: 'refresh-token'
+};
+await client.resumeSession(sessionData);
+```
 
 ### Creating Listings
 
@@ -132,6 +170,7 @@ const listings = await client.getListingsByLocation(
 - **Messaging**: Direct messaging between users for negotiations would need to be implemented.
 - **Trust Mechanisms**: Additional features for user ratings and verification could be added.
 - **Notifications**: Real-time notifications for new listings or messages.
+- **Image Management**: Improved image uploading and gallery view for listings.
 
 ## Contributing
 
