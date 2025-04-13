@@ -57,70 +57,125 @@ const demoListings = [
 ];
 
 export default function ListingDetailPage() {
-  const { id } = useParams();
+  const params = useParams();
   const router = useRouter();
   const { client, isLoggedIn } = useAuth();
   const [listing, setListing] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const [debugInfo, setDebugInfo] = useState<any>({});
+  
+  // Extract the id from params
+  const id = typeof params.id === 'string' ? params.id : 
+             Array.isArray(params.id) ? params.id[0] : '';
+  
   useEffect(() => {
     const fetchListing = async () => {
+      if (!client) {
+        setIsLoading(false);
+        setError('Client not available. Please log in first.');
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
+      setDebugInfo({
+        originalId: id,
+      });
       
       try {
-        // Check if the ID might be a URI (for real AT Protocol listings)
-        if (typeof id === 'string' && (id.startsWith('at://') || id.includes('app.bsky.feed.post'))) {
-          // This is a real AT Protocol URI - might be encoded
-          let uriToFetch = decodeAtUri(id);
+        console.log('Attempting to fetch listing with ID:', id);
+        
+        // First decode the URI if it's URL-encoded
+        let uriToFetch = id;
+        if (id.startsWith('at%3A%2F%2F')) {
+          uriToFetch = decodeURIComponent(id);
+          console.log('Decoded URI:', uriToFetch);
+        }
+
+        setDebugInfo(prev => ({
+          ...prev,
+          decodedUri: uriToFetch,
+        }));
+        
+        // Parse the URI to get its components
+        const uriParts = uriToFetch.split('/');
+        if (uriParts.length >= 4) {
+          const did = uriParts[2];
+          const collection = uriParts[3];
+          const rkey = uriParts[4];
           
-          if (client) {
-            try {
-              console.log('Fetching real listing with URI:', uriToFetch);
-              const realListing = await client.getListingByUri(uriToFetch);
+          setDebugInfo(prev => ({
+            ...prev,
+            parsedUri: {
+              did,
+              collection,
+              rkey
+            }
+          }));
+
+          // Skip the general methods and go straight to the one that works
+          console.log(`Fetching record - DID: ${did}, Collection: ${collection}, RKey: ${rkey}`);
+          
+          try {
+            // Use getRecord API directly since we know it works
+            const recordResult = await client.agent.api.com.atproto.repo.getRecord({
+              repo: did,
+              collection: collection,
+              rkey: rkey
+            });
+            
+            if (recordResult.success) {
+              console.log('Got record successfully:', recordResult.data);
               
-              if (realListing) {
-                console.log('Found real listing:', realListing);
-                setListing({
-                  ...realListing,
-                  isRealListing: true,
-                  isOwnListing: client.agent.session?.did === realListing.authorDid
+              // Get user handle
+              let handle = '';
+              try {
+                const profileResult = await client.agent.getProfile({ 
+                  actor: did 
                 });
-                setIsLoading(false);
-                return;
-              } else {
-                console.log('Listing not found for URI:', uriToFetch);
+                if (profileResult.success) {
+                  handle = profileResult.data.handle;
+                } else {
+                  handle = did.substring(0, 12) + '...';
+                }
+              } catch (e) {
+                console.error('Error fetching profile:', e);
+                handle = did.substring(0, 12) + '...';
               }
-            } catch (apiError) {
-              console.error('Error fetching real listing:', apiError);
-              setError(`Could not load listing: ${apiError instanceof Error ? apiError.message : String(apiError)}`);
+              
+              // Create a listing object from the record
+              const record = recordResult.data.value;
+              const listingData = {
+                ...record,
+                uri: uriToFetch,
+                authorDid: did,
+                authorHandle: handle,
+                cid: recordResult.data.cid
+              };
+              
+              console.log('Created listing object:', listingData);
+              
+              setListing({
+                ...listingData,
+                isRealListing: true,
+                isOwnListing: client.agent.session?.did === did
+              });
               setIsLoading(false);
               return;
+            } else {
+              throw new Error('Failed to get record');
             }
-          } else {
-            console.log('Client not available for fetching listing');
+          } catch (error) {
+            console.error('Error fetching record:', error);
+            throw error;
           }
         } else {
-          // This might be a demo listing index
-          const demoIndex = Number(id);
-          if (!isNaN(demoIndex) && demoIndex >= 0 && demoIndex < demoListings.length) {
-            setListing({
-              ...demoListings[demoIndex],
-              isRealListing: false,
-              isOwnListing: false
-            });
-            setIsLoading(false);
-            return;
-          }
+          throw new Error(`Invalid URI format: ${uriToFetch}`);
         }
-        
-        // If we got here, we couldn't find the listing
-        setError('Listing not found');
       } catch (err) {
         console.error('Failed to fetch listing:', err);
         setError(`Failed to fetch listing: ${err instanceof Error ? err.message : String(err)}`);
-      } finally {
         setIsLoading(false);
       }
     };
@@ -155,9 +210,24 @@ export default function ListingDetailPage() {
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
           {error || 'Listing not found'}
         </div>
-        <Link href="/browse" className="text-indigo-600 hover:text-indigo-800 font-medium">
-          ← Back to Browse
-        </Link>
+        
+        <div className="flex flex-col md:flex-row gap-4">
+          <Link href="/browse" className="text-indigo-600 hover:text-indigo-800 font-medium">
+            ← Back to Browse
+          </Link>
+          
+          <Link href="/debug" className="text-indigo-600 hover:text-indigo-800 font-medium">
+            Debug Listing URI
+          </Link>
+        </div>
+        
+        {/* Debug info - only shown in development */}
+        {Object.keys(debugInfo).length > 0 && (
+          <div className="mt-6 bg-gray-100 p-4 rounded-md">
+            <h2 className="text-lg font-semibold mb-2">Debug Info</h2>
+            <pre className="text-xs overflow-auto">{JSON.stringify(debugInfo, null, 2)}</pre>
+          </div>
+        )}
       </div>
     );
   }
@@ -193,16 +263,25 @@ export default function ListingDetailPage() {
           <div className="flex flex-col lg:flex-row">
             {/* Image or placeholder */}
             <div className="lg:w-1/2 lg:pr-6 mb-6 lg:mb-0">
-              <div className="bg-gray-100 rounded-lg h-80 flex items-center justify-center text-6xl">
-                {categoryIcons[listing.category] || '📦'}
-              </div>
+              {listing.images && listing.images.length > 0 ? (
+                <div className="h-80 bg-gray-200 rounded-lg overflow-hidden relative">
+                  <div className="absolute inset-0 flex items-center justify-center text-6xl">
+                    {categoryIcons[listing.category] || '📦'}
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-gray-100 rounded-lg h-80 flex items-center justify-center text-6xl">
+                  {categoryIcons[listing.category] || '📦'}
+                </div>
+              )}
               
               {/* Image thumbnails would go here if images were available */}
               {listing.images && listing.images.length > 0 && (
                 <div className="mt-4 flex space-x-2 overflow-x-auto">
                   {listing.images.map((image: any, index: number) => (
-                    <div key={index} className="w-20 h-20 bg-gray-200 rounded flex-shrink-0">
-                      {/* Thumbnail image would go here */}
+                    <div key={index} className="w-20 h-20 bg-gray-200 rounded flex-shrink-0 flex items-center justify-center">
+                      {/* Image placeholder */}
+                      <span className="text-2xl">{categoryIcons[listing.category] || '📦'}</span>
                     </div>
                   ))}
                 </div>
@@ -212,7 +291,7 @@ export default function ListingDetailPage() {
             {/* Details */}
             <div className="lg:w-1/2">
               <h1 className="text-2xl font-bold mb-2">{listing.title}</h1>
-              <div className="text-2xl text-indigo-600 font-bold mb-4">{listing.price}</div>
+              <div className="text-2xl text-indigo-600 font-bold mb-4">${listing.price}</div>
               
               <div className="mb-6">
                 <span className="inline-block mr-2 px-3 py-1 bg-indigo-100 text-indigo-800 text-sm font-medium rounded-full capitalize">
@@ -249,7 +328,7 @@ export default function ListingDetailPage() {
                 <span className="mr-2">🔗</span>
                 <span className="break-all">
                 <a 
-                href={getAtProtocolBrowserLink(listing.uri) || `https://atproto-browser.vercel.app/`}
+                href={`https://atproto-browser.vercel.app/at/${encodeURIComponent(listing.uri)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-indigo-600 hover:text-indigo-800"
