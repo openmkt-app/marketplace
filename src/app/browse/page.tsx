@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
+import { encodeAtUri } from '@/lib/uri-utils';
 
 // Using the types from marketplace-client
 type MarketplaceListing = {
@@ -40,7 +41,7 @@ const conditionLabels: Record<string, { label: string; color: string }> = {
 };
 
 export default function BrowsePage() {
-  const { client } = useAuth();
+  const { client, isLoggedIn } = useAuth();
   const [listings, setListings] = useState<MarketplaceListing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +50,8 @@ export default function BrowsePage() {
     county: '',
     locality: '',
     category: '',
-    condition: ''
+    condition: '',
+    showOnlyMyListings: false
   });
 
   // Placeholder data for demo purposes
@@ -141,52 +143,114 @@ export default function BrowsePage() {
       setError(null);
       
       try {
-        if (client) {
-          // In a real app, we'd fetch from the API
-          // This would use client.getListingsByLocation with the filter values
-          
-          // For demo purposes, we'll use placeholder data
-          // Simulating network delay
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // Filter demo listings based on filters
-          let filteredListings = [...demoListings];
-          
-          if (filters.state) {
-            filteredListings = filteredListings.filter(
-              listing => listing.location.state.toLowerCase().includes(filters.state.toLowerCase())
-            );
+        if (client && isLoggedIn) {
+          try {
+            // Get all marketplace listings
+            const allListings = await client.getAllListings();
+            
+            // Add a flag to identify user's own listings
+            const currentUserDid = client.agent.session?.did;
+            
+            const augmentedListings = allListings.map(listing => ({
+              ...listing,
+              isOwnListing: listing.authorDid === currentUserDid
+            }));
+            
+            // Apply filters
+            let filteredListings = [...augmentedListings];
+            
+            // Filter by "Show only my listings" if selected
+            if (filters.showOnlyMyListings) {
+              filteredListings = filteredListings.filter(listing => listing.isOwnListing);
+            }
+            
+            // Apply location filters
+            if (filters.state) {
+              filteredListings = filteredListings.filter(
+                listing => listing.location.state.toLowerCase().includes(filters.state.toLowerCase())
+              );
+            }
+            
+            if (filters.county) {
+              filteredListings = filteredListings.filter(
+                listing => listing.location.county.toLowerCase().includes(filters.county.toLowerCase())
+              );
+            }
+            
+            if (filters.locality) {
+              filteredListings = filteredListings.filter(
+                listing => listing.location.locality.toLowerCase().includes(filters.locality.toLowerCase())
+              );
+            }
+            
+            if (filters.category) {
+              filteredListings = filteredListings.filter(
+                listing => listing.category === filters.category
+              );
+            }
+            
+            if (filters.condition) {
+              filteredListings = filteredListings.filter(
+                listing => listing.condition === filters.condition
+              );
+            }
+            
+            if (filteredListings.length > 0) {
+              setListings(filteredListings);
+              return; // Exit early if we have real listings
+            } else if (filters.state || filters.county || filters.locality || filters.category || filters.condition || filters.showOnlyMyListings) {
+              // If we have filters applied but no results, show empty list
+              setListings([]);
+              return;
+            } else {
+              console.log('No real listings found after filtering, using demo data');
+            }
+          } catch (apiError) {
+            console.error('Error fetching from API:', apiError);
           }
-          
-          if (filters.county) {
-            filteredListings = filteredListings.filter(
-              listing => listing.location.county.toLowerCase().includes(filters.county.toLowerCase())
-            );
-          }
-          
-          if (filters.locality) {
-            filteredListings = filteredListings.filter(
-              listing => listing.location.locality.toLowerCase().includes(filters.locality.toLowerCase())
-            );
-          }
-          
-          if (filters.category) {
-            filteredListings = filteredListings.filter(
-              listing => listing.category === filters.category
-            );
-          }
-          
-          if (filters.condition) {
-            filteredListings = filteredListings.filter(
-              listing => listing.condition === filters.condition
-            );
-          }
-          
-          setListings(filteredListings);
-        } else {
-          // If client isn't initialized, use demo data
-          setListings(demoListings);
         }
+        
+        // Fallback to demo data
+        let filteredListings = [];
+        
+        // If "Show only my listings" is checked and we're logged in,
+        // we don't want to show any demo listings
+        if (!isLoggedIn || !filters.showOnlyMyListings) {
+          filteredListings = [...demoListings];
+        }
+        
+        // Apply filters to demo listings
+        if (filters.state) {
+          filteredListings = filteredListings.filter(
+            listing => listing.location.state.toLowerCase().includes(filters.state.toLowerCase())
+          );
+        }
+        
+        if (filters.county) {
+          filteredListings = filteredListings.filter(
+            listing => listing.location.county.toLowerCase().includes(filters.county.toLowerCase())
+          );
+        }
+        
+        if (filters.locality) {
+          filteredListings = filteredListings.filter(
+            listing => listing.location.locality.toLowerCase().includes(filters.locality.toLowerCase())
+          );
+        }
+        
+        if (filters.category) {
+          filteredListings = filteredListings.filter(
+            listing => listing.category === filters.category
+          );
+        }
+        
+        if (filters.condition) {
+          filteredListings = filteredListings.filter(
+            listing => listing.condition === filters.condition
+          );
+        }
+        
+        setListings(filteredListings);
       } catch (err) {
         console.error('Failed to fetch listings:', err);
         setError(`Failed to fetch listings: ${err instanceof Error ? err.message : String(err)}`);
@@ -199,13 +263,21 @@ export default function BrowsePage() {
     };
     
     fetchListings();
-  }, [client, filters]);
+  }, [client, isLoggedIn, filters]);
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFilters(prev => ({
       ...prev,
       [name]: value
+    }));
+  };
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setFilters(prev => ({
+      ...prev,
+      [name]: checked
     }));
   };
 
@@ -233,93 +305,109 @@ export default function BrowsePage() {
         <h2 className="text-xl font-semibold mb-4">Search & Filter</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div>
-            <label htmlFor="state" className="block text-sm font-medium mb-1">
-              State
-            </label>
-            <input
-              type="text"
-              id="state"
-              name="state"
-              value={filters.state}
-              onChange={handleFilterChange}
-              className="w-full px-3 py-2 border rounded-md"
-              placeholder="e.g. California"
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="county" className="block text-sm font-medium mb-1">
-              County
-            </label>
-            <input
-              type="text"
-              id="county"
-              name="county"
-              value={filters.county}
-              onChange={handleFilterChange}
-              className="w-full px-3 py-2 border rounded-md"
-              placeholder="e.g. Los Angeles"
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="locality" className="block text-sm font-medium mb-1">
-              City/Town
-            </label>
-            <input
-              type="text"
-              id="locality"
-              name="locality"
-              value={filters.locality}
-              onChange={handleFilterChange}
-              className="w-full px-3 py-2 border rounded-md"
-              placeholder="e.g. Pasadena"
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="category" className="block text-sm font-medium mb-1">
-              Category
-            </label>
-            <select
-              id="category"
-              name="category"
-              value={filters.category}
-              onChange={handleFilterChange}
-              className="w-full px-3 py-2 border rounded-md"
-            >
-              <option value="">All Categories</option>
-              <option value="furniture">Furniture</option>
-              <option value="electronics">Electronics</option>
-              <option value="clothing">Clothing</option>
-              <option value="vehicles">Vehicles</option>
-              <option value="toys">Toys & Games</option>
-              <option value="sports">Sports Equipment</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          
-          <div>
-            <label htmlFor="condition" className="block text-sm font-medium mb-1">
-              Condition
-            </label>
-            <select
-              id="condition"
-              name="condition"
-              value={filters.condition}
-              onChange={handleFilterChange}
-              className="w-full px-3 py-2 border rounded-md"
-            >
-              <option value="">Any Condition</option>
-              <option value="new">New</option>
-              <option value="likeNew">Like New</option>
-              <option value="good">Good</option>
-              <option value="fair">Fair</option>
-              <option value="poor">Poor</option>
-            </select>
-          </div>
+        <div>
+        <label htmlFor="state" className="block text-sm font-medium mb-1">
+        State
+        </label>
+        <input
+        type="text"
+        id="state"
+        name="state"
+        value={filters.state}
+        onChange={handleFilterChange}
+        className="w-full px-3 py-2 border rounded-md"
+        placeholder="e.g. California"
+        />
         </div>
+        
+        <div>
+        <label htmlFor="county" className="block text-sm font-medium mb-1">
+        County
+        </label>
+        <input
+        type="text"
+        id="county"
+        name="county"
+        value={filters.county}
+        onChange={handleFilterChange}
+        className="w-full px-3 py-2 border rounded-md"
+        placeholder="e.g. Los Angeles"
+        />
+        </div>
+        
+        <div>
+        <label htmlFor="locality" className="block text-sm font-medium mb-1">
+        City/Town
+        </label>
+        <input
+        type="text"
+        id="locality"
+        name="locality"
+        value={filters.locality}
+        onChange={handleFilterChange}
+        className="w-full px-3 py-2 border rounded-md"
+        placeholder="e.g. Pasadena"
+        />
+        </div>
+        
+        <div>
+        <label htmlFor="category" className="block text-sm font-medium mb-1">
+        Category
+        </label>
+        <select
+        id="category"
+        name="category"
+        value={filters.category}
+        onChange={handleFilterChange}
+        className="w-full px-3 py-2 border rounded-md"
+        >
+        <option value="">All Categories</option>
+        <option value="furniture">Furniture</option>
+        <option value="electronics">Electronics</option>
+        <option value="clothing">Clothing</option>
+        <option value="vehicles">Vehicles</option>
+        <option value="toys">Toys & Games</option>
+        <option value="sports">Sports Equipment</option>
+        <option value="other">Other</option>
+        </select>
+        </div>
+        
+        <div>
+        <label htmlFor="condition" className="block text-sm font-medium mb-1">
+        Condition
+        </label>
+        <select
+        id="condition"
+        name="condition"
+        value={filters.condition}
+        onChange={handleFilterChange}
+        className="w-full px-3 py-2 border rounded-md"
+        >
+        <option value="">Any Condition</option>
+        <option value="new">New</option>
+        <option value="likeNew">Like New</option>
+        <option value="good">Good</option>
+        <option value="fair">Fair</option>
+        <option value="poor">Poor</option>
+        </select>
+        </div>
+
+            {isLoggedIn && (
+              <div className="flex items-center pt-7">
+                <input
+                  type="checkbox"
+                  id="showOnlyMyListings"
+                  name="showOnlyMyListings"
+                  checked={filters.showOnlyMyListings}
+                  onChange={handleCheckboxChange}
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                />
+                <label htmlFor="showOnlyMyListings" className="ml-2 block text-sm font-medium text-gray-700">
+                  Show only my listings
+                </label>
+              </div>
+            )}
+          </div>
       </div>
       
       {/* Results */}
@@ -334,11 +422,44 @@ export default function BrowsePage() {
         <div className="text-center py-12">
           <h3 className="text-xl font-medium text-gray-700 mb-2">No listings found</h3>
           <p className="text-gray-500">Try adjusting your search filters</p>
+          {isLoggedIn && (
+            <div className="mt-6">
+              <p className="text-gray-600 mb-4">You haven't created any listings yet. Get started by creating your first listing!</p>
+              <Link
+                href="/create-listing"
+                className="inline-block px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-medium"
+              >
+                Create a Listing
+              </Link>
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {listings.map((listing, index) => (
-            <div key={index} className="listing-card bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
+            <div key={index} className="listing-card bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow relative">
+              {/* Add label for different listing types */}
+              {listing.isOwnListing && (
+                <div className="absolute top-2 right-2 z-10">
+                  <span className="inline-block px-2 py-1 bg-green-600 text-white text-xs font-bold rounded-full shadow">
+                    Your Listing
+                  </span>
+                </div>
+              )}
+              {listing.author && !listing.isOwnListing && (
+                <div className="absolute top-2 right-2 z-10">
+                  <span className="inline-block px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded-full shadow">
+                    AT Protocol
+                  </span>
+                </div>
+              )}
+              {!listing.authorDid && (
+                <div className="absolute top-2 right-2 z-10">
+                  <span className="inline-block px-2 py-1 bg-gray-600 text-white text-xs font-bold rounded-full shadow">
+                    Demo Listing
+                  </span>
+                </div>
+              )}
               <div className="h-48 bg-gray-200 flex items-center justify-center text-4xl">
                 {categoryIcons[listing.category] || '📦'}
               </div>
@@ -365,15 +486,27 @@ export default function BrowsePage() {
                     {listing.location.zipPrefix && ` ${listing.location.zipPrefix}xx`}
                   </div>
                   <div>📅 Listed on {formatDate(listing.createdAt)}</div>
+                  {listing.authorHandle && (
+                    <div>👤 Posted by @{listing.authorHandle}</div>
+                  )}
                 </div>
                 
                 <div className="mt-4">
-                  <Link
-                    href={`/listing/${index}`} // In a real app, this would be the listing ID
-                    className="inline-block w-full text-center py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md transition-colors"
-                  >
-                    View Details
-                  </Link>
+                  {listing.uri ? (
+                    <Link 
+                      href={`/listing/${encodeAtUri(listing.uri)}`}
+                      className="inline-block w-full text-center py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md transition-colors"
+                    >
+                      View Details
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/listing/${index}`} // For demo listings
+                      className="inline-block w-full text-center py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md transition-colors"
+                    >
+                      View Details
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>

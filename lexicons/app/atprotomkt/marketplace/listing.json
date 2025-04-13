@@ -1,0 +1,58 @@
+{
+    "lexicon": 1,
+    "id": "app.atprotomkt.marketplace.listing",
+    "description": "A record representing a marketplace listing",
+    "defs": {
+      "listingRecord": {
+        "type": "record",
+        "key": "tid",
+        "record": {
+          "type": "object",
+          "required": ["title", "description", "price", "location", "createdAt"],
+          "properties": {
+            "title": { "type": "string", "maxLength": 100 },
+            "description": { "type": "string", "maxLength": 1000 },
+            "price": { "type": "string", "maxLength": 50 },
+            "images": { 
+              "type": "array", 
+              "items": { "type": "blob", "accept": ["image/*"], "maxSize": 1000000 },
+              "maxLength": 4
+            },
+            "location": {
+              "type": "object",
+              "required": ["state", "county", "locality"],
+              "properties": {
+                "state": { "type": "string", "maxLength": 50 },
+                "county": { "type": "string", "maxLength": 50 },
+                "locality": { "type": "string", "maxLength": 50 },
+                "zipPrefix": { "type": "string", "maxLength": 3, "pattern": "^[0-9]{3}$" }
+              }
+            },
+            "category": { 
+              "type": "string",
+              "enum": [
+                "furniture", 
+                "electronics", 
+                "clothing", 
+                "vehicles", 
+                "toys", 
+                "sports", 
+                "other"
+              ]
+            },
+            "condition": {
+              "type": "string",
+              "enum": [
+                "new",
+                "likeNew",
+                "good",
+                "fair",
+                "poor"
+              ]
+            },
+            "createdAt": { "type": "string", "format": "datetime" }
+          }
+        }
+      }
+    }
+  }
