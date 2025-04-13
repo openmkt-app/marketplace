@@ -14,6 +14,32 @@ export default function Navbar() {
     return pathname === path;
   };
 
+  // Get display name from user object
+  const getDisplayName = () => {
+    if (!user) return '';
+    
+    // Check if user has handle property (which is what we're using in AuthContext)
+    if (user.handle) {
+      return `@${user.handle}`;
+    }
+    
+    // Fallbacks for other possible user formats
+    if (typeof user === 'string') {
+      return `@${user}`;
+    }
+    
+    if ('username' in user) {
+      return `@${user.username}`;
+    }
+    
+    if ('did' in user) {
+      // If we only have DID, show a shortened version
+      return `@${user.did.substring(0, 8)}...`;
+    }
+    
+    return '@user';
+  };
+
   return (
     <nav className="bg-gradient-to-r from-indigo-600 to-blue-500 text-white shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -58,8 +84,8 @@ export default function Navbar() {
           <div className="hidden md:flex md:items-center">
             {isLoggedIn ? (
               <div className="flex items-center space-x-4">
-                <span className="text-sm font-medium">
-                  {user ? `@${typeof user === 'string' ? user : user.username || 'user'}` : ''}
+                <span className="text-sm font-medium text-white">
+                  {getDisplayName()}
                 </span>
                 <button
                   onClick={logout}
@@ -137,7 +163,7 @@ export default function Navbar() {
             {isLoggedIn ? (
               <>
                 <div className="px-3 py-2 text-sm font-medium text-indigo-100">
-                  {user ? `@${typeof user === 'string' ? user : user.username || 'user'}` : ''}
+                  {getDisplayName()}
                 </div>
                 <button
                   onClick={() => {

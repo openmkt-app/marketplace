@@ -289,9 +289,151 @@ export class MarketplaceClient {
   async getAllListings(): Promise<MarketplaceListing[]> {
     try {
       logger.info('Fetching all marketplace listings');
+      
+      const listings: (MarketplaceListing & { 
+        authorDid: string; 
+        authorHandle: string; 
+        uri: string; 
+        cid: string;
+      })[] = [];
+      
+      // First, try to get the user's own listings directly
+      if (this.isLoggedIn && this.agent.session) {
+        try {
+          const userDid = this.agent.session.did;
+          logger.info(`Fetching listings from user's repository: ${userDid}`);
+          
+          // Get all marketplace listings from the user's repository
+          const userListings = await this.getUserListings(userDid);
+          
+          if (userListings.length > 0) {
+            listings.push(...userListings);
+            logger.info(`Found ${userListings.length} listings in user's repository`);
+          }
+        } catch (error) {
+          logger.error('Failed to fetch user listings', error as Error);
+        }
+      }
+      
+      // Try to use the search API to find marketplace listings from other users
+      try {
+        const searchResults = await this.searchMarketplaceListings();
+        if (searchResults.length > 0) {
+          // Filter out duplicates (in case user's own listings appear in search results)
+          const newListings = searchResults.filter(searchListing => {
+            return !listings.some(existing => existing.uri === searchListing.uri);
+          });
+          
+          listings.push(...newListings);
+          logger.info(`Found ${newListings.length} additional listings from search`);
+        }
+      } catch (error) {
+        logger.error('Failed to search for marketplace listings', error as Error);
+      }
+      
+      logger.info(`Total marketplace listings found: ${listings.length}`);
+      return listings;
+    } catch (error) {
+      logger.error('Failed to retrieve all listings', error as Error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Get a user's own marketplace listings
+   */
+  async getUserListings(userDid?: string): Promise<(MarketplaceListing & { 
+    authorDid: string; 
+    authorHandle: string; 
+    uri: string; 
+    cid: string;
+  })[]> {
+    if (!this.isLoggedIn && !userDid) {
+      return [];
+    }
+    
+    try {
+      const did = userDid || this.agent.session!.did;
+      const handle = userDid ? await this.getHandleFromDid(did) : this.agent.session!.handle;
+      
+      // Look for both old and new namespace to support existing listings
+      const validTypes = ['com.example.marketplace.listing', 'app.atprotomkt.marketplace.listing'];
+      const allListings: (MarketplaceListing & { 
+        authorDid: string; 
+        authorHandle: string;
+        uri: string; 
+        cid: string;
+      })[] = [];
+      
+      // Try to get listings for each namespace
+      for (const collection of validTypes) {
+        try {
+          logger.logApiRequest('GET', 'com.atproto.repo.listRecords', { 
+            repo: did,
+            collection 
+          });
+          
+          const result = await this.agent.api.com.atproto.repo.listRecords({
+            repo: did,
+            collection,
+            limit: 50
+          });
+          
+          if (result.success && result.data.records.length > 0) {
+            // Process the listings
+            const typedListings = result.data.records.map(record => {
+              return {
+                ...record.value as MarketplaceListing,
+                authorDid: did,
+                authorHandle: handle,
+                uri: record.uri,
+                cid: record.cid,
+              };
+            });
+            
+            allListings.push(...typedListings);
+          }
+        } catch (error) {
+          logger.warn(`Failed to fetch ${collection} listings for ${did}`, error as Error);
+        }
+      }
+      
+      return allListings;
+    } catch (error) {
+      logger.error('Failed to get user listings', error as Error);
+      return [];
+    }
+  }
+  
+  /**
+   * Get handle from DID
+   */
+  private async getHandleFromDid(did: string): Promise<string> {
+    try {
+      const result = await this.agent.getProfile({ actor: did });
+      return result.data.handle;
+    } catch (error) {
+      logger.error(`Failed to get handle for DID: ${did}`, error as Error);
+      return did; // Fallback to DID if handle can't be retrieved
+    }
+  }
+  
+  /**
+   * Search for marketplace listings
+   */
+  private async searchMarketplaceListings(): Promise<(MarketplaceListing & { 
+    authorDid: string; 
+    authorHandle: string; 
+    uri: string; 
+    cid: string;
+  })[]> {
+    try {
+      // Option 1: Use the firehose approach to find recent marketplace listings
+      // This isn't a real search but will find recent activity across the network
+      logger.info('Searching for marketplace listings via global feed');
       logger.logApiRequest('GET', 'app.bsky.feed.getTimeline', { limit: 100 });
       
-      // Get the timeline which will include recent posts
+      // The global timeline/feed includes recent posts from across the network
       const results = await this.agent.api.app.bsky.feed.getTimeline({
         limit: 100,
       });
@@ -302,8 +444,12 @@ export class MarketplaceClient {
       // Filter for marketplace listings
       const listings = results.data.feed
         .filter(item => {
-          const record = item.post.record as any;
-          return validTypes.includes(record.$type);
+          try {
+            const record = item.post.record as any;
+            return validTypes.includes(record.$type);
+          } catch (e) {
+            return false;
+          }
         })
         .map(item => {
           const record = item.post.record as any;
@@ -316,11 +462,11 @@ export class MarketplaceClient {
           } as MarketplaceListing & { authorDid: string; authorHandle: string; uri: string; cid: string };
         });
       
-      logger.info(`Found ${listings.length} marketplace listings`);
+      logger.info(`Found ${listings.length} marketplace listings in global feed`);
       return listings;
     } catch (error) {
-      logger.error('Failed to retrieve all listings', error as Error);
-      throw error;
+      logger.error('Failed to search for marketplace listings', error as Error);
+      return [];
     }
   }
   
