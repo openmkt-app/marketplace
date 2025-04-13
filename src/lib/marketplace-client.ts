@@ -84,12 +84,15 @@ export class MarketplaceClient {
 
   async resumeSession(sessionData: SessionData): Promise<{ success: boolean; data?: any; error?: Error }> {
     try {
-      this.agent.session = {
+      logger.info('Attempting to resume session');
+      
+      // Instead of directly setting the session property, use the agent's resumeSession method
+      await this.agent.resumeSession({
         did: sessionData.did,
         handle: sessionData.handle,
         accessJwt: sessionData.accessJwt,
         refreshJwt: sessionData.refreshJwt,
-      };
+      });
       
       // Verify the session is valid
       const result = await this.agent.getProfile({
@@ -97,16 +100,18 @@ export class MarketplaceClient {
       });
       
       this.isLoggedIn = true;
+      logger.info('Session resumed successfully');
+      
       return { success: true, data: { user: result.data } };
     } catch (error) {
-      console.error('Resume session failed:', error);
-      this.agent.session = undefined;
+      logger.error('Resume session failed', error as Error);
+      this.isLoggedIn = false;
       return { success: false, error: error as Error };
     }
   }
 
   logout(): void {
-    this.agent.session = undefined;
+    // The AT Protocol client should handle session cleanup internally
     this.isLoggedIn = false;
   }
 
@@ -139,13 +144,13 @@ export class MarketplaceClient {
       });
       
       logger.logApiRequest('POST', 'com.atproto.repo.createRecord', {
-        collection: 'com.example.marketplace.listing',
+        collection: 'app.atprotomkt.marketplace.listing',
         imageCount: processedImages ? processedImages.length : 0,
       });
       
       const result = await this.agent.api.com.atproto.repo.createRecord({
         repo: this.agent.session.did,
-        collection: 'com.example.marketplace.listing',
+        collection: 'app.atprotomkt.marketplace.listing',
         record: {
           ...listingDataWithoutImages,
           images: processedImages, // Add the processed images
@@ -232,30 +237,25 @@ export class MarketplaceClient {
     locality?: string
   ): Promise<MarketplaceListing[]> {
     try {
-      // This is a simplified implementation
-      // In a real app, you would need to implement this based on AT Protocol's
-      // search and discovery capabilities
+      logger.info(`Fetching listings by location - state: ${state}, county: ${county}, locality: ${locality || 'any'}`);
       
-      // For now, we're using a generic search approach
-      // You might need to adapt this based on how AT Protocol evolves
-      const queryParams: Record<string, string> = {
-        collection: 'com.example.marketplace.listing',
-      };
+      // Get all public listings by querying the firehose
+      logger.logApiRequest('GET', 'app.bsky.feed.getTimeline', { limit: 100 });
       
-      // There's no direct location search in the current AT Protocol
-      // This would need to be adapted based on the available APIs
-      
-      // Placeholder implementation
+      // Get the timeline which will include recent posts
       const results = await this.agent.api.app.bsky.feed.getTimeline({
         limit: 100,
       });
+      
+      // Look for both old and new namespace to support existing listings
+      const validTypes = ['com.example.marketplace.listing', 'app.atprotomkt.marketplace.listing'];
       
       // Filter for marketplace listings and then by location
       // This is inefficient but demonstrates the concept
       const listings = results.data.feed
         .filter(item => {
           const record = item.post.record as any;
-          return record.$type === 'com.example.marketplace.listing';
+          return validTypes.includes(record.$type);
         })
         .filter(item => {
           const record = item.post.record as any;
@@ -275,13 +275,103 @@ export class MarketplaceClient {
         })
         .map(item => (item.post.record as any) as MarketplaceListing);
       
+      logger.info(`Found ${listings.length} listings matching location criteria`);
       return listings;
     } catch (error) {
-      console.error('Failed to retrieve listings:', error);
+      logger.error('Failed to retrieve listings', error as Error);
       throw error;
     }
   }
 
+  /**
+   * Get all marketplace listings regardless of location
+   */
+  async getAllListings(): Promise<MarketplaceListing[]> {
+    try {
+      logger.info('Fetching all marketplace listings');
+      logger.logApiRequest('GET', 'app.bsky.feed.getTimeline', { limit: 100 });
+      
+      // Get the timeline which will include recent posts
+      const results = await this.agent.api.app.bsky.feed.getTimeline({
+        limit: 100,
+      });
+      
+      // Look for both old and new namespace to support existing listings
+      const validTypes = ['com.example.marketplace.listing', 'app.atprotomkt.marketplace.listing'];
+      
+      // Filter for marketplace listings
+      const listings = results.data.feed
+        .filter(item => {
+          const record = item.post.record as any;
+          return validTypes.includes(record.$type);
+        })
+        .map(item => {
+          const record = item.post.record as any;
+          return {
+            ...record,
+            authorDid: item.post.author.did,
+            authorHandle: item.post.author.handle,
+            uri: item.post.uri,
+            cid: item.post.cid,
+          } as MarketplaceListing & { authorDid: string; authorHandle: string; uri: string; cid: string };
+        });
+      
+      logger.info(`Found ${listings.length} marketplace listings`);
+      return listings;
+    } catch (error) {
+      logger.error('Failed to retrieve all listings', error as Error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Get a listing by its specific URI
+   */
+  async getListingByUri(uri: string): Promise<MarketplaceListing | null> {
+    try {
+      logger.info(`Fetching listing by URI: ${uri}`);
+      logger.logApiRequest('GET', 'app.bsky.feed.getPostThread', { uri });
+      
+      const result = await this.agent.api.app.bsky.feed.getPostThread({
+        uri,
+        depth: 0
+      });
+      
+      if (!result.success) {
+        logger.warn(`Listing not found for URI: ${uri}`);
+        return null;
+      }
+      
+      const thread = result.data.thread;
+      if (thread.type !== 'post') {
+        logger.warn(`Thread is not a post type for URI: ${uri}`);
+        return null;
+      }
+      
+      const post = thread.post;
+      const record = post.record as any;
+      
+      // Check if this is actually a marketplace listing
+      const validTypes = ['com.example.marketplace.listing', 'app.atprotomkt.marketplace.listing'];
+      if (!validTypes.includes(record.$type)) {
+        logger.warn(`Post is not a marketplace listing: ${record.$type}`);
+        return null;
+      }
+      
+      // Return the listing with additional metadata
+      return {
+        ...record,
+        authorDid: post.author.did,
+        authorHandle: post.author.handle,
+        uri: post.uri,
+        cid: post.cid,
+      } as MarketplaceListing & { authorDid: string; authorHandle: string; uri: string; cid: string };
+    } catch (error) {
+      logger.error(`Failed to fetch listing by URI: ${uri}`, error as Error);
+      return null;
+    }
+  }
+  
   // Additional helper methods would go here
   // For example: methods to delete listings, update listings, etc.
 }
