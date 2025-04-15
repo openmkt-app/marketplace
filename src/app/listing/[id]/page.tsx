@@ -1,393 +1,483 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
-import { decodeAtUri, getAtProtocolBrowserLink } from '@/lib/uri-utils';
-
-const categoryIcons: Record<string, string> = {
-  furniture: '🪑',
-  electronics: '📱',
-  clothing: '👕',
-  vehicles: '🚗',
-  toys: '🧸',
-  sports: '⚽️',
-  other: '📦'
-};
-
-const conditionLabels: Record<string, { label: string; color: string }> = {
-  new: { label: 'New', color: 'bg-green-100 text-green-800' },
-  likeNew: { label: 'Like New', color: 'bg-emerald-100 text-emerald-800' },
-  good: { label: 'Good', color: 'bg-blue-100 text-blue-800' },
-  fair: { label: 'Fair', color: 'bg-yellow-100 text-yellow-800' },
-  poor: { label: 'Poor', color: 'bg-red-100 text-red-800' }
-};
-
-// Demo listings for fallback
-const demoListings = [
-  {
-    title: 'Vintage Mid-Century Desk',
-    description: 'Beautiful solid wood desk in excellent condition. Perfect for a home office or study area. Features three drawers for storage and a spacious work surface. The legs are tapered in the classic mid-century modern style. Minor wear consistent with age, but overall in great shape. Dimensions: 48" W x 24" D x 30" H.',
-    price: '$125',
-    location: {
-      state: 'California',
-      county: 'Los Angeles',
-      locality: 'Pasadena',
-      zipPrefix: '910'
-    },
-    category: 'furniture',
-    condition: 'good',
-    createdAt: new Date().toISOString()
-  },
-  {
-    title: 'iPhone 13 Pro - 256GB',
-    description: 'Lightly used iPhone 13 Pro in perfect working condition. Includes original box, charger, and case. Battery health at 92%. No scratches or dents. Color is Sierra Blue. Unlocked and ready for any carrier. AppleCare+ valid through December 2023. Reason for selling: upgraded to newer model.',
-    price: '$650',
-    location: {
-      state: 'California',
-      county: 'Orange',
-      locality: 'Irvine',
-    },
-    category: 'electronics',
-    condition: 'likeNew',
-    createdAt: new Date().toISOString()
-  },
-  // More demo listings...
-];
+import { BskyAgent } from '@atproto/api';
+import { createBlueskyCdnImageUrls } from '@/lib/image-utils';
 
 export default function ListingDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const { client, isLoggedIn } = useAuth();
-  const [listing, setListing] = useState<any | null>(null);
+  const [listing, setListing] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<any>({});
-  
-  // Extract the id from params
-  const id = typeof params.id === 'string' ? params.id : 
-             Array.isArray(params.id) ? params.id[0] : '';
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const params = useParams();
   
   useEffect(() => {
     const fetchListing = async () => {
-      if (!client) {
-        setIsLoading(false);
-        setError('Client not available. Please log in first.');
-        return;
-      }
-
       setIsLoading(true);
       setError(null);
-      setDebugInfo({
-        originalId: id,
-      });
       
       try {
-        console.log('Attempting to fetch listing with ID:', id);
+        console.log('Attempting to fetch listing with ID:', params.id);
         
-        // First decode the URI if it's URL-encoded
-        let uriToFetch = id;
-        if (id.startsWith('at%3A%2F%2F')) {
-          uriToFetch = decodeURIComponent(id);
-          console.log('Decoded URI:', uriToFetch);
+        // Decode the URI
+        const uri = decodeURIComponent(params.id as string);
+        console.log('Decoded URI:', uri);
+        
+        if (!uri) {
+          throw new Error('No listing ID provided');
         }
-
-        setDebugInfo(prev => ({
-          ...prev,
-          decodedUri: uriToFetch,
-        }));
         
-        // Parse the URI to get its components
-        const uriParts = uriToFetch.split('/');
-        if (uriParts.length >= 4) {
-          const did = uriParts[2];
-          const collection = uriParts[3];
-          const rkey = uriParts[4];
-          
-          setDebugInfo(prev => ({
-            ...prev,
-            parsedUri: {
-              did,
-              collection,
-              rkey
-            }
-          }));
-
-          // Skip the general methods and go straight to the one that works
-          console.log(`Fetching record - DID: ${did}, Collection: ${collection}, RKey: ${rkey}`);
-          
-          try {
-            // Use getRecord API directly since we know it works
-            const recordResult = await client.agent.api.com.atproto.repo.getRecord({
-              repo: did,
-              collection: collection,
-              rkey: rkey
-            });
-            
-            if (recordResult.success) {
-              console.log('Got record successfully:', recordResult.data);
-              
-              // Get user handle
-              let handle = '';
+        // Parse the URI to get the components
+        // Format: at://did:plc:xxx/collection/rkey
+        const parts = uri.split('/');
+        const did = parts[2];
+        const collection = parts[3];
+        const rkey = parts[4];
+        
+        console.log('Fetching record - DID:', did, 'Collection:', collection, 'RKey:', rkey);
+        
+        // Validate the DID format
+        if (!did || !did.startsWith('did:plc:')) {
+          console.error('Invalid DID format:', did);
+          throw new Error('Invalid listing identifier format');
+        }
+        
+        // Initialize the agent
+        const agent = new BskyAgent({
+          service: 'https://bsky.social',
+        });
+        
+        // Get record directly
+        const record = await agent.api.com.atproto.repo.getRecord({
+          repo: did,
+          collection: collection,
+          rkey: rkey
+        });
+        
+        console.log('Raw API response data:', record.data);
+        
+        // Check if record.data.value exists and has images array
+        if (record.data && record.data.value && Array.isArray(record.data.value.images)) {
+          console.log('Images found in API response:', record.data.value.images.length);
+        } else {
+          console.warn('No images array found in API response or it is not an array');
+        }
+        
+        // Create a listing object with the data
+        const listingData = {
+          ...record.data.value,
+          uri: record.data.uri,
+          cid: record.data.cid,
+          authorDid: did
+        };
+        
+        // SPECIAL DIAGNOSTIC: Extract JSON-safe version of problematic properties
+        const diagnosticData = {
+          recordData: {
+            uri: record.data.uri,
+            cid: record.data.cid,
+            valueType: record.data.value?.$type,
+            hasImages: Boolean(record.data.value?.images),
+            imagesIsArray: Array.isArray(record.data.value?.images),
+            imagesLength: Array.isArray(record.data.value?.images) ? record.data.value.images.length : 'not array',
+            // Try to get a serializable version of images
+            imagesSample: record.data.value?.images ? record.data.value.images.map(img => {
               try {
-                const profileResult = await client.agent.getProfile({ 
-                  actor: did 
-                });
-                if (profileResult.success) {
-                  handle = profileResult.data.handle;
-                } else {
-                  handle = did.substring(0, 12) + '...';
-                }
+                return {
+                  type: img?.$type,
+                  hasRef: Boolean(img?.ref),
+                  refType: typeof img?.ref,
+                  refJson: JSON.stringify(img?.ref),
+                  mimeType: img?.mimeType,
+                  size: img?.size
+                };
               } catch (e) {
-                console.error('Error fetching profile:', e);
-                handle = did.substring(0, 12) + '...';
+                return { error: 'Failed to serialize image', message: e.message };
               }
-              
-              // Create a listing object from the record
-              const record = recordResult.data.value;
-              const listingData = {
-                ...record,
-                uri: uriToFetch,
-                authorDid: did,
-                authorHandle: handle,
-                cid: recordResult.data.cid
-              };
-              
-              console.log('Created listing object:', listingData);
-              
-              setListing({
-                ...listingData,
-                isRealListing: true,
-                isOwnListing: client.agent.session?.did === did
-              });
-              setIsLoading(false);
-              return;
-            } else {
-              throw new Error('Failed to get record');
+            }) : 'no images'
+          },
+          listingData: {
+            uri: listingData.uri,
+            cid: listingData.cid,
+            type: listingData.$type,
+            title: listingData.title,
+            hasImages: Boolean(listingData.images),
+            imagesIsArray: Array.isArray(listingData.images),
+            imagesLength: Array.isArray(listingData.images) ? listingData.images.length : 'not array',
+          }
+        };
+        
+        // EXPERIMENTAL: Direct extraction of CIDs from raw data
+        try {
+          const rawJson = JSON.stringify(record.data);
+          // Find all potential CID strings in the raw data
+          // This regex targets both bafk and bafkr prefixes commonly used for Bluesky CIDs
+          const cidMatches = rawJson.match(/bafk(?:re)?[a-zA-Z0-9]{44,60}/g) || [];
+          
+          if (cidMatches.length > 0) {
+            console.log('🔍 Found potential CIDs in raw data:', cidMatches);
+            
+            // Create direct URLs using these CIDs
+            const directUrls = cidMatches.map(cid => ({
+              thumbnail: `https://cdn.bsky.app/img/feed_thumbnail/plain/${did}/${cid}@jpeg`,
+              fullsize: `https://cdn.bsky.app/img/feed_fullsize/plain/${did}/${cid}@jpeg`,
+              mimeType: 'image/jpeg',
+              extractedCid: cid
+            }));
+            
+            // Store these direct URLs in the listing data for later use
+            listingData.extractedImageUrls = directUrls;
+            console.log('📷 Created direct image URLs:', directUrls);
+          }
+        } catch (error) {
+          console.error('Failed to extract CIDs from raw data:', error);
+        }
+        
+        console.log('Created listing object:', listingData);
+        
+        // Ensure authorDid is correctly set
+        if (!listingData.authorDid) {
+          console.error('Author DID is missing, using DID from the URI');
+          listingData.authorDid = did;
+        }
+        
+        // Log the full data object for debugging
+        console.log('Full listing data before validation:', JSON.stringify(listingData, null, 2));
+        console.log(`Found ${listingData.images ? listingData.images.length : 0} images in the listing`);
+          
+          // Check if images exist and have the expected structure
+          if (listingData.images && Array.isArray(listingData.images)) {
+            console.log(`Found ${listingData.images.length} images in the listing`);
+          
+          // Validate each image object
+          listingData.images = listingData.images.filter(image => {
+            // Print the exact object for debugging
+            console.log('Validating image object:', JSON.stringify(image, null, 2));
+            
+            // More flexible validation to handle both BlobRef objects and regular objects
+            // with ref.$link properties
+            if (!image) {
+              console.warn('Skipping null/undefined image object');
+              return false;
             }
-          } catch (error) {
-            console.error('Error fetching record:', error);
-            throw error;
+            
+            // In case we get a BlobRef, the $type should be 'blob'
+            if (image.$type === 'blob' && image.ref && typeof image.ref === 'object') {
+              if (image.ref.$link) {
+                console.log('Valid blob image with ref.$link:', image.ref.$link);
+                return true;
+              }
+            }
+
+            // Handle case where image might be the ref itself
+            if (typeof image === 'object' && image.$link) {
+              console.log('Direct blob reference with $link:', image.$link);
+              return true;
+            }
+            
+            // Log the exact reason for skipping
+            console.warn('Skipping invalid image object, missing ref.$link:', image);
+            return false;
+          });
+          
+          // Log the image objects after validation
+          if (listingData.images.length > 0) {
+            console.log('First image object after validation:', JSON.stringify(listingData.images[0], null, 2));
+            console.log(`Validated ${listingData.images.length} images`);
           }
         } else {
-          throw new Error(`Invalid URI format: ${uriToFetch}`);
+          console.warn('No images found in the listing or images is not an array');
+          listingData.images = [];
         }
+        
+        setListing(listingData);
       } catch (err) {
         console.error('Failed to fetch listing:', err);
-        setError(`Failed to fetch listing: ${err instanceof Error ? err.message : String(err)}`);
+        setError(`Failed to load listing: ${err instanceof Error ? err.message : String(err)}`);
+      } finally {
         setIsLoading(false);
       }
     };
     
-    fetchListing();
-  }, [id, client, isLoggedIn]);
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
-
+    if (params.id) {
+      fetchListing();
+    }
+  }, [params.id]);
+  
+  // Use the directly extracted URLs if available, or generate them using our utility function
+  const directImageUrls = React.useMemo(() => {
+    // First try to use the URLs we extracted directly from the raw data
+    if (listing && listing.extractedImageUrls && listing.extractedImageUrls.length > 0) {
+      console.log('Using extracted image URLs:', listing.extractedImageUrls);
+      return listing.extractedImageUrls;
+    }
+    
+    if (!listing || !listing.images || !Array.isArray(listing.images)) {
+      console.log('No images found in listing:', listing);
+      return [];
+    }
+    
+    console.log(`Processing ${listing.images.length} images with author DID:`, listing.authorDid);
+    
+    // Use a try-catch for each image to prevent a single failure from breaking all images
+    const urls = [];
+    
+    for (let i = 0; i < listing.images.length; i++) {
+      const image = listing.images[i];
+      
+      try {
+        // Debug each image
+        console.log(`Processing image ${i}:`, JSON.stringify(image, null, 2));
+        
+        // We'll be more lenient about validation here and let the utility function handle it
+        const imageUrls = createBlueskyCdnImageUrls(image, listing.authorDid, image.mimeType);
+        console.log(`Generated URLs for image ${i}:`, imageUrls);
+        
+        urls.push({
+          thumbnail: imageUrls.thumbnail,
+          fullsize: imageUrls.fullsize,
+          mimeType: image.mimeType || 'image/jpeg'
+        });
+      } catch (err) {
+        console.error(`Error processing image ${i}:`, err);
+      }
+    }
+    
+    console.log(`Successfully processed ${urls.length} images`);
+    return urls;
+  }, [listing]);
+  
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 flex justify-center">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="h-10 w-48 bg-gray-200 rounded mb-4"></div>
-          <div className="h-4 w-64 bg-gray-200 rounded"></div>
+      <div className="max-w-4xl mx-auto p-4">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-2xl font-bold">Loading...</h1>
+          <Link href="/browse" className="text-blue-600 hover:underline">
+            Back to Listings
+          </Link>
         </div>
+        <div className="animate-pulse bg-gray-200 h-96 rounded-lg"></div>
       </div>
     );
   }
-
-  if (error || !listing) {
+  
+  if (error) {
     return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-          {error || 'Listing not found'}
-        </div>
-        
-        <div className="flex flex-col md:flex-row gap-4">
-          <Link href="/browse" className="text-indigo-600 hover:text-indigo-800 font-medium">
-            ← Back to Browse
-          </Link>
-          
-          <Link href="/debug" className="text-indigo-600 hover:text-indigo-800 font-medium">
-            Debug Listing URI
+      <div className="max-w-4xl mx-auto p-4">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-2xl font-bold">Error</h1>
+          <Link href="/browse" className="text-blue-600 hover:underline">
+            Back to Listings
           </Link>
         </div>
-        
-        {/* Debug info - only shown in development */}
-        {Object.keys(debugInfo).length > 0 && (
-          <div className="mt-6 bg-gray-100 p-4 rounded-md">
-            <h2 className="text-lg font-semibold mb-2">Debug Info</h2>
-            <pre className="text-xs overflow-auto">{JSON.stringify(debugInfo, null, 2)}</pre>
-          </div>
-        )}
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
       </div>
     );
   }
-
+  
+  if (!listing) {
+    return (
+      <div className="max-w-4xl mx-auto p-4">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-2xl font-bold">No Listing Found</h1>
+          <Link href="/browse" className="text-blue-600 hover:underline">
+            Back to Listings
+          </Link>
+        </div>
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
+          No listing data was found for this ID.
+        </div>
+      </div>
+    );
+  }
+  
+  // Format price for display
+  const formattedPrice = listing.price.includes('$')
+    ? listing.price
+    : `$${listing.price}`;
+  
+  // Format creation date
+  const createdDate = new Date(listing.createdAt);
+  const formattedDate = createdDate.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
-      <div className="mb-8">
-        <Link href="/browse" className="text-indigo-600 hover:text-indigo-800 font-medium">
-          ← Back to Browse
+    <div className="max-w-4xl mx-auto p-4">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-2xl font-bold">{listing.title}</h1>
+        <Link href="/browse" className="text-blue-600 hover:underline">
+          Back to Listings
         </Link>
       </div>
       
-      <div className="bg-white shadow-xl rounded-lg overflow-hidden">
-        {/* Status labels */}
-        <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-          {listing.isRealListing ? (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-              {listing.isOwnListing ? 'Your Listing' : 'AT Protocol Listing'}
-            </span>
+      <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
+        {/* Main image display */}
+        <div className="w-full h-96 bg-gray-100 flex items-center justify-center">
+          {directImageUrls.length > 0 ? (
+            <img 
+              src={directImageUrls[selectedImageIndex].fullsize} 
+              alt={listing.title}
+              className="max-h-full max-w-full object-contain"
+              onError={(e) => {
+                console.error('Failed to load fullsize image:', directImageUrls[selectedImageIndex].fullsize);
+                e.currentTarget.src = '/placeholder-image.svg';
+                e.currentTarget.alt = 'Image failed to load';
+              }}
+            />
           ) : (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-              Demo Listing
-            </span>
+            <div className="flex flex-col items-center justify-center h-full p-4">
+              <img 
+                src="/placeholder-image.svg" 
+                alt="No images available"
+                className="max-w-xs mb-2"
+              />
+              <div className="text-gray-500 text-center">
+                <p>No images available for this listing</p>
+              </div>
+            </div>
           )}
-          
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${conditionLabels[listing.condition]?.color || 'bg-gray-100 text-gray-800'}`}>
-            {conditionLabels[listing.condition]?.label || listing.condition}
-          </span>
         </div>
         
-        {/* Main content */}
-        <div className="p-6">
-          <div className="flex flex-col lg:flex-row">
-            {/* Image or placeholder */}
-            <div className="lg:w-1/2 lg:pr-6 mb-6 lg:mb-0">
-              {listing.images && listing.images.length > 0 ? (
-                <div className="h-80 bg-gray-200 rounded-lg overflow-hidden relative">
-                  <div className="absolute inset-0 flex items-center justify-center text-6xl">
-                    {categoryIcons[listing.category] || '📦'}
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-gray-100 rounded-lg h-80 flex items-center justify-center text-6xl">
-                  {categoryIcons[listing.category] || '📦'}
-                </div>
-              )}
-              
-              {/* Image thumbnails would go here if images were available */}
-              {listing.images && listing.images.length > 0 && (
-                <div className="mt-4 flex space-x-2 overflow-x-auto">
-                  {listing.images.map((image: any, index: number) => (
-                    <div key={index} className="w-20 h-20 bg-gray-200 rounded flex-shrink-0 flex items-center justify-center">
-                      {/* Image placeholder */}
-                      <span className="text-2xl">{categoryIcons[listing.category] || '📦'}</span>
+        {/* Image URL debugging (only in development) */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="p-2 bg-gray-100 border-t border-gray-200 text-xs">
+            <details>
+              <summary className="text-blue-600 cursor-pointer">Debug Information</summary>
+              <div className="mt-2 p-2 overflow-auto space-y-2">
+                {directImageUrls.length > 0 ? (
+                  <>
+                    <p>Selected Image URL: <code className="break-all">{directImageUrls[selectedImageIndex].fullsize}</code></p>
+                    <p>Author DID: <code>{listing.authorDid}</code></p>
+                    {directImageUrls[selectedImageIndex].extractedCid && (
+                      <div className="mt-2 bg-green-50 p-2 border border-green-200 rounded">
+                        <p className="font-semibold text-green-700">Using directly extracted CID:</p>
+                        <code className="break-all">{directImageUrls[selectedImageIndex].extractedCid}</code>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="bg-yellow-50 p-2 border border-yellow-200 rounded">
+                    <p className="font-semibold">No images were processed successfully</p>
+                    <p>Original image data from API:</p>
+                    <pre className="bg-gray-50 p-2 mt-1 rounded overflow-x-auto">
+                      {JSON.stringify(listing.images, null, 2)}
+                    </pre>
+                    
+                    <p className="mt-2 font-semibold">Image Processing Diagnostics:</p>
+                    <div className="bg-gray-50 p-2 rounded">
+                      <ul className="list-disc list-inside">
+                        <li>Images array exists? <code>{listing.images ? 'Yes' : 'No'}</code></li>
+                        <li>Images is array? <code>{Array.isArray(listing.images) ? 'Yes' : 'No'}</code></li>
+                        <li>Images count: <code>{listing.images ? listing.images.length : 0}</code></li>
+                        <li>Listing has authorDid? <code>{listing.authorDid ? 'Yes' : 'No'}</code></li>
+                      </ul>
                     </div>
-                  ))}
+                  </div>
+                )}
+                
+                <div className="bg-blue-50 p-2 border border-blue-200 rounded mt-4">
+                  <p className="font-semibold">URL Format Reference</p>
+                  <code className="block mt-1">https://cdn.bsky.app/img/[variant]/plain/[DID]/[IMAGE_BLOB]@[extension]</code>
+                  <p className="mt-2">Where:</p>
+                  <ul className="list-disc list-inside">
+                    <li>variant = "feed_thumbnail" or "feed_fullsize"</li>
+                    <li>DID = "{listing.authorDid}"</li>
+                    <li>IMAGE_BLOB = The blob reference CID</li>
+                    <li>extension = The file format (e.g., "jpeg")</li>
+                  </ul>
                 </div>
-              )}
+              </div>
+            </details>
+          </div>
+        )}
+        
+        {/* Thumbnails */}
+        {directImageUrls.length > 1 && (
+          <div className="flex gap-2 p-4 bg-gray-50">
+            {directImageUrls.map((url, i) => (
+              <div 
+                key={i} 
+                onClick={() => setSelectedImageIndex(i)}
+                className={`w-20 h-20 border-2 rounded-md overflow-hidden cursor-pointer transition-all
+                  ${i === selectedImageIndex ? 'border-blue-500 shadow-md' : 'border-gray-200'}`}
+              >
+                <img 
+                  src={url.thumbnail} 
+                  alt={`${listing.title} thumbnail ${i + 1}`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error('Failed to load thumbnail image:', url.thumbnail);
+                    e.currentTarget.src = '/placeholder-image.svg';
+                    e.currentTarget.alt = 'Thumbnail failed to load';
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {/* Listing details */}
+        <div className="p-6">
+          <div className="text-2xl font-bold text-blue-600 mb-4">
+            {formattedPrice}
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h2 className="text-lg font-semibold mb-2">Description</h2>
+              <p className="text-gray-700 mb-4">{listing.description}</p>
+              
+              <h2 className="text-lg font-semibold mb-2">Details</h2>
+              <div className="space-y-2">
+                <div className="flex">
+                  <span className="font-medium w-24">Category:</span> 
+                  <span className="text-gray-700">{listing.category}</span>
+                </div>
+                <div className="flex">
+                  <span className="font-medium w-24">Condition:</span> 
+                  <span className="text-gray-700">{listing.condition}</span>
+                </div>
+                <div className="flex">
+                  <span className="font-medium w-24">Location:</span> 
+                  <span className="text-gray-700">
+                    {listing.location.locality}, {listing.location.county}, {listing.location.state}
+                    {listing.location.zipPrefix && ` (${listing.location.zipPrefix}xx)`}
+                  </span>
+                </div>
+              </div>
             </div>
             
-            {/* Details */}
-            <div className="lg:w-1/2">
-              <h1 className="text-2xl font-bold mb-2">{listing.title}</h1>
-              <div className="text-2xl text-indigo-600 font-bold mb-4">${listing.price}</div>
-              
-              <div className="mb-6">
-                <span className="inline-block mr-2 px-3 py-1 bg-indigo-100 text-indigo-800 text-sm font-medium rounded-full capitalize">
-                  {listing.category}
-                </span>
-              </div>
-              
-              <div className="mb-6">
-                <h2 className="text-lg font-semibold mb-2">Description</h2>
-                <p className="text-gray-700 whitespace-pre-line">{listing.description}</p>
-              </div>
-              
-              <div className="mb-6">
-                <h2 className="text-lg font-semibold mb-2">Location</h2>
-                <p className="text-gray-700">
-                  {listing.location.locality}, {listing.location.county}, {listing.location.state}
-                  {listing.location.zipPrefix && ` ${listing.location.zipPrefix}xx`}
-                </p>
-              </div>
-              
-              <div className="mb-6 text-sm text-gray-500">
-                <div className="flex items-center mb-1">
-                  <span className="mr-2">📅</span>
-                  <span>Listed on {formatDate(listing.createdAt)}</span>
-                </div>
-                {listing.authorHandle && (
-                  <div className="flex items-center">
-                    <span className="mr-2">👤</span>
-                    <span>Posted by @{listing.authorHandle}</span>
+            <div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h2 className="text-lg font-semibold mb-2">Listing Information</h2>
+                <div className="space-y-2">
+                  <div className="flex">
+                    <span className="font-medium w-24">Listed on:</span> 
+                    <span className="text-gray-700">{formattedDate}</span>
                   </div>
-                )}
-                {listing.uri && (
-                <div className="flex items-start mt-1">
-                <span className="mr-2">🔗</span>
-                <span className="break-all">
-                <a 
-                href={`https://atproto-browser.vercel.app/at/${encodeURIComponent(listing.uri)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-indigo-600 hover:text-indigo-800"
-                >
-                View on AT Protocol Browser
-                </a>
-                </span>
+                  <div className="flex">
+                    <span className="font-medium w-24">Seller:</span> 
+                    <span className="text-gray-700">@{listing.authorDid.split(':')[2].substring(0, 8)}...</span>
+                  </div>
                 </div>
-                )}
+                
+                <div className="mt-6">
+                  <button
+                    className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors"
+                  >
+                    Contact Seller
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        
-        {/* Contact seller button */}
-        <div className="p-6 bg-gray-50 border-t border-gray-200">
-          {listing.isOwnListing ? (
-            <div className="bg-yellow-50 border border-yellow-400 text-yellow-700 p-4 rounded mb-4">
-              This is your own listing. You cannot contact yourself.
-            </div>
-          ) : (
-            <button
-              className="w-full sm:w-auto py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md"
-              onClick={() => {
-                if (!isLoggedIn) {
-                  router.push('/login');
-                } else {
-                  // In a real app, this would open a message composer or similar
-                  alert('In a real app, this would allow you to contact the seller.');
-                }
-              }}
-            >
-              Contact Seller
-            </button>
-          )}
-          
-          {/* Additional buttons for editing/deleting own listings would go here */}
-          {listing.isOwnListing && listing.isRealListing && (
-            <div className="mt-4 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-              <button
-                className="py-2 px-4 border border-indigo-600 text-indigo-600 hover:bg-indigo-50 font-medium rounded-md"
-                onClick={() => {
-                  // In a real app, this would open the edit form
-                  alert('Edit functionality would be implemented in a real app.');
-                }}
-              >
-                Edit Listing
-              </button>
-              <button
-                className="py-2 px-4 border border-red-600 text-red-600 hover:bg-red-50 font-medium rounded-md"
-                onClick={() => {
-                  // In a real app, this would show a confirmation dialog
-                  alert('Delete functionality would be implemented in a real app.');
-                }}
-              >
-                Delete Listing
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </div>

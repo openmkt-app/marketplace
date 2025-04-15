@@ -74,7 +74,7 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-semibold mb-3 text-gray-900">Create Listings</h3>
               <p className="text-gray-600">
-                List your items with detailed descriptions, photos, and location information.
+                List your items with detailed descriptions, up to 4 high-quality photos, and precise location information.
               </p>
             </div>
             
@@ -86,7 +86,7 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-semibold mb-3 text-gray-900">Find Local Items</h3>
               <p className="text-gray-600">
-                Search for items in your county or city with location-based browsing.
+                Search for items in your county or city with location-based browsing and view items with our interactive image gallery.
               </p>
             </div>
             
@@ -98,8 +98,64 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-semibold mb-3 text-gray-900">Connect with Sellers</h3>
               <p className="text-gray-600">
-                Contact sellers directly through the AT Protocol's secure messaging.
+                Contact sellers directly through the AT Protocol's secure messaging after viewing their listings in detail.
               </p>
+            </div>
+          </div>
+          
+          {/* New Features Section */}
+          <div className="mt-16">
+            <h2 className="text-2xl font-bold text-center mb-8 text-gray-900">New Features</h2>
+            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-8 rounded-xl shadow-md">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold mb-1 text-gray-900">Enhanced Image Gallery</h3>
+                    <p className="text-gray-600">Browse through multiple listing images with our intuitive thumbnail gallery interface.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold mb-1 text-gray-900">High-Quality Images</h3>
+                    <p className="text-gray-600">Upload up to 4 high-resolution images per listing to showcase your items in detail.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold mb-1 text-gray-900">Detailed Listing View</h3>
+                    <p className="text-gray-600">See all the important details about each item with our comprehensive listing page.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold mb-1 text-gray-900">Responsive Design</h3>
+                    <p className="text-gray-600">Enjoy a seamless marketplace experience on any device, from desktop to mobile.</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

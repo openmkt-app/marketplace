@@ -1,6 +1,7 @@
 // src/lib/marketplace-client.ts
 import { BskyAgent } from '@atproto/api';
 import type { AtpSessionEvent, AtpSessionData } from '@atproto/api';
+import { generateImageUrls } from './image-utils';
 import logger from './logger';
 
 // Define types for our marketplace listings
@@ -28,6 +29,13 @@ export type MarketplaceListing = {
   category: string;
   condition: string;
   createdAt: string;
+  // Added for UI display
+  formattedImages?: Array<{
+    thumbnail: string;
+    fullsize: string;
+    mimeType: string;
+  }>;
+  sellerDid?: string;
 };
 
 export type CreateListingParams = Omit<MarketplaceListing, 'createdAt'>;
@@ -276,7 +284,26 @@ export class MarketplaceClient {
         .map(item => (item.post.record as any) as MarketplaceListing);
       
       logger.info(`Found ${listings.length} listings matching location criteria`);
-      return listings;
+      
+      // Process listings to add image URLs
+      return listings.map((listing, index) => {
+        // Extract the seller DID from the post (from the results.data.feed entries)
+        const feedItem = results.data.feed.find(item => {
+          const record = item.post.record as any;
+          return validTypes.includes(record.$type);
+        });
+        
+        const sellerDid = feedItem?.post.author.did || '';
+        
+        // Generate formatted image URLs
+        const formattedImages = generateImageUrls(sellerDid, listing.images);
+        
+        return {
+          ...listing,
+          formattedImages,
+          sellerDid
+        };
+      });
     } catch (error) {
       logger.error('Failed to retrieve listings', error as Error);
       throw error;
@@ -332,7 +359,17 @@ export class MarketplaceClient {
       }
       
       logger.info(`Total marketplace listings found: ${listings.length}`);
-      return listings;
+      
+      // Add formatted image URLs for each listing
+      const processedListings = listings.map(listing => {
+        const formattedImages = generateImageUrls(listing.authorDid, listing.images);
+        return {
+          ...listing,
+          formattedImages
+        };
+      });
+      
+      return processedListings;
     } catch (error) {
       logger.error('Failed to retrieve all listings', error as Error);
       throw error;
@@ -398,7 +435,16 @@ export class MarketplaceClient {
         }
       }
       
-      return allListings;
+      // Add formatted image URLs for each listing
+      const processedListings = allListings.map(listing => {
+        const formattedImages = generateImageUrls(listing.authorDid, listing.images);
+        return {
+          ...listing,
+          formattedImages
+        };
+      });
+      
+      return processedListings;
     } catch (error) {
       logger.error('Failed to get user listings', error as Error);
       return [];
@@ -463,7 +509,17 @@ export class MarketplaceClient {
         });
       
       logger.info(`Found ${listings.length} marketplace listings in global feed`);
-      return listings;
+      
+      // Add formatted image URLs for each listing
+      const processedListings = listings.map(listing => {
+        const formattedImages = generateImageUrls(listing.authorDid, listing.images);
+        return {
+          ...listing,
+          formattedImages
+        };
+      });
+      
+      return processedListings;
     } catch (error) {
       logger.error('Failed to search for marketplace listings', error as Error);
       return [];
@@ -504,14 +560,39 @@ export class MarketplaceClient {
         return null;
       }
       
-      // Return the listing with additional metadata
-      return {
+      // Create the listing with additional metadata
+      const listing = {
         ...record,
         authorDid: post.author.did,
         authorHandle: post.author.handle,
         uri: post.uri,
         cid: post.cid,
       } as MarketplaceListing & { authorDid: string; authorHandle: string; uri: string; cid: string };
+      
+      // Add formatted image URLs if the listing has images
+      console.log('Processing listing images:', {
+        hasImages: !!listing.images,
+        imageCount: listing.images?.length || 0,
+        authorDid: listing.authorDid
+      });
+      
+      if (listing.images && listing.images.length > 0) {
+        try {
+          // Generate the formatted image URLs
+          const formattedImages = generateImageUrls(listing.authorDid, listing.images);
+          listing.formattedImages = formattedImages;
+          
+          // Log the processed images and URLs
+          console.log(`Generated ${formattedImages.length} image URLs:`, {
+            first: formattedImages[0],
+            count: formattedImages.length
+          });
+        } catch (error) {
+          console.error('Error generating image URLs:', error);
+        }
+      }
+      
+      return listing;
     } catch (error) {
       logger.error(`Failed to fetch listing by URI: ${uri}`, error as Error);
       return null;

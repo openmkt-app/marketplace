@@ -1,0 +1,33 @@
+/* src/components/marketplace/ListingGrid/styles.css */
+.listing-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .listing-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .listing-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .listing-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.listing-grid-empty {
+  text-align: center;
+  padding: 3rem 0;
+  color: #6b7280;
+  background-color: #f9fafb;
+  border-radius: 0.5rem;
+  margin-bottom: 2rem;
+}

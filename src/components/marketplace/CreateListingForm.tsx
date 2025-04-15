@@ -108,7 +108,12 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
         },
         category: formData.get('category') as string,
         condition: formData.get('condition') as string,
-        images: selectedImages.length > 0 ? selectedImages : undefined,
+        images: selectedImages.length > 0 
+          ? selectedImages.map(file => ({
+              ref: file.name,
+              mimeType: file.type,
+            }))
+          : undefined,
       });
       
       console.log('Listing created:', result);
