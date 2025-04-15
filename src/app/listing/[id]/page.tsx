@@ -11,6 +11,7 @@ export default function ListingDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [sellerProfile, setSellerProfile] = useState<any>(null);
   const params = useParams();
   
   useEffect(() => {
@@ -147,9 +148,9 @@ export default function ListingDetailPage() {
         console.log('Full listing data before validation:', JSON.stringify(listingData, null, 2));
         console.log(`Found ${listingData.images ? listingData.images.length : 0} images in the listing`);
           
-          // Check if images exist and have the expected structure
-          if (listingData.images && Array.isArray(listingData.images)) {
-            console.log(`Found ${listingData.images.length} images in the listing`);
+        // Check if images exist and have the expected structure
+        if (listingData.images && Array.isArray(listingData.images)) {
+          console.log(`Found ${listingData.images.length} images in the listing`);
           
           // Validate each image object
           listingData.images = listingData.images.filter(image => {
@@ -193,6 +194,54 @@ export default function ListingDetailPage() {
         }
         
         setListing(listingData);
+        
+        // After listing is loaded, fetch the seller's profile
+        try {
+          console.log('Fetching seller profile for:', listingData.authorDid);
+          
+          // Direct approach to get the profile record
+          const profileRecord = await agent.api.com.atproto.repo.getRecord({
+            repo: did,
+            collection: 'app.bsky.actor.profile',
+            rkey: 'self'
+          });
+          
+          console.log('Got profile record:', profileRecord.data);
+          
+          if (profileRecord.data && profileRecord.data.value) {
+            // Extract display name from the value
+            const profileData = {
+              did: did,
+              handle: did.split(':')[2],
+              displayName: profileRecord.data.value.displayName,
+              description: profileRecord.data.value.description
+            };
+            
+            // If there's an avatar, create the avatar URL
+            if (profileRecord.data.value.avatar && 
+                profileRecord.data.value.avatar.ref && 
+                profileRecord.data.value.avatar.ref.$link) {
+              const avatarCid = profileRecord.data.value.avatar.ref.$link;
+              const mimeType = profileRecord.data.value.avatar.mimeType || 'image/jpeg';
+              const extension = mimeType.split('/')[1] || 'jpeg';
+              
+              profileData.avatarUrl = `https://cdn.bsky.app/img/avatar/plain/${did}/${avatarCid}@${extension}`;
+              console.log('Created avatar URL:', profileData.avatarUrl);
+            }
+            
+            setSellerProfile(profileData);
+          }
+        } catch (profileError) {
+          console.error('Failed to fetch seller profile:', profileError);
+          
+          // Simple fallback to just show the handle
+          const basicProfile = {
+            did: did,
+            handle: did.split(':')[2],
+            displayName: null
+          };
+          setSellerProfile(basicProfile);
+        }
       } catch (err) {
         console.error('Failed to fetch listing:', err);
         setError(`Failed to load listing: ${err instanceof Error ? err.message : String(err)}`);
@@ -456,15 +505,41 @@ export default function ListingDetailPage() {
             
             <div>
               <div className="bg-gray-50 p-4 rounded-lg">
-                <h2 className="text-lg font-semibold mb-2">Listing Information</h2>
+                <h2 className="text-lg font-semibold mb-4 border-b pb-2 border-gray-200">Listing Information</h2>
+                
                 <div className="space-y-2">
                   <div className="flex">
                     <span className="font-medium w-24">Listed on:</span> 
                     <span className="text-gray-700">{formattedDate}</span>
                   </div>
-                  <div className="flex">
-                    <span className="font-medium w-24">Seller:</span> 
-                    <span className="text-gray-700">@{listing.authorDid.split(':')[2].substring(0, 8)}...</span>
+                  
+                  <div className="flex items-center rounded">
+                    <span className="font-medium w-24 shrink-0">Seller:</span> 
+                    <div className="flex items-center">
+                      {sellerProfile?.avatarUrl && (
+                        <div className="w-8 h-8 rounded-full overflow-hidden mr-2 bg-gray-200 flex-shrink-0">
+                          <img 
+                            src={sellerProfile.avatarUrl} 
+                            alt="Seller avatar"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
+                      <span className="text-gray-700 font-bold">
+                        {sellerProfile?.displayName ? (
+                          <>
+                            {sellerProfile.displayName} 
+                          </>
+                        ) : (
+                          <span className="text-gray-600">
+                            <span className="bg-yellow-100 px-1 rounded">User ID:</span> @{sellerProfile?.handle || listing.authorDid.split(':')[2].substring(0, 8)}...
+                          </span>
+                        )}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 
