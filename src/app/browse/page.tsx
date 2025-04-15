@@ -74,8 +74,17 @@ export default function BrowsePage() {
       setError(null);
       
       try {
+        // Check if user is logged in
+        if (!auth.isLoggedIn || !auth.client) {
+          console.log('User not logged in, showing demo listings');
+          setRealListingsCount(0);
+          setShowDemoListings(true);
+          setIsLoading(false);
+          return;
+        }
+        
         // Use the auth client if available, otherwise create a new one
-        const client = auth.client || new MarketplaceClient();
+        const client = auth.client;
         
         // First, try to get all listings regardless of location
         console.log('Fetching all marketplace listings...');
@@ -101,7 +110,7 @@ export default function BrowsePage() {
     };
     
     fetchListings();
-  }, [auth.client]);
+  }, [auth.client, auth.isLoggedIn]);
   
   // Handle location form changes
   const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -122,10 +131,45 @@ export default function BrowsePage() {
       // Validate that at least state is provided
       if (!location.state) {
         setError('Please provide at least a state for location search');
+        setIsLoading(false);
         return;
       }
       
-      const client = auth.client || new MarketplaceClient();
+      // Check if user is logged in
+      if (!auth.isLoggedIn || !auth.client) {
+        console.log('User not logged in, filtering demo listings by location');
+        
+        // Filter demo listings by location
+        const filteredDemos = demoListings.filter(listing => {
+          const stateMatch = listing.location.state.toLowerCase() === location.state.toLowerCase();
+          
+          if (location.county) {
+            const countyMatch = listing.location.county.toLowerCase() === location.county.toLowerCase();
+            
+            if (location.locality) {
+              const localityMatch = listing.location.locality.toLowerCase() === location.locality.toLowerCase();
+              return stateMatch && countyMatch && localityMatch;
+            }
+            
+            return stateMatch && countyMatch;
+          }
+          
+          return stateMatch;
+        });
+        
+        if (filteredDemos.length > 0) {
+          setListings(filteredDemos);
+          setShowDemoListings(true);
+        } else {
+          setListings([]);
+          setShowDemoListings(false);
+        }
+        
+        setIsLoading(false);
+        return;
+      }
+      
+      const client = auth.client;
       
       // If county is provided, use it for more targeted search
       if (location.county) {
@@ -305,7 +349,14 @@ export default function BrowsePage() {
         <div>
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6" role="alert">
             <p className="font-bold">Demo Mode</p>
-            <p>No real listings found. Showing demo content for illustration purposes.</p>
+            <p>{auth.isLoggedIn ? 'No real listings found.' : 'You need to log in to see real listings.'} Showing demo content for illustration purposes.</p>
+            {!auth.isLoggedIn && (
+              <button 
+                onClick={() => window.location.href = '/login'}
+                className="mt-2 py-1 px-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded">
+                Log In
+              </button>
+            )}
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

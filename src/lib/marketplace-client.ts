@@ -340,22 +340,24 @@ export class MarketplaceClient {
         } catch (error) {
           logger.error('Failed to fetch user listings', error as Error);
         }
-      }
-      
-      // Try to use the search API to find marketplace listings from other users
-      try {
-        const searchResults = await this.searchMarketplaceListings();
-        if (searchResults.length > 0) {
-          // Filter out duplicates (in case user's own listings appear in search results)
-          const newListings = searchResults.filter(searchListing => {
-            return !listings.some(existing => existing.uri === searchListing.uri);
-          });
-          
-          listings.push(...newListings);
-          logger.info(`Found ${newListings.length} additional listings from search`);
+        
+        // Only try to search for marketplace listings if the user is logged in
+        try {
+          const searchResults = await this.searchMarketplaceListings();
+          if (searchResults.length > 0) {
+            // Filter out duplicates (in case user's own listings appear in search results)
+            const newListings = searchResults.filter(searchListing => {
+              return !listings.some(existing => existing.uri === searchListing.uri);
+            });
+            
+            listings.push(...newListings);
+            logger.info(`Found ${newListings.length} additional listings from search`);
+          }
+        } catch (error) {
+          logger.error('Failed to search for marketplace listings', error as Error);
         }
-      } catch (error) {
-        logger.error('Failed to search for marketplace listings', error as Error);
+      } else {
+        logger.warn('User is not logged in, skipping marketplace listings search');
       }
       
       logger.info(`Total marketplace listings found: ${listings.length}`);
@@ -474,6 +476,12 @@ export class MarketplaceClient {
     cid: string;
   })[]> {
     try {
+      // Check if user is logged in before attempting to fetch timeline
+      if (!this.isLoggedIn || !this.agent.session) {
+        logger.warn('User is not logged in, cannot search marketplace listings');
+        return [];
+      }
+
       // Option 1: Use the firehose approach to find recent marketplace listings
       // This isn't a real search but will find recent activity across the network
       logger.info('Searching for marketplace listings via global feed');
