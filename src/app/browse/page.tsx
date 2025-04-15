@@ -1,12 +1,62 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import MarketplaceClient from '@/lib/marketplace-client';
 import type { MarketplaceListing } from '@/lib/marketplace-client';
 import { useAuth } from '@/contexts/AuthContext';
 
+// Demo listings data for showcase purposes - define outside component to avoid recreation
+const demoListingsData: MarketplaceListing[] = [
+  {
+    title: 'Vintage Mid-Century Chair',
+    description: 'Beautiful wooden chair from the 1960s in excellent condition.',
+    price: '$75',
+    location: {
+      state: 'California',
+      county: 'Los Angeles',
+      locality: 'Pasadena',
+      zipPrefix: '910'
+    },
+    category: 'furniture',
+    condition: 'good',
+    createdAt: new Date().toISOString()
+  },
+  {
+    title: 'Mountain Bike',
+    description: 'Trek mountain bike, barely used. Great for trails.',
+    price: '$350',
+    location: {
+      state: 'Oregon',
+      county: 'Multnomah',
+      locality: 'Portland',
+      zipPrefix: '972'
+    },
+    category: 'sports',
+    condition: 'likeNew',
+    createdAt: new Date().toISOString()
+  },
+  {
+    title: 'iPhone 13',
+    description: 'Used iPhone 13, 128GB. Battery health at 92%.',
+    price: '$450',
+    location: {
+      state: 'New York',
+      county: 'Kings',
+      locality: 'Brooklyn',
+      zipPrefix: '112'
+    },
+    category: 'electronics',
+    condition: 'good',
+    createdAt: new Date().toISOString()
+  }
+];
+
 export default function BrowsePage() {
+  // Memoize demo data to have a stable reference
+  const memoDemoListings = useMemo(() => demoListingsData, []);
+  
+  // Start with empty listings and set auth state first
   const [showDemoListings, setShowDemoListings] = useState(false);
   const [realListingsCount, setRealListingsCount] = useState(0);
   const [listings, setListings] = useState<MarketplaceListing[]>([]);
@@ -17,73 +67,35 @@ export default function BrowsePage() {
     county: '',
     locality: ''
   });
+  // Track if we've made the initial determination of what to show
+  const [initialized, setInitialized] = useState(false);
   
   // Get auth context to use existing client if available
   const auth = useAuth();
   
-  // Demo listings for showcase purposes
-  const demoListings: MarketplaceListing[] = [
-    {
-      title: 'Vintage Mid-Century Chair',
-      description: 'Beautiful wooden chair from the 1960s in excellent condition.',
-      price: '$75',
-      location: {
-        state: 'California',
-        county: 'Los Angeles',
-        locality: 'Pasadena',
-        zipPrefix: '910'
-      },
-      category: 'furniture',
-      condition: 'good',
-      createdAt: new Date().toISOString()
-    },
-    {
-      title: 'Mountain Bike',
-      description: 'Trek mountain bike, barely used. Great for trails.',
-      price: '$350',
-      location: {
-        state: 'Oregon',
-        county: 'Multnomah',
-        locality: 'Portland',
-        zipPrefix: '972'
-      },
-      category: 'sports',
-      condition: 'likeNew',
-      createdAt: new Date().toISOString()
-    },
-    {
-      title: 'iPhone 13',
-      description: 'Used iPhone 13, 128GB. Battery health at 92%.',
-      price: '$450',
-      location: {
-        state: 'New York',
-        county: 'Kings',
-        locality: 'Brooklyn',
-        zipPrefix: '112'
-      },
-      category: 'electronics',
-      condition: 'good',
-      createdAt: new Date().toISOString()
-    }
-  ];
-  
-  // Fetch listings on component mount
+  // Fetch listings from API
   useEffect(() => {
-    const fetchListings = async () => {
+    // Don't fetch until auth state is settled
+    if (initialized || auth.isLoading) return;
+    
+    const fetchListings = async () => {      
+      // Keep loading state active during fetch
       setIsLoading(true);
       setError(null);
       
+      // Check for auth status first
+      if (!auth.isLoggedIn || !auth.client) {
+        console.log('User not logged in, showing demo listings');
+        setRealListingsCount(0);
+        setShowDemoListings(true);
+        setListings(memoDemoListings); // Set demo listings if not logged in
+        setIsLoading(false);
+        setInitialized(true);
+        return;
+      }
+      
       try {
-        // Check if user is logged in
-        if (!auth.isLoggedIn || !auth.client) {
-          console.log('User not logged in, showing demo listings');
-          setRealListingsCount(0);
-          setShowDemoListings(true);
-          setIsLoading(false);
-          return;
-        }
-        
-        // Use the auth client if available, otherwise create a new one
+        // Use the auth client
         const client = auth.client;
         
         // First, try to get all listings regardless of location
@@ -98,19 +110,22 @@ export default function BrowsePage() {
         } else {
           console.log('No real listings found, showing demos');
           setRealListingsCount(0);
+          setListings(memoDemoListings); // Set demo listings when no real listings found
           setShowDemoListings(true);
         }
       } catch (err) {
         console.error('Error fetching listings:', err);
         setError(`Failed to fetch listings: ${err instanceof Error ? err.message : String(err)}`);
+        setListings(memoDemoListings); // Set demo listings on error
         setShowDemoListings(true);
       } finally {
         setIsLoading(false);
+        setInitialized(true);
       }
     };
     
     fetchListings();
-  }, [auth.client, auth.isLoggedIn]);
+  }, [auth.client, auth.isLoggedIn, auth.isLoading, initialized]);
   
   // Handle location form changes
   const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -140,7 +155,7 @@ export default function BrowsePage() {
         console.log('User not logged in, filtering demo listings by location');
         
         // Filter demo listings by location
-        const filteredDemos = demoListings.filter(listing => {
+        const filteredDemos = memoDemoListings.filter(listing => {
           const stateMatch = listing.location.state.toLowerCase() === location.state.toLowerCase();
           
           if (location.county) {
@@ -291,7 +306,7 @@ export default function BrowsePage() {
         </form>
       </div>
       
-      {isLoading ? (
+      {!initialized || isLoading ? (
         <div className="text-center py-10">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
           <p className="mt-2">Loading listings...</p>
@@ -360,7 +375,7 @@ export default function BrowsePage() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {demoListings.map((listing, index) => (
+            {listings.map((listing, index) => (
               <div key={index} className="bg-white p-4 rounded-lg shadow-md">
                 <h2 className="text-xl font-semibold mb-2">{listing.title}</h2>
                 <p className="text-gray-600 mb-2">{listing.description}</p>
