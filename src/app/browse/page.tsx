@@ -607,7 +607,7 @@ export default function BrowsePage() {
           )}
           
           {filters.viewMode === 'map' && (
-            <div className="bg-background rounded-lg p-4 min-h-[400px] flex items-center justify-center">
+            <div className="bg-neutral-light rounded-lg p-4 min-h-[400px] flex items-center justify-center">
               <p className="text-text-secondary">
                 Map view is coming soon! Listings will be displayed on an interactive map.
               </p>

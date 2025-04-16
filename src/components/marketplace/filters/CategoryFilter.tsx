@@ -50,7 +50,7 @@ export default function CategoryFilter({
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="font-medium text-gray-700 mb-2">Categories</h3>
+        <h3 className="font-medium text-text-primary mb-2">Categories</h3>
         <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
           {CATEGORIES.map((cat) => (
             <button
@@ -58,8 +58,8 @@ export default function CategoryFilter({
               onClick={() => handleCategoryChange(cat.id)}
               className={`py-2 px-3 text-left text-sm rounded ${
                 category === cat.id
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-primary-color text-white'
+                  : 'bg-neutral-light text-text-primary hover:bg-neutral-medium'
               }`}
             >
               {cat.name}
@@ -71,7 +71,7 @@ export default function CategoryFilter({
       {/* Show subcategories if a category is selected */}
       {selectedCategoryObj && (
         <div>
-          <h3 className="font-medium text-gray-700 mb-2">Subcategories</h3>
+          <h3 className="font-medium text-text-primary mb-2">Subcategories</h3>
           <div className="grid grid-cols-2 gap-2">
             {selectedCategoryObj.subcategories.map((sub) => (
               <button
@@ -79,8 +79,8 @@ export default function CategoryFilter({
                 onClick={() => handleSubcategoryChange(sub.id)}
                 className={`py-2 px-3 text-left text-sm rounded ${
                   subcategory === sub.id
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-primary-color text-white'
+                    : 'bg-neutral-light text-text-primary hover:bg-neutral-medium'
                 }`}
               >
                 {sub.name}

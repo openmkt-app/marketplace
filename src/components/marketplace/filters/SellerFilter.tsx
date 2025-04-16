@@ -33,7 +33,7 @@ export default function SellerFilter({
 
   return (
     <div className="space-y-4">
-      <h3 className="font-medium text-gray-700">Seller Filters</h3>
+      <h3 className="font-medium text-text-primary">Seller Filters</h3>
       
       <div className="space-y-2">
         <label className="flex items-center">
@@ -41,11 +41,11 @@ export default function SellerFilter({
             type="checkbox"
             checked={isVerified}
             onChange={handleVerifiedChange}
-            className="h-4 w-4 text-blue-600 rounded"
+            className="h-4 w-4 text-primary-color rounded"
           />
           <div className="ml-2">
-            <span className="text-gray-700">Verified Sellers</span>
-            <p className="text-sm text-gray-500">Only show listings from sellers with verified accounts</p>
+            <span className="text-text-primary">Verified Sellers</span>
+            <p className="text-sm text-text-secondary">Only show listings from sellers with verified accounts</p>
           </div>
         </label>
         
@@ -54,19 +54,19 @@ export default function SellerFilter({
             type="checkbox"
             checked={inNetwork}
             onChange={handleNetworkChange}
-            className="h-4 w-4 text-blue-600 rounded"
+            className="h-4 w-4 text-primary-color rounded"
           />
           <div className="ml-2">
-            <span className="text-gray-700">In My Network</span>
-            <p className="text-sm text-gray-500">Only show listings from sellers in your social graph</p>
+            <span className="text-text-primary">In My Network</span>
+            <p className="text-sm text-text-secondary">Only show listings from sellers in your social graph</p>
           </div>
         </label>
       </div>
       
-      <div className="py-2 px-3 bg-blue-50 rounded-md text-sm text-blue-800 flex items-start">
+      <div className="py-2 px-3 bg-primary-light/10 rounded-md text-sm text-primary-color flex items-start">
         <svg 
           xmlns="http://www.w3.org/2000/svg" 
-          className="h-5 w-5 mr-2 text-blue-500 flex-shrink-0 mt-0.5" 
+          className="h-5 w-5 mr-2 text-primary-color flex-shrink-0 mt-0.5" 
           viewBox="0 0 20 20" 
           fill="currentColor"
         >

@@ -244,11 +244,11 @@ export default function ListingDetailPage() {
       <div className="max-w-4xl mx-auto p-4">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold">Loading...</h1>
-          <Link href="/browse" className="text-blue-600 hover:underline">
+          <Link href="/browse" className="text-primary-color hover:text-primary-light hover:underline">
             Back to Listings
           </Link>
         </div>
-        <div className="animate-pulse bg-gray-200 h-96 rounded-lg"></div>
+        <div className="animate-pulse bg-neutral-light h-96 rounded-lg"></div>
       </div>
     );
   }
@@ -257,8 +257,8 @@ export default function ListingDetailPage() {
     return (
       <div className="max-w-4xl mx-auto p-4">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold">Error</h1>
-          <Link href="/browse" className="text-blue-600 hover:underline">
+          <h1 className="text-2xl font-bold text-text-primary">Error</h1>
+          <Link href="/browse" className="text-primary-color hover:text-primary-light hover:underline">
             Back to Listings
           </Link>
         </div>
@@ -273,8 +273,8 @@ export default function ListingDetailPage() {
     return (
       <div className="max-w-4xl mx-auto p-4">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold">No Listing Found</h1>
-          <Link href="/browse" className="text-blue-600 hover:underline">
+          <h1 className="text-2xl font-bold text-text-primary">No Listing Found</h1>
+          <Link href="/browse" className="text-primary-color hover:text-primary-light hover:underline">
             Back to Listings
           </Link>
         </div>
@@ -299,14 +299,14 @@ export default function ListingDetailPage() {
   return (
     <div className="max-w-4xl mx-auto p-4">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold">{listing.title}</h1>
-        <Link href="/browse" className="text-blue-600 hover:underline">
+        <h1 className="text-2xl font-bold text-text-primary">{listing.title}</h1>
+        <Link href="/browse" className="text-primary-color hover:text-primary-light hover:underline">
           Back to Listings
         </Link>
       </div>
       
       <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
-        <div className="w-full h-96 bg-gray-100 flex items-center justify-center">
+        <div className="w-full h-96 bg-neutral-light flex items-center justify-center">
           {directImageUrls.length > 0 ? (
             <img 
               src={directImageUrls[selectedImageIndex].fullsize} 
@@ -324,7 +324,7 @@ export default function ListingDetailPage() {
                 alt="No images available"
                 className="max-w-xs mb-2"
               />
-              <div className="text-gray-500 text-center">
+              <div className="text-text-secondary text-center">
                 <p>No images available for this listing</p>
               </div>
             </div>
@@ -332,9 +332,9 @@ export default function ListingDetailPage() {
         </div>
         
         {process.env.NODE_ENV === 'development' && (
-          <div className="p-2 bg-gray-100 border-t border-gray-200 text-xs">
+          <div className="p-2 bg-neutral-light/30 border-t border-neutral-light text-xs">
             <details>
-              <summary className="text-blue-600 cursor-pointer">Debug Information</summary>
+              <summary className="text-primary-color cursor-pointer">Debug Information</summary>
               <div className="mt-2 p-2 overflow-auto space-y-2">
                 {directImageUrls.length > 0 ? (
                   <>
@@ -351,12 +351,12 @@ export default function ListingDetailPage() {
                   <div className="bg-yellow-50 p-2 border border-yellow-200 rounded">
                     <p className="font-semibold">No images were processed successfully</p>
                     <p>Original image data from API:</p>
-                    <pre className="bg-gray-50 p-2 mt-1 rounded overflow-x-auto">
+                    <pre className="bg-white p-2 mt-1 rounded overflow-x-auto border border-neutral-light">
                       {JSON.stringify(listing.images, null, 2)}
                     </pre>
                     
                     <p className="mt-2 font-semibold">Image Processing Diagnostics:</p>
-                    <div className="bg-gray-50 p-2 rounded">
+                    <div className="bg-white p-2 rounded border border-neutral-light">
                       <ul className="list-disc list-inside">
                         <li>Images array exists? <code>{listing.images ? 'Yes' : 'No'}</code></li>
                         <li>Images is array? <code>{Array.isArray(listing.images) ? 'Yes' : 'No'}</code></li>
@@ -367,7 +367,7 @@ export default function ListingDetailPage() {
                   </div>
                 )}
                 
-                <div className="bg-blue-50 p-2 border border-blue-200 rounded mt-4">
+                <div className="bg-primary-light/10 p-2 border border-primary-light/20 rounded mt-4">
                   <p className="font-semibold">URL Format Reference</p>
                   <code className="block mt-1">https://cdn.bsky.app/img/[variant]/plain/[DID]/[IMAGE_BLOB]@[extension]</code>
                   <p className="mt-2">Where:</p>
@@ -384,13 +384,13 @@ export default function ListingDetailPage() {
         )}
         
         {directImageUrls.length > 1 && (
-          <div className="flex gap-2 p-4 bg-gray-50">
+          <div className="flex gap-2 p-4 bg-neutral-light/30">
             {directImageUrls.map((url: any, i: number) => (
               <div 
                 key={i} 
                 onClick={() => setSelectedImageIndex(i)}
                 className={`w-20 h-20 border-2 rounded-md overflow-hidden cursor-pointer transition-all
-                  ${i === selectedImageIndex ? 'border-blue-500 shadow-md' : 'border-gray-200'}`}
+                  ${i === selectedImageIndex ? 'border-primary-color shadow-md' : 'border-neutral-light'}`}
               >
                 <img 
                   src={url.thumbnail} 
@@ -407,28 +407,28 @@ export default function ListingDetailPage() {
         )}
         
         <div className="p-6">
-          <div className="text-2xl font-bold text-blue-600 mb-4">
+          <div className="text-2xl font-bold text-primary-color mb-4">
             {formattedPrice}
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h2 className="text-lg font-semibold mb-2">Description</h2>
-              <p className="text-gray-700 mb-4">{listing.description}</p>
+              <h2 className="text-lg font-semibold mb-2 text-text-primary">Description</h2>
+              <p className="text-text-secondary mb-4">{listing.description}</p>
               
-              <h2 className="text-lg font-semibold mb-2">Details</h2>
+              <h2 className="text-lg font-semibold mb-2 text-text-primary">Details</h2>
               <div className="space-y-2">
                 <div className="flex">
                   <span className="font-medium w-24">Category:</span> 
-                  <span className="text-gray-700">{listing.category}</span>
+                  <span className="badge">{listing.category}</span>
                 </div>
                 <div className="flex">
                   <span className="font-medium w-24">Condition:</span> 
-                  <span className="text-gray-700">{listing.condition}</span>
+                  <span className="badge">{listing.condition}</span>
                 </div>
                 <div className="flex">
                   <span className="font-medium w-24">Location:</span> 
-                  <span className="text-gray-700">
+                  <span className="text-text-secondary">
                     {listing.location.locality}, {listing.location.county}, {listing.location.state}
                     {listing.location.zipPrefix && ` (${listing.location.zipPrefix}xx)`}
                   </span>
@@ -437,20 +437,20 @@ export default function ListingDetailPage() {
             </div>
             
             <div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h2 className="text-lg font-semibold mb-4 border-b pb-2 border-gray-200">Listing Information</h2>
+              <div className="bg-neutral-light/30 p-4 rounded-lg">
+                <h2 className="text-lg font-semibold mb-4 border-b pb-2 border-neutral-light text-text-primary">Listing Information</h2>
                 
                 <div className="space-y-2">
                   <div className="flex">
                     <span className="font-medium w-24">Listed on:</span> 
-                    <span className="text-gray-700">{formattedDate}</span>
+                    <span className="text-text-secondary">{formattedDate}</span>
                   </div>
                   
                   <div className="flex items-center rounded">
                     <span className="font-medium w-24 shrink-0">Seller:</span> 
                     <div className="flex items-center">
                       {sellerProfile?.avatarUrl && (
-                        <div className="w-8 h-8 rounded-full overflow-hidden mr-2 bg-gray-200 flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full overflow-hidden mr-2 bg-white flex-shrink-0 border border-neutral-light">
                           <img 
                             src={sellerProfile.avatarUrl} 
                             alt="Seller avatar"
@@ -461,13 +461,13 @@ export default function ListingDetailPage() {
                           />
                         </div>
                       )}
-                      <span className="text-gray-700 font-bold">
+                      <span className="text-text-primary font-bold">
                         {sellerProfile?.displayName ? (
                           <>
                             {sellerProfile.displayName} 
                           </>
                         ) : (
-                          <span className="text-gray-600">
+                          <span className="text-text-secondary">
                             <span className="bg-yellow-100 px-1 rounded">User ID:</span> @{sellerProfile?.handle || listing.authorDid.split(':')[2].substring(0, 8)}...
                           </span>
                         )}
@@ -478,7 +478,7 @@ export default function ListingDetailPage() {
                 
                 <div className="mt-6">
                   <button
-                    className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors"
+                    className="btn-primary w-full"
                   >
                     Contact Seller
                   </button>

@@ -61,7 +61,7 @@ export default function PriceFilter({ initialValue, onChange }: PriceFilterProps
 
   return (
     <div className="space-y-4">
-      <h3 className="font-medium text-gray-700">Price Range</h3>
+      <h3 className="font-medium text-text-primary">Price Range</h3>
       
       {/* Price bracket selector */}
       <div className="grid grid-cols-3 gap-2">
@@ -71,8 +71,8 @@ export default function PriceFilter({ initialValue, onChange }: PriceFilterProps
             onClick={() => handleBracketChange(option.value)}
             className={`py-2 px-3 text-sm rounded-md ${
               bracket === option.value
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-primary-color text-white'
+                : 'bg-neutral-light text-text-primary hover:bg-neutral-medium'
             }`}
           >
             {option.label}
@@ -94,7 +94,7 @@ export default function PriceFilter({ initialValue, onChange }: PriceFilterProps
           className="flex-1 p-2 border rounded-md"
           min="0"
         />
-        <span className="text-gray-500">to</span>
+        <span className="text-text-secondary">to</span>
         <input
           type="number"
           value={max}
@@ -116,9 +116,9 @@ export default function PriceFilter({ initialValue, onChange }: PriceFilterProps
           id="deals"
           checked={deals}
           onChange={(e) => setDeals(e.target.checked)}
-          className="h-4 w-4 text-blue-600 rounded"
+          className="h-4 w-4 text-primary-color rounded"
         />
-        <label htmlFor="deals" className="ml-2 text-gray-700">
+        <label htmlFor="deals" className="ml-2 text-text-primary">
           Show deals only
         </label>
       </div>
