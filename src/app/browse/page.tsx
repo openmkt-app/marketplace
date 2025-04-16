@@ -1,85 +1,15 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import MarketplaceClient from '@/lib/marketplace-client';
 import type { MarketplaceListing } from '@/lib/marketplace-client';
 import { useAuth } from '@/contexts/AuthContext';
 import ListingCard from '@/components/marketplace/ListingCard';
-
-// Demo listings data for showcase purposes - define outside component to avoid recreation
-const demoListingsData: MarketplaceListing[] = [
-  {
-    title: 'Vintage Mid-Century Chair',
-    description: 'Beautiful wooden chair from the 1960s in excellent condition.',
-    price: '$75',
-    images: [
-      {
-        ref: {
-          $link: 'demo-furniture.svg'
-        },
-        mimeType: 'image/svg+xml',
-        size: 1024
-      }
-    ],
-    location: {
-      state: 'California',
-      county: 'Los Angeles',
-      locality: 'Pasadena',
-      zipPrefix: '910'
-    },
-    category: 'furniture',
-    condition: 'good',
-    createdAt: new Date().toISOString()
-  },
-  {
-    title: 'Mountain Bike',
-    description: 'Trek mountain bike, barely used. Great for trails.',
-    price: '$350',
-    images: [
-      {
-        ref: {
-          $link: 'demo-sports.svg'
-        },
-        mimeType: 'image/svg+xml',
-        size: 1024
-      }
-    ],
-    location: {
-      state: 'Oregon',
-      county: 'Multnomah',
-      locality: 'Portland',
-      zipPrefix: '972'
-    },
-    category: 'sports',
-    condition: 'likeNew',
-    createdAt: new Date().toISOString()
-  },
-  {
-    title: 'iPhone 13',
-    description: 'Used iPhone 13, 128GB. Battery health at 92%.',
-    price: '$450',
-    images: [
-      {
-        ref: {
-          $link: 'demo-electronics.svg'
-        },
-        mimeType: 'image/svg+xml',
-        size: 1024
-      }
-    ],
-    location: {
-      state: 'New York',
-      county: 'Kings',
-      locality: 'Brooklyn',
-      zipPrefix: '112'
-    },
-    category: 'electronics',
-    condition: 'good',
-    createdAt: new Date().toISOString()
-  }
-];
+import FilterPanel, { FilterValues } from '@/components/marketplace/filters/FilterPanel';
+import { filterListingsByLocation, filterListingsByCommuteRoute } from '@/lib/location-utils';
+import { demoListingsData } from './demo-data';
 
 export default function BrowsePage() {
   // Memoize demo data to have a stable reference
@@ -92,14 +22,16 @@ export default function BrowsePage() {
   // Start with empty listings and set auth state first
   const [showDemoListings, setShowDemoListings] = useState(false);
   const [realListingsCount, setRealListingsCount] = useState(0);
-  const [listings, setListings] = useState<MarketplaceListing[]>([]);
+  const [allListings, setAllListings] = useState<MarketplaceListing[]>([]);
+  const [filteredListings, setFilteredListings] = useState<MarketplaceListing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [location, setLocation] = useState({
-    state: '',
-    county: '',
-    locality: ''
+  
+  // Filtering state
+  const [filters, setFilters] = useState<FilterValues>({
+    locationType: 'basic',
   });
+  
   // Track if we've made the initial determination of what to show
   const [initialized, setInitialized] = useState(false);
   
@@ -107,7 +39,7 @@ export default function BrowsePage() {
   const auth = useAuth();
   
   // Fetch profile information for a listing
-  const fetchAuthorProfile = async (did: string, client: MarketplaceClient) => {
+  const fetchAuthorProfile = useCallback(async (did: string, client: MarketplaceClient) => {
     if (!did || !client || !client.agent) return null;
     
     try {
@@ -130,7 +62,7 @@ export default function BrowsePage() {
     }
     
     return null;
-  };
+  }, []);
   
   // Fetch listings from API
   useEffect(() => {
@@ -147,7 +79,8 @@ export default function BrowsePage() {
         console.log('User not logged in, showing demo listings');
         setRealListingsCount(0);
         setShowDemoListings(true);
-        setListings(memoDemoListings); // Set demo listings if not logged in
+        setAllListings(memoDemoListings);
+        setFilteredListings(memoDemoListings);
         setIsLoading(false);
         setInitialized(true);
         return;
@@ -180,18 +113,21 @@ export default function BrowsePage() {
             return listing;
           }));
           
-          setListings(enhancedListings);
+          setAllListings(enhancedListings);
+          setFilteredListings(enhancedListings); // Start with all listings
           setShowDemoListings(false);
         } else {
           console.log('No real listings found, showing demos');
           setRealListingsCount(0);
-          setListings(memoDemoListings); // Set demo listings when no real listings found
+          setAllListings(memoDemoListings);
+          setFilteredListings(memoDemoListings);
           setShowDemoListings(true);
         }
       } catch (err) {
         console.error('Error fetching listings:', err);
         setError(`Failed to fetch listings: ${err instanceof Error ? err.message : String(err)}`);
-        setListings(memoDemoListings); // Set demo listings on error
+        setAllListings(memoDemoListings);
+        setFilteredListings(memoDemoListings);
         setShowDemoListings(true);
       } finally {
         setIsLoading(false);
@@ -200,143 +136,31 @@ export default function BrowsePage() {
     };
     
     fetchListings();
-  }, [auth.client, auth.isLoggedIn, auth.isLoading, initialized]);
+  }, [auth.client, auth.isLoggedIn, auth.isLoading, initialized, memoDemoListings, fetchAuthorProfile]);
   
-  // Handle location form changes
-  const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setLocation(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-  
-  // Handle location form submission
-  const handleLocationSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
+  // Apply filters when they change
+  useEffect(() => {
+    // Don't apply filters until listings are loaded
+    if (!initialized || isLoading) return;
     
-    try {
-      // Validate that at least state is provided
-      if (!location.state) {
-        setError('Please provide at least a state for location search');
-        setIsLoading(false);
-        return;
-      }
-      
-      // Check if user is logged in
-      if (!auth.isLoggedIn || !auth.client) {
-        console.log('User not logged in, filtering demo listings by location');
-        
-        // Filter demo listings by location
-        const filteredDemos = memoDemoListings.filter(listing => {
-          const stateMatch = listing.location.state.toLowerCase() === location.state.toLowerCase();
-          
-          if (location.county) {
-            const countyMatch = listing.location.county.toLowerCase() === location.county.toLowerCase();
-            
-            if (location.locality) {
-              const localityMatch = listing.location.locality.toLowerCase() === location.locality.toLowerCase();
-              return stateMatch && countyMatch && localityMatch;
-            }
-            
-            return stateMatch && countyMatch;
-          }
-          
-          return stateMatch;
-        });
-        
-        if (filteredDemos.length > 0) {
-          setListings(filteredDemos);
-          setShowDemoListings(true);
-        } else {
-          setListings([]);
-          setShowDemoListings(false);
-        }
-        
-        setIsLoading(false);
-        return;
-      }
-      
-      const client = auth.client;
-      
-      // If county is provided, use it for more targeted search
-      if (location.county) {
-        console.log(`Searching for listings in ${location.state}, ${location.county}${location.locality ? `, ${location.locality}` : ''}`);
-        const locationResults = await client.getListingsByLocation(
-          location.state,
-          location.county,
-          location.locality || undefined
-        );
-        
-        if (locationResults && locationResults.length > 0) {
-          setRealListingsCount(locationResults.length);
-
-          // Enhance listings with author profile information
-          const enhancedListings = await Promise.all(locationResults.map(async (listing) => {
-            if (listing.authorDid) {
-              const profile = await fetchAuthorProfile(listing.authorDid, client);
-              if (profile) {
-                return {
-                  ...listing,
-                  authorHandle: profile.handle,
-                  authorDisplayName: profile.displayName
-                };
-              }
-            }
-            return listing;
-          }));
-          
-          setListings(enhancedListings);
-          setShowDemoListings(false);
-        } else {
-          // If no results for specific location, show that no listings were found
-          setRealListingsCount(0);
-          setListings([]);
-          setShowDemoListings(false);
-        }
-      } else {
-        // If only state is provided, get all listings and filter client-side
-        const allListings = await client.getAllListings();
-        const filteredListings = allListings.filter(listing => 
-          listing.location.state.toLowerCase() === location.state.toLowerCase()
-        );
-        
-        if (filteredListings.length > 0) {
-          setRealListingsCount(filteredListings.length);
-
-          // Enhance listings with author profile information
-          const enhancedListings = await Promise.all(filteredListings.map(async (listing) => {
-            if (listing.authorDid) {
-              const profile = await fetchAuthorProfile(listing.authorDid, client);
-              if (profile) {
-                return {
-                  ...listing,
-                  authorHandle: profile.handle,
-                  authorDisplayName: profile.displayName
-                };
-              }
-            }
-            return listing;
-          }));
-          
-          setListings(enhancedListings);
-          setShowDemoListings(false);
-        } else {
-          setRealListingsCount(0);
-          setListings([]);
-          setShowDemoListings(false);
-        }
-      }
-    } catch (err) {
-      console.error('Error searching listings by location:', err);
-      setError(`Failed to search listings: ${err instanceof Error ? err.message : String(err)}`);
-    } finally {
-      setIsLoading(false);
+    // Apply filtering logic based on selected filter type
+    let filtered = [...allListings];
+    
+    if (filters.locationType === 'basic' && filters.location) {
+      // Apply basic location filter
+      filtered = filterListingsByLocation(filtered, filters.location);
+    } else if (filters.locationType === 'commute' && filters.commuteRoute) {
+      // Apply commute route filter
+      filtered = filterListingsByCommuteRoute(filtered, filters.commuteRoute);
     }
-  };
+    
+    setFilteredListings(filtered);
+  }, [filters, allListings, initialized, isLoading]);
   
+  // Memoize the filter change handler to prevent unnecessary re-renders
+  const handleFilterChange = useCallback((newFilters: FilterValues) => {
+    setFilters(newFilters);
+  }, []);
   
   return (
     <div className="max-w-6xl mx-auto p-4">
@@ -349,59 +173,10 @@ export default function BrowsePage() {
       )}
       
       <div className="mb-8">
-        <form onSubmit={handleLocationSubmit} className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Find Items Near You</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label htmlFor="state" className="block text-sm font-medium mb-1">
-                State
-              </label>
-              <input
-                type="text"
-                id="state"
-                name="state"
-                value={location.state}
-                onChange={handleLocationChange}
-                className="w-full px-3 py-2 border rounded-md"
-                placeholder="e.g. California"
-              />
-            </div>
-            <div>
-              <label htmlFor="county" className="block text-sm font-medium mb-1">
-                County
-              </label>
-              <input
-                type="text"
-                id="county"
-                name="county"
-                value={location.county}
-                onChange={handleLocationChange}
-                className="w-full px-3 py-2 border rounded-md"
-                placeholder="e.g. Los Angeles"
-              />
-            </div>
-            <div>
-              <label htmlFor="locality" className="block text-sm font-medium mb-1">
-                City/Town
-              </label>
-              <input
-                type="text"
-                id="locality"
-                name="locality"
-                value={location.locality}
-                onChange={handleLocationChange}
-                className="w-full px-3 py-2 border rounded-md"
-                placeholder="e.g. Pasadena"
-              />
-            </div>
-          </div>
-          <button
-            type="submit"
-            className="mt-4 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md"
-          >
-            Search
-          </button>
-        </form>
+        <FilterPanel 
+          initialValues={filters}
+          onFilterChange={handleFilterChange}
+        />
       </div>
       
       {!initialized || isLoading ? (
@@ -409,21 +184,36 @@ export default function BrowsePage() {
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
           <p className="mt-2">Loading listings...</p>
         </div>
-      ) : realListingsCount > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {listings.map((listing: any, index) => (
-            <ListingCard 
-              key={index} 
-              listing={{
-                ...listing,
-                // Make sure we have the authorDid to generate image URLs
-                authorDid: listing.authorDid || auth.user?.did || 'did:plc:oyhgprn7edb3dpdaq4mlgfkv'
-              }}
-              showDebug={debugMode}
-            />
-          ))}
+      ) : realListingsCount > 0 && filteredListings.length > 0 ? (
+        <div>
+          <p className="mb-4 text-gray-600">
+            Showing {filteredListings.length} of {allListings.length} listings
+            {filters.locationType === 'basic' && filters.location && (
+              <>
+                {filters.location.state && <> matching <span className="font-medium">{filters.location.state}</span></>}
+                {filters.location.county && <>, <span className="font-medium">{filters.location.county}</span></>}
+                {filters.location.locality && <>, <span className="font-medium">{filters.location.locality}</span></>}
+              </>
+            )}
+            {filters.locationType === 'commute' && filters.commuteRoute && (
+              <> along route from <span className="font-medium">{filters.commuteRoute.startLocation.name}</span> to <span className="font-medium">{filters.commuteRoute.endLocation.name}</span></>
+            )}
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredListings.map((listing: any, index) => (
+              <ListingCard 
+                key={index} 
+                listing={{
+                  ...listing,
+                  // Make sure we have the authorDid to generate image URLs
+                  authorDid: listing.authorDid || auth.user?.did || 'did:plc:oyhgprn7edb3dpdaq4mlgfkv'
+                }}
+                showDebug={debugMode}
+              />
+            ))}
+          </div>
         </div>
-      ) : showDemoListings ? (
+      ) : showDemoListings && filteredListings.length > 0 ? (
         <div>
           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6" role="alert">
             <p className="font-bold">Demo Mode</p>
@@ -437,8 +227,22 @@ export default function BrowsePage() {
             )}
           </div>
           
+          <p className="mb-4 text-gray-600">
+            Showing {filteredListings.length} of {allListings.length} listings
+            {filters.locationType === 'basic' && filters.location && (
+              <>
+                {filters.location.state && <> matching <span className="font-medium">{filters.location.state}</span></>}
+                {filters.location.county && <>, <span className="font-medium">{filters.location.county}</span></>}
+                {filters.location.locality && <>, <span className="font-medium">{filters.location.locality}</span></>}
+              </>
+            )}
+            {filters.locationType === 'commute' && filters.commuteRoute && (
+              <> along route from <span className="font-medium">{filters.commuteRoute.startLocation.name}</span> to <span className="font-medium">{filters.commuteRoute.endLocation.name}</span></>
+            )}
+          </p>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {listings.map((listing, index) => (
+            {filteredListings.map((listing, index) => (
               <ListingCard 
                 key={index} 
                 listing={{
@@ -455,14 +259,22 @@ export default function BrowsePage() {
         </div>
       ) : (
         <div className="text-center py-10">
-          <p className="text-xl">No listings found in this area.</p>
-          <p className="mt-2">Try another location or create your own listing!</p>
-          <Link
-            href="/create-listing"
-            className="mt-4 inline-block py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md"
-          >
-            Create Listing
-          </Link>
+          <p className="text-xl">No listings found matching your filters.</p>
+          <p className="mt-2">Try adjusting your search criteria or create your own listing!</p>
+          <div className="mt-4 flex flex-wrap justify-center gap-4">
+            <button
+              onClick={() => setFilters({ locationType: 'basic' })}
+              className="py-2 px-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-md"
+            >
+              Clear Filters
+            </button>
+            <Link
+              href="/create-listing"
+              className="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md"
+            >
+              Create Listing
+            </Link>
+          </div>
         </div>
       )}
     </div>
