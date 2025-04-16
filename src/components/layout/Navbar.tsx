@@ -2,13 +2,30 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Navbar() {
   const { isLoggedIn, user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
+
+  // Handle scroll effect for navbar
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 10) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   const isActive = (path: string) => {
     return pathname === path;
@@ -41,66 +58,72 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-gradient-to-r from-indigo-600 to-blue-500 text-white shadow-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <nav 
+      className={`sticky top-0 z-50 bg-white shadow-sm transition-all duration-300 ${
+        scrolled ? 'shadow-md' : ''
+      }`}
+    >
+      <div className="container-custom">
         <div className="flex justify-between h-16">
-          <div className="flex">
-            <div className="flex-shrink-0 flex items-center">
-              <Link href="/" className="font-bold text-xl tracking-tight">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <Link href="/" className="font-bold text-xl text-primary-color tracking-tight">
                 AT Marketplace
               </Link>
             </div>
             
             {/* Desktop navigation */}
-            <div className="hidden md:ml-6 md:flex md:items-center md:space-x-4">
+            <div className="hidden md:ml-8 md:flex md:items-center md:space-x-2">
               <Link 
                 href="/" 
-                className={`px-3 py-2 rounded-md text-sm font-medium ${
-                  isActive('/') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-600'
-                }`}
+                className={`nav-link ${isActive('/') ? 'active' : ''}`}
               >
                 Home
               </Link>
               <Link 
                 href="/browse" 
-                className={`px-3 py-2 rounded-md text-sm font-medium ${
-                  isActive('/browse') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-600'
-                }`}
+                className={`nav-link ${isActive('/browse') ? 'active' : ''}`}
               >
-                Browse Listings
+                Browse
               </Link>
               <Link 
                 href="/create-listing" 
-                className={`px-3 py-2 rounded-md text-sm font-medium ${
-                  isActive('/create-listing') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-600'
-                }`}
+                className={`nav-link ${isActive('/create-listing') ? 'active' : ''}`}
               >
-                Create Listing
+                Sell
               </Link>
             </div>
           </div>
           
           {/* User account section */}
-          <div className="hidden md:flex md:items-center">
+          <div className="hidden md:flex md:items-center md:space-x-3">
             {isLoggedIn ? (
-              <div className="flex items-center space-x-4">
-                <span className="text-sm font-medium text-white">
+              <div className="flex items-center space-x-3">
+                <span className="text-sm font-medium text-text-primary">
                   {getDisplayName()}
                 </span>
                 <button
                   onClick={logout}
-                  className="px-4 py-2 bg-indigo-800 hover:bg-indigo-900 rounded-md text-sm font-medium"
+                  className="btn-tertiary"
                 >
                   Log Out
                 </button>
               </div>
             ) : (
-              <Link
-                href="/login"
-                className="px-4 py-2 bg-indigo-800 hover:bg-indigo-900 rounded-md text-sm font-medium"
-              >
-                Log In
-              </Link>
+              <div className="space-x-2">
+                <Link
+                  href="/login"
+                  className="btn-tertiary"
+                >
+                  Log In
+                </Link>
+                <Link
+                  href="/signup"
+                  className="btn-primary"
+                >
+                  Sign Up
+                </Link>
+              </div>
             )}
           </div>
           
@@ -108,19 +131,17 @@ export default function Navbar() {
           <div className="flex md:hidden items-center">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-indigo-100 hover:text-white hover:bg-indigo-600 focus:outline-none"
-              aria-expanded="false"
+              className="p-2 rounded-lg text-text-primary hover:bg-neutral-light transition-colors"
+              aria-expanded={isMenuOpen}
             >
               <span className="sr-only">Open main menu</span>
-              {/* Icon when menu is closed */}
               {!isMenuOpen ? (
                 <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               ) : (
-                /* Icon when menu is open */
                 <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               )}
             </button>
@@ -128,62 +149,67 @@ export default function Navbar() {
         </div>
       </div>
       
-      {/* Mobile menu, show/hide based on menu state */}
+      {/* Mobile menu */}
       {isMenuOpen && (
-        <div className="md:hidden">
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+        <div className="md:hidden bg-white border-t border-neutral-light">
+          <div className="container-custom py-2 space-y-1">
             <Link 
               href="/" 
-              className={`block px-3 py-2 rounded-md text-sm font-medium ${
-                isActive('/') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-600'
-              }`}
+              className={`list-item ${isActive('/') ? 'bg-neutral-light text-primary-color font-medium' : ''}`}
               onClick={() => setIsMenuOpen(false)}
             >
               Home
             </Link>
             <Link 
               href="/browse" 
-              className={`block px-3 py-2 rounded-md text-sm font-medium ${
-                isActive('/browse') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-600'
-              }`}
+              className={`list-item ${isActive('/browse') ? 'bg-neutral-light text-primary-color font-medium' : ''}`}
               onClick={() => setIsMenuOpen(false)}
             >
               Browse Listings
             </Link>
             <Link 
               href="/create-listing" 
-              className={`block px-3 py-2 rounded-md text-sm font-medium ${
-                isActive('/create-listing') ? 'bg-indigo-800 text-white' : 'text-indigo-100 hover:bg-indigo-600'
-              }`}
+              className={`list-item ${isActive('/create-listing') ? 'bg-neutral-light text-primary-color font-medium' : ''}`}
               onClick={() => setIsMenuOpen(false)}
             >
               Create Listing
             </Link>
             
-            {isLoggedIn ? (
-              <>
-                <div className="px-3 py-2 text-sm font-medium text-indigo-100">
-                  {getDisplayName()}
+            <div className="pt-2 mt-2 border-t border-neutral-light">
+              {isLoggedIn ? (
+                <>
+                  <div className="px-3 py-2 text-sm font-medium text-text-primary">
+                    {getDisplayName()}
+                  </div>
+                  <button
+                    onClick={() => {
+                      logout();
+                      setIsMenuOpen(false);
+                    }}
+                    className="list-item w-full text-left"
+                  >
+                    Log Out
+                  </button>
+                </>
+              ) : (
+                <div className="flex flex-col space-y-2 p-3">
+                  <Link
+                    href="/login"
+                    className="btn-tertiary w-full text-center"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Log In
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="btn-primary w-full text-center"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Sign Up
+                  </Link>
                 </div>
-                <button
-                  onClick={() => {
-                    logout();
-                    setIsMenuOpen(false);
-                  }}
-                  className="block w-full text-left px-3 py-2 rounded-md text-sm font-medium text-indigo-100 hover:bg-indigo-600"
-                >
-                  Log Out
-                </button>
-              </>
-            ) : (
-              <Link
-                href="/login"
-                className="block px-3 py-2 rounded-md text-sm font-medium text-indigo-100 hover:bg-indigo-600"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Log In
-              </Link>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
