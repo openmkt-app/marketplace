@@ -48,7 +48,7 @@ export default function RecencyFilter({
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="font-medium text-gray-700 mb-2">Posted Within</h3>
+        <h3 className="font-medium text-text-primary mb-2">Posted Within</h3>
         <div className="space-y-1">
           {timeFrames.map(timeFrame => (
             <button
@@ -56,8 +56,8 @@ export default function RecencyFilter({
               onClick={() => handleTimeFrameChange(timeFrame.id)}
               className={`w-full py-2 px-3 text-left text-sm rounded ${
                 selectedTimeFrame === timeFrame.id
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-primary-color text-white'
+                  : 'bg-neutral-light text-text-primary hover:bg-neutral-medium'
               }`}
             >
               {timeFrame.label}
@@ -72,9 +72,9 @@ export default function RecencyFilter({
             type="checkbox"
             checked={showRecentlyViewed}
             onChange={handleRecentlyViewedChange}
-            className="h-4 w-4 text-blue-600 rounded"
+            className="h-4 w-4 text-primary-color rounded"
           />
-          <span className="ml-2 text-gray-700">Show recently viewed first</span>
+          <span className="ml-2 text-text-primary">Show recently viewed first</span>
         </label>
       </div>
     </div>

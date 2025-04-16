@@ -62,7 +62,7 @@ export default function ConditionFilter({
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="font-medium text-gray-700 mb-2">Condition</h3>
+        <h3 className="font-medium text-text-primary mb-2">Condition</h3>
         <div className="space-y-2">
           {conditionOptions.map((cond) => (
             <label key={cond.id} className="flex items-center">
@@ -70,16 +70,16 @@ export default function ConditionFilter({
                 type="checkbox"
                 checked={conditions.includes(cond.id)}
                 onChange={() => toggleCondition(cond.id)}
-                className="h-4 w-4 text-blue-600 rounded"
+                className="h-4 w-4 text-primary-color rounded"
               />
-              <span className="ml-2 text-gray-700">{cond.label}</span>
+              <span className="ml-2 text-text-primary">{cond.label}</span>
             </label>
           ))}
         </div>
       </div>
 
       <div>
-        <h3 className="font-medium text-gray-700 mb-2">Item Age</h3>
+        <h3 className="font-medium text-text-primary mb-2">Item Age</h3>
         <div className="space-y-1">
           {ageOptions.map((option) => (
             <button
@@ -87,8 +87,8 @@ export default function ConditionFilter({
               onClick={() => handleAgeChange(option.id)}
               className={`w-full py-2 px-3 text-left text-sm rounded ${
                 age === option.id
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-primary-color text-white'
+                  : 'bg-neutral-light text-text-primary hover:bg-neutral-medium'
               }`}
             >
               {option.label}

@@ -337,7 +337,7 @@ export default function FilterPanel({
           </div>
           
           {/* Saved Filters and Save Button */}
-          <div className="p-4 bg-background flex justify-between items-center">
+          <div className="p-4 bg-neutral-light/50 flex justify-between items-center">
             <div className="flex items-center space-x-2">
               <span className="text-sm font-medium text-text-primary">Saved Filters:</span>
               <div className="flex space-x-2">
@@ -346,7 +346,7 @@ export default function FilterPanel({
                     <button
                       key={index}
                       onClick={() => handleLoadFilter(savedFilter.filter)}
-                      className="text-sm bg-neutral-light hover:bg-neutral-medium px-3 py-1 rounded-full"
+                      className="text-sm bg-white hover:bg-neutral-light px-3 py-1 rounded-full shadow-sm"
                     >
                       {savedFilter.name}
                     </button>
