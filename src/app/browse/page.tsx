@@ -6,6 +6,7 @@ import Link from 'next/link';
 import MarketplaceClient, { MarketplaceListing, ListingLocation } from '@/lib/marketplace-client';
 import { useAuth } from '@/contexts/AuthContext';
 import ListingCard from '@/components/marketplace/ListingCard';
+import ListingImageDisplay from '@/components/marketplace/ListingImageDisplay';
 import FilterPanel, { FilterValues } from '@/components/marketplace/filters/FilterPanel';
 import { LocationFilterValue } from '@/components/marketplace/filters/LocationFilter';
 import { 
@@ -569,10 +570,11 @@ export default function BrowsePage() {
                   className="bg-white rounded-lg shadow-md overflow-hidden flex"
                 >
                   <div className="w-48 h-48 bg-gray-100 flex-shrink-0">
-                    <img 
-                      src={listing.formattedImages?.[0]?.thumbnail || '/placeholder-image.jpg'} 
-                      alt={listing.title}
-                      className="w-full h-full object-cover"
+                    <ListingImageDisplay 
+                      listing={listing}
+                      size="thumbnail"
+                      height="100%"
+                      fallbackText="No image"
                     />
                   </div>
                   <div className="p-4 flex-grow">
@@ -664,10 +666,11 @@ export default function BrowsePage() {
                   className="bg-white rounded-lg shadow-md overflow-hidden flex"
                 >
                   <div className="w-48 h-48 bg-gray-100 flex-shrink-0">
-                    <img 
-                      src={listing.formattedImages?.[0]?.thumbnail || '/placeholder-image.jpg'} 
-                      alt={listing.title}
-                      className="w-full h-full object-cover"
+                    <ListingImageDisplay 
+                      listing={listing}
+                      size="thumbnail"
+                      height="100%"
+                      fallbackText="No image"
                     />
                   </div>
                   <div className="p-4 flex-grow">
