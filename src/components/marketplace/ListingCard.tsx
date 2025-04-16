@@ -12,6 +12,7 @@ interface ListingCardProps {
     uri?: string;
     authorDid?: string;
     authorHandle?: string;
+    authorDisplayName?: string;
   };
   showDebug?: boolean;
 }
@@ -40,7 +41,11 @@ export default function ListingCard({ listing, showDebug = false }: ListingCardP
       {listing.authorHandle && (
         <div className="mb-2">
           <span className="text-sm text-gray-500">
-            Listed by: @{listing.authorHandle}
+            Listed by: {listing.authorDisplayName ? (
+              <span className="font-medium">{listing.authorDisplayName}</span>
+            ) : (
+              <span>@{listing.authorHandle}</span>
+            )}
           </span>
         </div>
       )}
