@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="300" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="300" fill="#f0f9ff"/>
+  <!-- Chair back -->
+  <rect x="140" y="80" width="120" height="100" rx="10" fill="#60a5fa" stroke="#2563eb" stroke-width="4"/>
+  <!-- Chair seat -->
+  <rect x="120" y="180" width="160" height="20" rx="5" fill="#93c5fd" stroke="#2563eb" stroke-width="4"/>
+  <!-- Chair legs -->
+  <rect x="130" y="200" width="10" height="60" rx="2" fill="#1e40af" stroke="#1e3a8a" stroke-width="2"/>
+  <rect x="260" y="200" width="10" height="60" rx="2" fill="#1e40af" stroke="#1e3a8a" stroke-width="2"/>
+  <!-- Pattern on chair back -->
+  <circle cx="200" cy="130" r="30" fill="#bfdbfe" stroke="#3b82f6" stroke-width="2"/>
+  <circle cx="200" cy="130" r="20" fill="#93c5fd" stroke="#3b82f6" stroke-width="2"/>
+  <circle cx="200" cy="130" r="10" fill="#60a5fa" stroke="#3b82f6" stroke-width="2"/>
+  <!-- Decorative elements -->
+  <text x="200" y="270" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#1e40af">Mid-Century Chair</text>
+</svg>

@@ -1,76 +1,80 @@
+// src/components/marketplace/ListingCard.tsx
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
-import { type MarketplaceListing } from '@/lib/marketplace-client';
+import ListingImageDisplay from './ListingImageDisplay';
+import ListingImageDebug from './ListingImageDebug';
+import type { MarketplaceListing } from '@/lib/marketplace-client';
 
 interface ListingCardProps {
-  listing: MarketplaceListing;
+  listing: MarketplaceListing & { 
+    uri?: string;
+    authorDid?: string;
+    authorHandle?: string;
+  };
+  showDebug?: boolean;
 }
 
-export default function ListingCard({ listing }: ListingCardProps) {
-  // Format the date
-  const formattedDate = new Date(listing.createdAt).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-
-  // Format the condition to be more readable
-  const formatCondition = (condition: string): string => {
-    switch (condition) {
-      case 'new': return 'New';
-      case 'likeNew': return 'Like New';
-      case 'good': return 'Good';
-      case 'fair': return 'Fair';
-      case 'poor': return 'Poor';
-      default: return condition;
-    }
-  };
-
+export default function ListingCard({ listing, showDebug = false }: ListingCardProps) {
   return (
-    <Link href={`/listing/${listing.title.replace(/\s+/g, '-').toLowerCase()}`} className="block">
-      <div className="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:scale-[1.02]">
-        {listing.images && listing.images.length > 0 ? (
-          <div className="h-48 overflow-hidden">
-            <img
-              src="https://via.placeholder.com/400x300"
-              alt={listing.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        ) : (
-          <div className="h-48 bg-gray-200 flex items-center justify-center">
-            <span className="text-gray-500">No image available</span>
-          </div>
-        )}
-
-        <div className="p-4">
-          <div className="flex justify-between items-start">
-            <h3 className="text-lg font-semibold mb-1 text-gray-800">{listing.title}</h3>
-            <span className="font-bold text-blue-600">{listing.price}</span>
-          </div>
-          
-          <p className="text-sm text-gray-600 mb-2 line-clamp-2">{listing.description}</p>
-          
-          <div className="flex justify-between items-center mt-3">
-            <div className="text-xs text-gray-500">
-              {listing.location.locality}, {listing.location.state}
-            </div>
-            
-            <div className="flex space-x-2">
-              <span className="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded">
-                {formatCondition(listing.condition)}
-              </span>
-              <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
-                {listing.category}
-              </span>
-            </div>
-          </div>
-          
-          <div className="text-xs text-gray-500 mt-2">
-            Posted {formattedDate}
-          </div>
-        </div>
+    <div className="bg-white p-4 rounded-lg shadow-md overflow-hidden flex flex-col">
+      {/* Debug info - only shown when showDebug is true */}
+      <ListingImageDebug listing={listing} show={showDebug} />
+      
+      {/* Image Section */}
+      <div className="relative w-full h-48 mb-4 bg-gray-100 rounded-md overflow-hidden">
+        <ListingImageDisplay 
+          listing={listing}
+          size="thumbnail"
+          height="100%"
+          fallbackText="No image available"
+        />
       </div>
-    </Link>
+      
+      {/* Listing Details */}
+      <h2 className="text-xl font-semibold mb-2">{listing.title}</h2>
+      <p className="text-gray-600 mb-2 flex-grow line-clamp-2">{listing.description}</p>
+      <p className="text-xl font-bold text-blue-600 mb-2">{listing.price}</p>
+      
+      {listing.authorHandle && (
+        <div className="mb-2">
+          <span className="text-sm text-gray-500">
+            Listed by: @{listing.authorHandle}
+          </span>
+        </div>
+      )}
+      
+      <div className="mb-2">
+        <span className="text-sm text-gray-500">
+          Location: {listing.location.locality}, {listing.location.state}
+        </span>
+      </div>
+      
+      <div className="mb-3">
+        <span className="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2">
+          {listing.category}
+        </span>
+        <span className="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700">
+          {listing.condition}
+        </span>
+      </div>
+      
+      {listing.uri ? (
+        <Link
+          href={`/listing/${encodeURIComponent(listing.uri)}`}
+          className="mt-auto inline-block py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md text-center w-full"
+        >
+          View Details
+        </Link>
+      ) : (
+        <Link
+          href={`/listing/${encodeURIComponent(listing.title)}`}
+          className="mt-auto inline-block py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md text-center w-full"
+        >
+          View Details
+        </Link>
+      )}
+    </div>
   );
 }

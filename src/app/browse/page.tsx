@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import MarketplaceClient from '@/lib/marketplace-client';
 import type { MarketplaceListing } from '@/lib/marketplace-client';
 import { useAuth } from '@/contexts/AuthContext';
+import ListingCard from '@/components/marketplace/ListingCard';
 
 // Demo listings data for showcase purposes - define outside component to avoid recreation
 const demoListingsData: MarketplaceListing[] = [
@@ -12,6 +14,15 @@ const demoListingsData: MarketplaceListing[] = [
     title: 'Vintage Mid-Century Chair',
     description: 'Beautiful wooden chair from the 1960s in excellent condition.',
     price: '$75',
+    images: [
+      {
+        ref: {
+          $link: 'demo-furniture.svg'
+        },
+        mimeType: 'image/svg+xml',
+        size: 1024
+      }
+    ],
     location: {
       state: 'California',
       county: 'Los Angeles',
@@ -26,6 +37,15 @@ const demoListingsData: MarketplaceListing[] = [
     title: 'Mountain Bike',
     description: 'Trek mountain bike, barely used. Great for trails.',
     price: '$350',
+    images: [
+      {
+        ref: {
+          $link: 'demo-sports.svg'
+        },
+        mimeType: 'image/svg+xml',
+        size: 1024
+      }
+    ],
     location: {
       state: 'Oregon',
       county: 'Multnomah',
@@ -40,6 +60,15 @@ const demoListingsData: MarketplaceListing[] = [
     title: 'iPhone 13',
     description: 'Used iPhone 13, 128GB. Battery health at 92%.',
     price: '$450',
+    images: [
+      {
+        ref: {
+          $link: 'demo-electronics.svg'
+        },
+        mimeType: 'image/svg+xml',
+        size: 1024
+      }
+    ],
     location: {
       state: 'New York',
       county: 'Kings',
@@ -55,6 +84,10 @@ const demoListingsData: MarketplaceListing[] = [
 export default function BrowsePage() {
   // Memoize demo data to have a stable reference
   const memoDemoListings = useMemo(() => demoListingsData, []);
+  
+  // Get search params for debug mode
+  const searchParams = useSearchParams();
+  const debugMode = searchParams.get('debug') === 'true';
   
   // Start with empty listings and set auth state first
   const [showDemoListings, setShowDemoListings] = useState(false);
@@ -230,15 +263,6 @@ export default function BrowsePage() {
     }
   };
   
-  // Helper function to display listing image if available
-  const getListingImage = (listing: any) => {
-    if (listing.images && listing.images.length > 0) {
-      // This is a placeholder - the actual implementation depends on how 
-      // you're storing/serving images
-      return `https://example.com/image/${listing.images[0].ref.$link}`;
-    }
-    return null;
-  };
   
   return (
     <div className="max-w-6xl mx-auto p-4">
@@ -314,50 +338,15 @@ export default function BrowsePage() {
       ) : realListingsCount > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {listings.map((listing: any, index) => (
-            <div key={index} className="bg-white p-4 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold mb-2">{listing.title}</h2>
-              <p className="text-gray-600 mb-2">{listing.description}</p>
-              <p className="text-xl font-bold text-blue-600 mb-2">{listing.price}</p>
-              
-              {listing.authorHandle && (
-                <div className="mb-2">
-                  <span className="text-sm text-gray-500">
-                    Listed by: @{listing.authorHandle}
-                  </span>
-                </div>
-              )}
-              
-              <div className="mb-2">
-                <span className="text-sm text-gray-500">
-                  Location: {listing.location.locality}, {listing.location.state}
-                </span>
-              </div>
-              
-              <div className="mb-2">
-                <span className="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2">
-                  {listing.category}
-                </span>
-                <span className="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700">
-                  {listing.condition}
-                </span>
-              </div>
-              
-              {listing.uri ? (
-                <Link
-                  href={`/listing/${encodeURIComponent(listing.uri)}`}
-                  className="mt-2 inline-block py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md"
-                >
-                  View Details
-                </Link>
-              ) : (
-                <Link
-                  href={`/listing/${encodeURIComponent(listing.title)}`}
-                  className="mt-2 inline-block py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md"
-                >
-                  View Details
-                </Link>
-              )}
-            </div>
+            <ListingCard 
+              key={index} 
+              listing={{
+                ...listing,
+                // Make sure we have the authorDid to generate image URLs
+                authorDid: listing.authorDid || auth.user?.did || 'did:plc:oyhgprn7edb3dpdaq4mlgfkv'
+              }}
+              showDebug={debugMode}
+            />
           ))}
         </div>
       ) : showDemoListings ? (
@@ -376,25 +365,15 @@ export default function BrowsePage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {listings.map((listing, index) => (
-              <div key={index} className="bg-white p-4 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold mb-2">{listing.title}</h2>
-                <p className="text-gray-600 mb-2">{listing.description}</p>
-                <p className="text-xl font-bold text-blue-600 mb-2">{listing.price}</p>
-                <div className="mb-2">
-                  <span className="text-sm text-gray-500">Location: {listing.location.locality}, {listing.location.state}</span>
-                </div>
-                <div className="mb-2">
-                  <span className="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2">
-                    {listing.category}
-                  </span>
-                  <span className="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700">
-                    {listing.condition}
-                  </span>
-                </div>
-                <button className="mt-2 inline-block py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md">
-                  View Details (Demo)
-                </button>
-              </div>
+              <ListingCard 
+                key={index} 
+                listing={{
+                  ...listing,
+                  // For demo listings, we need to provide authorDid for image handling
+                  authorDid: 'did:plc:demo',
+                }}
+                showDebug={debugMode}
+              />
             ))}
           </div>
         </div>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="300" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="300" fill="#ecfdf5"/>
+  <!-- Bicycle frame -->
+  <path d="M100,180 L150,180 L175,130 L225,130 L250,180 L300,180" fill="none" stroke="#047857" stroke-width="8"/>
+  <!-- Seat tube -->
+  <line x1="175" y1="130" x2="175" y2="180" stroke="#047857" stroke-width="8"/>
+  <!-- Handle bars -->
+  <path d="M225,130 L225,150 L205,140" fill="none" stroke="#047857" stroke-width="8"/>
+  <!-- Front wheel -->
+  <circle cx="300" cy="180" r="40" fill="none" stroke="#10b981" stroke-width="5"/>
+  <circle cx="300" cy="180" r="35" fill="none" stroke="#10b981" stroke-width="2"/>
+  <line x1="300" y1="140" x2="300" y2="220" stroke="#10b981" stroke-width="1"/>
+  <line x1="260" y1="180" x2="340" y2="180" stroke="#10b981" stroke-width="1"/>
+  <!-- Back wheel -->
+  <circle cx="100" cy="180" r="40" fill="none" stroke="#10b981" stroke-width="5"/>
+  <circle cx="100" cy="180" r="35" fill="none" stroke="#10b981" stroke-width="2"/>
+  <line x1="100" y1="140" x2="100" y2="220" stroke="#10b981" stroke-width="1"/>
+  <line x1="60" y1="180" x2="140" y2="180" stroke="#10b981" stroke-width="1"/>
+  <!-- Pedals -->
+  <circle cx="175" cy="180" r="15" fill="none" stroke="#047857" stroke-width="3"/>
+  <line x1="175" y1="165" x2="190" y2="180" stroke="#047857" stroke-width="4"/>
+  <!-- Product label -->
+  <text x="200" y="270" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#047857">Mountain Bike</text>
+</svg>
