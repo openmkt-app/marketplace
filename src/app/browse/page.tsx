@@ -106,6 +106,32 @@ export default function BrowsePage() {
   // Get auth context to use existing client if available
   const auth = useAuth();
   
+  // Fetch profile information for a listing
+  const fetchAuthorProfile = async (did: string, client: MarketplaceClient) => {
+    if (!did || !client || !client.agent) return null;
+    
+    try {
+      // Direct approach to get the profile record
+      const profileRecord = await client.agent.api.com.atproto.repo.getRecord({
+        repo: did,
+        collection: 'app.bsky.actor.profile',
+        rkey: 'self'
+      });
+      
+      if (profileRecord.data && profileRecord.data.value) {
+        return {
+          did: did,
+          handle: profileRecord.data.value.handle || did.split(':')[2],
+          displayName: profileRecord.data.value.displayName
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching profile for', did, error);
+    }
+    
+    return null;
+  };
+  
   // Fetch listings from API
   useEffect(() => {
     // Don't fetch until auth state is settled
@@ -138,7 +164,23 @@ export default function BrowsePage() {
         if (allListings && allListings.length > 0) {
           console.log(`Found ${allListings.length} real listings`);
           setRealListingsCount(allListings.length);
-          setListings(allListings);
+          
+          // Enhance listings with author profile information
+          const enhancedListings = await Promise.all(allListings.map(async (listing) => {
+            if (listing.authorDid) {
+              const profile = await fetchAuthorProfile(listing.authorDid, client);
+              if (profile) {
+                return {
+                  ...listing,
+                  authorHandle: profile.handle,
+                  authorDisplayName: profile.displayName
+                };
+              }
+            }
+            return listing;
+          }));
+          
+          setListings(enhancedListings);
           setShowDemoListings(false);
         } else {
           console.log('No real listings found, showing demos');
@@ -230,7 +272,23 @@ export default function BrowsePage() {
         
         if (locationResults && locationResults.length > 0) {
           setRealListingsCount(locationResults.length);
-          setListings(locationResults);
+
+          // Enhance listings with author profile information
+          const enhancedListings = await Promise.all(locationResults.map(async (listing) => {
+            if (listing.authorDid) {
+              const profile = await fetchAuthorProfile(listing.authorDid, client);
+              if (profile) {
+                return {
+                  ...listing,
+                  authorHandle: profile.handle,
+                  authorDisplayName: profile.displayName
+                };
+              }
+            }
+            return listing;
+          }));
+          
+          setListings(enhancedListings);
           setShowDemoListings(false);
         } else {
           // If no results for specific location, show that no listings were found
@@ -247,7 +305,23 @@ export default function BrowsePage() {
         
         if (filteredListings.length > 0) {
           setRealListingsCount(filteredListings.length);
-          setListings(filteredListings);
+
+          // Enhance listings with author profile information
+          const enhancedListings = await Promise.all(filteredListings.map(async (listing) => {
+            if (listing.authorDid) {
+              const profile = await fetchAuthorProfile(listing.authorDid, client);
+              if (profile) {
+                return {
+                  ...listing,
+                  authorHandle: profile.handle,
+                  authorDisplayName: profile.displayName
+                };
+              }
+            }
+            return listing;
+          }));
+          
+          setListings(enhancedListings);
           setShowDemoListings(false);
         } else {
           setRealListingsCount(0);
@@ -371,6 +445,8 @@ export default function BrowsePage() {
                   ...listing,
                   // For demo listings, we need to provide authorDid for image handling
                   authorDid: 'did:plc:demo',
+                  authorHandle: 'demo_user',
+                  authorDisplayName: 'Demo User'
                 }}
                 showDebug={debugMode}
               />
