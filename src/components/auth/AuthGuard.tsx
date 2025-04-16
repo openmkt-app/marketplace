@@ -9,16 +9,16 @@ interface AuthGuardProps {
 export default function AuthGuard({ children }: AuthGuardProps) {
   // Add a development mode toggle
   const [devMode, setDevMode] = useState(true);
-  const { isLoggedIn, loading } = useAuth();
+  const { isLoggedIn, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !isLoggedIn && !devMode) {
+    if (!isLoading && !isLoggedIn && !devMode) {
       router.push('/login');
     }
-  }, [isLoggedIn, loading, router, devMode]);
+  }, [isLoggedIn, isLoading, router, devMode]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">

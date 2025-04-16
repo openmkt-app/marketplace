@@ -20,61 +20,40 @@ export default function ListingDetailPage() {
       setError(null);
       
       try {
-        console.log('Attempting to fetch listing with ID:', params.id);
-        
-        // Decode the URI
         const uri = decodeURIComponent(params.id as string);
-        console.log('Decoded URI:', uri);
         
         if (!uri) {
           throw new Error('No listing ID provided');
         }
         
-        // Parse the URI to get the components
-        // Format: at://did:plc:xxx/collection/rkey
         const parts = uri.split('/');
         const did = parts[2];
         const collection = parts[3];
         const rkey = parts[4];
         
-        console.log('Fetching record - DID:', did, 'Collection:', collection, 'RKey:', rkey);
-        
-        // Validate the DID format
-        if (!did || !did.startsWith('did:plc:')) {
-          console.error('Invalid DID format:', did);
-          throw new Error('Invalid listing identifier format');
-        }
-        
-        // Initialize the agent
         const agent = new BskyAgent({
           service: 'https://bsky.social',
         });
         
-        // Get record directly
         const record = await agent.api.com.atproto.repo.getRecord({
           repo: did,
           collection: collection,
           rkey: rkey
         });
         
-        console.log('Raw API response data:', record.data);
-        
-        // Check if record.data.value exists and has images array
         if (record.data && record.data.value && Array.isArray(record.data.value.images)) {
           console.log('Images found in API response:', record.data.value.images.length);
         } else {
           console.warn('No images array found in API response or it is not an array');
         }
         
-        // Create a listing object with the data
         const listingData = {
           ...record.data.value,
           uri: record.data.uri,
           cid: record.data.cid,
           authorDid: did
-        };
+        } as any; // Using 'as any' to handle dynamic properties from the Bluesky API that TypeScript cannot detect statically
         
-        // SPECIAL DIAGNOSTIC: Extract JSON-safe version of problematic properties
         const diagnosticData = {
           recordData: {
             uri: record.data.uri,
@@ -83,8 +62,7 @@ export default function ListingDetailPage() {
             hasImages: Boolean(record.data.value?.images),
             imagesIsArray: Array.isArray(record.data.value?.images),
             imagesLength: Array.isArray(record.data.value?.images) ? record.data.value.images.length : 'not array',
-            // Try to get a serializable version of images
-            imagesSample: record.data.value?.images ? record.data.value.images.map(img => {
+            imagesSample: Array.isArray(record.data.value?.images) ? record.data.value.images.map(img => {
               try {
                 return {
                   type: img?.$type,
@@ -94,7 +72,7 @@ export default function ListingDetailPage() {
                   mimeType: img?.mimeType,
                   size: img?.size
                 };
-              } catch (e) {
+              } catch (e: any) {
                 return { error: 'Failed to serialize image', message: e.message };
               }
             }) : 'no images'
@@ -102,25 +80,19 @@ export default function ListingDetailPage() {
           listingData: {
             uri: listingData.uri,
             cid: listingData.cid,
-            type: listingData.$type,
-            title: listingData.title,
-            hasImages: Boolean(listingData.images),
-            imagesIsArray: Array.isArray(listingData.images),
-            imagesLength: Array.isArray(listingData.images) ? listingData.images.length : 'not array',
+            type: (listingData as any).$type,
+            title: (listingData as any).title,
+            hasImages: Boolean((listingData as any).images),
+            imagesIsArray: Array.isArray((listingData as any).images),
+            imagesLength: Array.isArray((listingData as any).images) ? (listingData as any).images.length : 'not array',
           }
         };
         
-        // EXPERIMENTAL: Direct extraction of CIDs from raw data
         try {
           const rawJson = JSON.stringify(record.data);
-          // Find all potential CID strings in the raw data
-          // This regex targets both bafk and bafkr prefixes commonly used for Bluesky CIDs
           const cidMatches = rawJson.match(/bafk(?:re)?[a-zA-Z0-9]{44,60}/g) || [];
           
           if (cidMatches.length > 0) {
-            console.log('🔍 Found potential CIDs in raw data:', cidMatches);
-            
-            // Create direct URLs using these CIDs
             const directUrls = cidMatches.map(cid => ({
               thumbnail: `https://cdn.bsky.app/img/feed_thumbnail/plain/${did}/${cid}@jpeg`,
               fullsize: `https://cdn.bsky.app/img/feed_fullsize/plain/${did}/${cid}@jpeg`,
@@ -128,9 +100,7 @@ export default function ListingDetailPage() {
               extractedCid: cid
             }));
             
-            // Store these direct URLs in the listing data for later use
             listingData.extractedImageUrls = directUrls;
-            console.log('📷 Created direct image URLs:', directUrls);
           }
         } catch (error) {
           console.error('Failed to extract CIDs from raw data:', error);
@@ -138,52 +108,36 @@ export default function ListingDetailPage() {
         
         console.log('Created listing object:', listingData);
         
-        // Ensure authorDid is correctly set
         if (!listingData.authorDid) {
           console.error('Author DID is missing, using DID from the URI');
           listingData.authorDid = did;
         }
         
-        // Log the full data object for debugging
-        console.log('Full listing data before validation:', JSON.stringify(listingData, null, 2));
         console.log(`Found ${listingData.images ? listingData.images.length : 0} images in the listing`);
           
-        // Check if images exist and have the expected structure
         if (listingData.images && Array.isArray(listingData.images)) {
           console.log(`Found ${listingData.images.length} images in the listing`);
           
-          // Validate each image object
-          listingData.images = listingData.images.filter(image => {
-            // Print the exact object for debugging
-            console.log('Validating image object:', JSON.stringify(image, null, 2));
-            
-            // More flexible validation to handle both BlobRef objects and regular objects
-            // with ref.$link properties
+          listingData.images = listingData.images.filter((image: any) => {
             if (!image) {
               console.warn('Skipping null/undefined image object');
               return false;
             }
             
-            // In case we get a BlobRef, the $type should be 'blob'
             if (image.$type === 'blob' && image.ref && typeof image.ref === 'object') {
               if (image.ref.$link) {
-                console.log('Valid blob image with ref.$link:', image.ref.$link);
                 return true;
               }
             }
 
-            // Handle case where image might be the ref itself
             if (typeof image === 'object' && image.$link) {
-              console.log('Direct blob reference with $link:', image.$link);
               return true;
             }
             
-            // Log the exact reason for skipping
             console.warn('Skipping invalid image object, missing ref.$link:', image);
             return false;
           });
           
-          // Log the image objects after validation
           if (listingData.images.length > 0) {
             console.log('First image object after validation:', JSON.stringify(listingData.images[0], null, 2));
             console.log(`Validated ${listingData.images.length} images`);
@@ -195,11 +149,9 @@ export default function ListingDetailPage() {
         
         setListing(listingData);
         
-        // After listing is loaded, fetch the seller's profile
         try {
           console.log('Fetching seller profile for:', listingData.authorDid);
           
-          // Direct approach to get the profile record
           const profileRecord = await agent.api.com.atproto.repo.getRecord({
             repo: did,
             collection: 'app.bsky.actor.profile',
@@ -209,24 +161,27 @@ export default function ListingDetailPage() {
           console.log('Got profile record:', profileRecord.data);
           
           if (profileRecord.data && profileRecord.data.value) {
-            // Extract display name from the value
-            const profileData = {
+            const profileData: { 
+              did: string;
+              handle: string;
+              displayName?: string;
+              description?: string;
+              avatarUrl?: string;
+            } = {
               did: did,
               handle: did.split(':')[2],
-              displayName: profileRecord.data.value.displayName,
-              description: profileRecord.data.value.description
+              displayName: (profileRecord.data.value as any).displayName,
+              description: (profileRecord.data.value as any).description
             };
             
-            // If there's an avatar, create the avatar URL
-            if (profileRecord.data.value.avatar && 
-                profileRecord.data.value.avatar.ref && 
-                profileRecord.data.value.avatar.ref.$link) {
-              const avatarCid = profileRecord.data.value.avatar.ref.$link;
-              const mimeType = profileRecord.data.value.avatar.mimeType || 'image/jpeg';
+            if ((profileRecord.data.value as any).avatar && 
+                (profileRecord.data.value as any).avatar.ref && 
+                (profileRecord.data.value as any).avatar.ref.$link) {
+              const avatarCid = (profileRecord.data.value as any).avatar.ref.$link;
+              const mimeType = (profileRecord.data.value as any).avatar.mimeType || 'image/jpeg';
               const extension = mimeType.split('/')[1] || 'jpeg';
               
               profileData.avatarUrl = `https://cdn.bsky.app/img/avatar/plain/${did}/${avatarCid}@${extension}`;
-              console.log('Created avatar URL:', profileData.avatarUrl);
             }
             
             setSellerProfile(profileData);
@@ -234,7 +189,6 @@ export default function ListingDetailPage() {
         } catch (profileError) {
           console.error('Failed to fetch seller profile:', profileError);
           
-          // Simple fallback to just show the handle
           const basicProfile = {
             did: did,
             handle: did.split(':')[2],
@@ -255,34 +209,22 @@ export default function ListingDetailPage() {
     }
   }, [params.id]);
   
-  // Use the directly extracted URLs if available, or generate them using our utility function
   const directImageUrls = React.useMemo(() => {
-    // First try to use the URLs we extracted directly from the raw data
     if (listing && listing.extractedImageUrls && listing.extractedImageUrls.length > 0) {
-      console.log('Using extracted image URLs:', listing.extractedImageUrls);
       return listing.extractedImageUrls;
     }
     
     if (!listing || !listing.images || !Array.isArray(listing.images)) {
-      console.log('No images found in listing:', listing);
       return [];
     }
     
-    console.log(`Processing ${listing.images.length} images with author DID:`, listing.authorDid);
-    
-    // Use a try-catch for each image to prevent a single failure from breaking all images
     const urls = [];
     
     for (let i = 0; i < listing.images.length; i++) {
       const image = listing.images[i];
       
       try {
-        // Debug each image
-        console.log(`Processing image ${i}:`, JSON.stringify(image, null, 2));
-        
-        // We'll be more lenient about validation here and let the utility function handle it
         const imageUrls = createBlueskyCdnImageUrls(image, listing.authorDid, image.mimeType);
-        console.log(`Generated URLs for image ${i}:`, imageUrls);
         
         urls.push({
           thumbnail: imageUrls.thumbnail,
@@ -294,7 +236,6 @@ export default function ListingDetailPage() {
       }
     }
     
-    console.log(`Successfully processed ${urls.length} images`);
     return urls;
   }, [listing]);
   
@@ -344,12 +285,10 @@ export default function ListingDetailPage() {
     );
   }
   
-  // Format price for display
   const formattedPrice = listing.price.includes('$')
     ? listing.price
     : `$${listing.price}`;
   
-  // Format creation date
   const createdDate = new Date(listing.createdAt);
   const formattedDate = createdDate.toLocaleDateString('en-US', {
     year: 'numeric',
@@ -367,7 +306,6 @@ export default function ListingDetailPage() {
       </div>
       
       <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
-        {/* Main image display */}
         <div className="w-full h-96 bg-gray-100 flex items-center justify-center">
           {directImageUrls.length > 0 ? (
             <img 
@@ -375,7 +313,6 @@ export default function ListingDetailPage() {
               alt={listing.title}
               className="max-h-full max-w-full object-contain"
               onError={(e) => {
-                console.error('Failed to load fullsize image:', directImageUrls[selectedImageIndex].fullsize);
                 e.currentTarget.src = '/placeholder-image.svg';
                 e.currentTarget.alt = 'Image failed to load';
               }}
@@ -394,7 +331,6 @@ export default function ListingDetailPage() {
           )}
         </div>
         
-        {/* Image URL debugging (only in development) */}
         {process.env.NODE_ENV === 'development' && (
           <div className="p-2 bg-gray-100 border-t border-gray-200 text-xs">
             <details>
@@ -447,10 +383,9 @@ export default function ListingDetailPage() {
           </div>
         )}
         
-        {/* Thumbnails */}
         {directImageUrls.length > 1 && (
           <div className="flex gap-2 p-4 bg-gray-50">
-            {directImageUrls.map((url, i) => (
+            {directImageUrls.map((url: any, i: number) => (
               <div 
                 key={i} 
                 onClick={() => setSelectedImageIndex(i)}
@@ -462,7 +397,6 @@ export default function ListingDetailPage() {
                   alt={`${listing.title} thumbnail ${i + 1}`}
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    console.error('Failed to load thumbnail image:', url.thumbnail);
                     e.currentTarget.src = '/placeholder-image.svg';
                     e.currentTarget.alt = 'Thumbnail failed to load';
                   }}
@@ -472,7 +406,6 @@ export default function ListingDetailPage() {
           </div>
         )}
         
-        {/* Listing details */}
         <div className="p-6">
           <div className="text-2xl font-bold text-blue-600 mb-4">
             {formattedPrice}

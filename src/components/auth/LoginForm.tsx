@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
 export default function LoginForm() {
-  const { login, loading } = useAuth();
+  const { login, isLoading } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +48,7 @@ export default function LoginForm() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className="w-full px-3 py-2 border rounded-md"
-            disabled={loading}
+            disabled={isLoading}
           />
         </div>
         
@@ -62,22 +62,22 @@ export default function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full px-3 py-2 border rounded-md"
-            disabled={loading}
+            disabled={isLoading}
           />
         </div>
         
         <button
           type="submit"
-          disabled={loading}
+          disabled={isLoading}
           className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md"
         >
-          {loading ? 'Logging in...' : 'Login'}
+          {isLoading ? 'Logging in...' : 'Login'}
         </button>
       </form>
       
       <div className="mt-4 text-sm text-center">
         <p>
-          Don't have an AT Protocol account?{' '}
+          Don&apos;t have an AT Protocol account?{' '}
           <a 
             href="https://bsky.app" 
             target="_blank" 

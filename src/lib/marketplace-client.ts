@@ -1,6 +1,6 @@
 // src/lib/marketplace-client.ts
 import { BskyAgent } from '@atproto/api';
-import type { AtpSessionEvent, AtpSessionData } from '@atproto/api';
+import type { AtpSessionData } from '@atproto/api';
 import { generateImageUrls } from './image-utils';
 import logger from './logger';
 
@@ -35,62 +35,88 @@ export type MarketplaceListing = {
     fullsize: string;
     mimeType: string;
   }>;
+  // Added for listing identification
+  uri?: string;
+  cid?: string;
+  // Added for seller information
   sellerDid?: string;
+  authorDid?: string;
+  authorHandle?: string;
+  authorDisplayName?: string;
+  // Added for display and filtering
+  isVerifiedSeller?: boolean;
+  isSameNetwork?: boolean;
+  lastViewed?: string;
 };
 
 export type CreateListingParams = Omit<MarketplaceListing, 'createdAt'>;
 
-export type SessionData = {
-  did: string;
-  handle: string;
-  accessJwt: string;
-  refreshJwt: string;
-};
+// Define a session data interface compatible with AtpSessionData
+export type SessionData = AtpSessionData;
+
+// Add a cache interface for marketplace listings
+interface ListingsCache {
+  data: (MarketplaceListing & { 
+    authorDid: string; 
+    authorHandle: string; 
+    uri: string; 
+    cid: string;
+  })[];
+  timestamp: number;
+  cacheTTL: number;
+  isValid: () => boolean;
+}
+
+// Define a type for post records
+interface PostRecord {
+  $type: string;
+  location?: ListingLocation;
+  // Add other fields as needed
+}
 
 export class MarketplaceClient {
   agent: BskyAgent;
   isLoggedIn: boolean;
+  // Add cache and rate limit tracking properties
+  private listingsCache: ListingsCache | null;
+  private lastApiCall: number;
+  private cacheTTL: number; // cache time-to-live in milliseconds
+  private rateLimitInterval: number; // minimum time between API calls in milliseconds
 
   constructor(serviceUrl: string = 'https://bsky.social') {
     this.agent = new BskyAgent({
       service: serviceUrl,
     });
     this.isLoggedIn = false;
+    // Initialize cache and rate limit properties
+    this.listingsCache = null;
+    this.lastApiCall = 0;
+    this.cacheTTL = 5 * 60 * 1000; // 5 minutes cache TTL
+    this.rateLimitInterval = 30 * 1000; // 30 seconds between API calls
   }
 
-  async login(username: string, password: string): Promise<{ success: boolean; data?: any; error?: Error }> {
+  async login(username: string, password: string): Promise<SessionData> {
     try {
-      logger.info(`Attempting login for user: ${username}`);
-      logger.logApiRequest('POST', 'login', { identifier: username });
-      
-      const result = await this.agent.login({
+      logger.info(`Attempting to login user: ${username}`);
+      logger.logApiRequest('POST', 'com.atproto.server.createSession', { identifier: username });
+      const response = await this.agent.login({
         identifier: username,
         password: password,
       });
       
       this.isLoggedIn = true;
       logger.info(`Login successful for user: ${username}`);
-      logger.logApiResponse('POST', 'login', 200, { did: result.data.did, handle: result.data.handle });
       
-      console.log('Login response data:', result.data);
-      
-      // Ensure we're returning the data in the expected format
-      return { 
-        success: true, 
-        data: {
-          did: result.data.did,
-          handle: result.data.handle,
-          accessJwt: result.data.accessJwt,
-          refreshJwt: result.data.refreshJwt
-        } 
-      };
+      // Return the full session data that the UI might need
+      return response.data as SessionData;
     } catch (error) {
-      logger.error(`Login failed for user: ${username}`, error as Error);
-      return { success: false, error: error as Error };
+      logger.error('Login failed', error as Error);
+      this.isLoggedIn = false;
+      throw error;
     }
   }
 
-  async resumeSession(sessionData: SessionData): Promise<{ success: boolean; data?: any; error?: Error }> {
+  async resumeSession(sessionData: SessionData): Promise<{ success: boolean; data?: Record<string, unknown>; error?: Error }> {
     try {
       logger.info('Attempting to resume session');
       
@@ -123,7 +149,7 @@ export class MarketplaceClient {
     this.isLoggedIn = false;
   }
 
-  async createListing(listingData: CreateListingParams): Promise<any> {
+  async createListing(listingData: CreateListingParams): Promise<Record<string, unknown>> {
     if (!this.isLoggedIn || !this.agent.session) {
       throw new Error('User must be logged in to create a listing');
     }
@@ -138,7 +164,8 @@ export class MarketplaceClient {
       // Create a copy of the listing data without the images property
       // This prevents issues with the original File objects being passed to the API
       const {
-        images: _images, // Extract and ignore the original images
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        images: _,
         ...listingDataWithoutImages
       } = listingData;
       
@@ -262,11 +289,11 @@ export class MarketplaceClient {
       // This is inefficient but demonstrates the concept
       const listings = results.data.feed
         .filter(item => {
-          const record = item.post.record as any;
+          const record = item.post.record as PostRecord;
           return validTypes.includes(record.$type);
         })
         .filter(item => {
-          const record = item.post.record as any;
+          const record = item.post.record as PostRecord;
           const location = record.location;
           
           if (!location) return false;
@@ -281,15 +308,15 @@ export class MarketplaceClient {
           
           return stateMatch && countyMatch;
         })
-        .map(item => (item.post.record as any) as MarketplaceListing);
+        .map(item => (item.post.record as unknown) as MarketplaceListing);
       
       logger.info(`Found ${listings.length} listings matching location criteria`);
       
       // Process listings to add image URLs
-      return listings.map((listing, index) => {
+      return listings.map(listing => {
         // Extract the seller DID from the post (from the results.data.feed entries)
         const feedItem = results.data.feed.find(item => {
-          const record = item.post.record as any;
+          const record = item.post.record as PostRecord;
           return validTypes.includes(record.$type);
         });
         
@@ -467,7 +494,7 @@ export class MarketplaceClient {
   }
   
   /**
-   * Search for marketplace listings
+   * Search for marketplace listings with caching and rate limiting
    */
   private async searchMarketplaceListings(): Promise<(MarketplaceListing & { 
     authorDid: string; 
@@ -481,6 +508,32 @@ export class MarketplaceClient {
         logger.warn('User is not logged in, cannot search marketplace listings');
         return [];
       }
+
+      // Check if we have a valid cache - if so, return the cached data
+      if (this.listingsCache && this.listingsCache.isValid()) {
+        logger.info('Returning cached marketplace listings');
+        return this.listingsCache.data;
+      }
+
+      // Check if we need to wait for rate limiting
+      const now = Date.now();
+      const timeElapsed = now - this.lastApiCall;
+      if (this.lastApiCall > 0 && timeElapsed < this.rateLimitInterval) {
+        const waitTime = this.rateLimitInterval - timeElapsed;
+        logger.warn(`Rate limit protection: Waiting ${waitTime}ms before making API call`);
+        
+        // If we have expired cached data, return it while waiting for the rate limit
+        if (this.listingsCache) {
+          logger.info('Returning stale cached data due to rate limiting');
+          return this.listingsCache.data;
+        }
+        
+        // Otherwise, wait for the rate limit to expire
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+
+      // Update the last API call timestamp
+      this.lastApiCall = Date.now();
 
       // Option 1: Use the firehose approach to find recent marketplace listings
       // This isn't a real search but will find recent activity across the network
@@ -499,16 +552,16 @@ export class MarketplaceClient {
       const listings = results.data.feed
         .filter(item => {
           try {
-            const record = item.post.record as any;
+            const record = item.post.record as PostRecord;
             return validTypes.includes(record.$type);
-          } catch (e) {
+          } catch {
             return false;
           }
         })
         .map(item => {
-          const record = item.post.record as any;
+          const record = item.post.record as unknown;
           return {
-            ...record,
+            ...record as MarketplaceListing,
             authorDid: item.post.author.did,
             authorHandle: item.post.author.handle,
             uri: item.post.uri,
@@ -520,6 +573,7 @@ export class MarketplaceClient {
       
       // Add formatted image URLs for each listing
       const processedListings = listings.map(listing => {
+        // Pass the correct type of images to generateImageUrls or handle conversion
         const formattedImages = generateImageUrls(listing.authorDid, listing.images);
         return {
           ...listing,
@@ -527,8 +581,26 @@ export class MarketplaceClient {
         };
       });
       
+      // Update the cache
+      this.listingsCache = {
+        data: processedListings,
+        timestamp: Date.now(),
+        cacheTTL: this.cacheTTL,
+        isValid: function() {
+          return (Date.now() - this.timestamp) < this.cacheTTL;
+        }
+      };
+      
       return processedListings;
     } catch (error) {
+      // If we encounter a rate limit error (429), use cached data if available
+      if (error instanceof Error && error.message.includes('429')) {
+        logger.warn('Rate limit exceeded (429), using cached data if available');
+        if (this.listingsCache) {
+          return this.listingsCache.data;
+        }
+      }
+      
       logger.error('Failed to search for marketplace listings', error as Error);
       return [];
     }
@@ -559,7 +631,7 @@ export class MarketplaceClient {
       }
       
       const post = thread.post;
-      const record = post.record as any;
+      const record = post.record as PostRecord;
       
       // Check if this is actually a marketplace listing
       const validTypes = ['com.example.marketplace.listing', 'app.atprotomkt.marketplace.listing'];
@@ -570,7 +642,7 @@ export class MarketplaceClient {
       
       // Create the listing with additional metadata
       const listing = {
-        ...record,
+        ...record as unknown as MarketplaceListing,
         authorDid: post.author.did,
         authorHandle: post.author.handle,
         uri: post.uri,
@@ -578,23 +650,11 @@ export class MarketplaceClient {
       } as MarketplaceListing & { authorDid: string; authorHandle: string; uri: string; cid: string };
       
       // Add formatted image URLs if the listing has images
-      console.log('Processing listing images:', {
-        hasImages: !!listing.images,
-        imageCount: listing.images?.length || 0,
-        authorDid: listing.authorDid
-      });
-      
       if (listing.images && listing.images.length > 0) {
         try {
           // Generate the formatted image URLs
           const formattedImages = generateImageUrls(listing.authorDid, listing.images);
           listing.formattedImages = formattedImages;
-          
-          // Log the processed images and URLs
-          console.log(`Generated ${formattedImages.length} image URLs:`, {
-            first: formattedImages[0],
-            count: formattedImages.length
-          });
         } catch (error) {
           console.error('Error generating image URLs:', error);
         }

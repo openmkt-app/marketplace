@@ -18,14 +18,8 @@ interface ListingImageGalleryProps {
 export default function ListingImageGallery({ images, title }: ListingImageGalleryProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   
-  // Log images when component renders
-  useEffect(() => {
-    console.log('ListingImageGallery - Images provided:', images);
-  }, [images]);
-  
   // If no images are provided, show a placeholder
   if (!images || images.length === 0) {
-    console.error('No images provided to gallery');
     return (
       <div className="listing-image-gallery">
         <div className="main-image-container placeholder">
@@ -42,7 +36,6 @@ export default function ListingImageGallery({ images, title }: ListingImageGalle
   );
   
   if (!hasValidImages) {
-    console.error('Invalid image format:', images);
     return (
       <div className="listing-image-gallery">
         <div className="main-image-container placeholder">

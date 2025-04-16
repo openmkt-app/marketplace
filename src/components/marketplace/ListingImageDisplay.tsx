@@ -28,35 +28,25 @@ export default function ListingImageDisplay({
     setError(false); // Reset error state on new listing
 
     try {
-      // Log the listing for debugging
-      console.log('ListingImageDisplay - Processing listing:', listing.title || 'Untitled');
-      
       const authorDid = listing.authorDid || '';
       const hasImages = listing.images && listing.images.length > 0;
 
       if (!authorDid) {
-        console.warn('ListingImageDisplay - Missing author DID, cannot generate image URL');
         setImageUrl(null);
         return;
       }
       
       if (!hasImages) {
-        console.log('ListingImageDisplay - No images found in listing');
         setImageUrl(null);
         return;
       }
-      
-      // Debug the first image object
-      console.log('ListingImageDisplay - First image:', JSON.stringify(listing.images[0], null, 2));
       
       // Check if this is a demo image with SVG format
       const isDemoImage = listing.images[0]?.ref?.$link?.includes('demo-') || 
                          listing.images[0]?.ref?.$link?.endsWith('.svg');
       
       if (isDemoImage) {
-        console.log('ListingImageDisplay - Detected demo image');
         const svgPath = `/${listing.images[0].ref.$link}`;
-        console.log('ListingImageDisplay - Using demo SVG path:', svgPath);
         setImageUrl(svgPath);
         return;
       }
@@ -65,13 +55,9 @@ export default function ListingImageDisplay({
       const blobCid = extractBlobCid(listing.images[0]);
       
       if (!blobCid) {
-        console.warn('ListingImageDisplay - Failed to extract blob CID from image:', listing.images[0]);
-        console.warn('ListingImageDisplay - Listing author DID:', authorDid);
         setImageUrl(null);
         return;
       }
-      
-      console.log('ListingImageDisplay - Successfully extracted blob CID:', blobCid);
       
       // Get the MIME type from the image object if available
       const imageMimeType = listing.images[0].mimeType || 'image/jpeg';
@@ -83,24 +69,18 @@ export default function ListingImageDisplay({
         size: listing.images[0].size || 0
       };
       
-      console.log('ListingImageDisplay - Using DID:', authorDid);
-      console.log('ListingImageDisplay - Using image object:', imageObj);
-      
       // Generate the image URLs
       const imageData = createBlueskyCdnImageUrls(imageObj, authorDid);
       const url = size === 'thumbnail' ? imageData.thumbnail : imageData.fullsize;
       
-      console.log(`ListingImageDisplay - Generated ${size} URL:`, url);
       setImageUrl(url);
     } catch (err) {
-      console.error('ListingImageDisplay - Error generating image URL:', err);
       setImageUrl(null);
     }
   }, [listing, size]);
   
   // Handle image loading error
   const handleImageError = () => {
-    console.log('ListingImageDisplay - Image failed to load:', imageUrl);
     setError(true);
   };
   

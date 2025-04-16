@@ -178,7 +178,6 @@ export async function compressImage(file: File, maxSizeKB: number = 900, quality
  */
 export function generateCdnUrl(did: string, blobCid: string, variant: 'feed_thumbnail' | 'feed_fullsize' = 'feed_thumbnail'): string | null {
   if (!did || !blobCid) {
-    console.error('Missing required parameters for CDN URL generation', { did, blobCid });
     return null;
   }
   
@@ -191,7 +190,6 @@ export function generateCdnUrl(did: string, blobCid: string, variant: 'feed_thum
   // Format: https://cdn.bsky.app/img/feed_thumbnail/plain/[DID]/[IMAGE_BLOB]@jpeg
   const url = `https://cdn.bsky.app/img/${variant}/plain/${normalizedDid}/${normalizedBlobCid}@jpeg`;
   
-  console.log(`Generated CDN URL: ${url}`);
   return url;
 }
 
@@ -209,12 +207,10 @@ export function generateImageUrl(
   variant: 'feed_thumbnail' | 'feed_fullsize' = 'feed_thumbnail'
 ): string {
   if (!image || !image.ref || !image.ref.$link) {
-    console.error('Invalid image object:', image);
     return '';
   }
   
   if (!did) {
-    console.error('Missing DID for image URL generation');
     return '';
   }
   
@@ -237,8 +233,6 @@ export function generateImageUrl(
   // Format: https://cdn.bsky.app/img/feed_thumbnail/plain/[DID]/[IMAGE_BLOB]@jpeg
   const url = `https://cdn.bsky.app/img/${variant}/plain/${did}/${blobCid}@${extension}`;
   
-  console.log(`Generated URL: ${url}`);
-  
   return url;
 }
 
@@ -255,16 +249,12 @@ export function generateImageUrls(did: string, images?: ListingImage[]): Array<{
   mimeType: string;
 }> {
   if (!images || images.length === 0) {
-    console.log('No images to generate URLs for');
     return [];
   }
   
   if (!did) {
-    console.error('Missing DID for image URL generation');
     return [];
   }
-  
-  console.log(`Generating URLs for ${images.length} images with DID: ${did}`);
   
   // Filter out invalid images
   const validImages = images.filter(image => {
@@ -272,7 +262,6 @@ export function generateImageUrls(did: string, images?: ListingImage[]): Array<{
   });
   
   if (validImages.length !== images.length) {
-    console.warn(`${images.length - validImages.length} invalid images filtered out`);
   }
   
   const formattedImages = validImages.map(image => {
@@ -299,18 +288,13 @@ export function generateImageUrls(did: string, images?: ListingImage[]): Array<{
 export function extractAndFormatListingImages(listing: any, did: string): string[] {
   // Check if the listing exists and has images
   if (!listing) {
-    console.error('Listing is null or undefined');
     return [];
   }
   
   if (!did) {
-    console.error('Missing DID for image URL generation');
     return [];
   }
 
-  console.log('Extracting images from listing:', listing);
-  console.log('Using DID:', did);
-  
   // If the listing already has formatted image URLs, use those
   if (listing.formattedImages && Array.isArray(listing.formattedImages)) {
     return listing.formattedImages.map((img: any) => img.fullsize || img.thumbnail || '');
@@ -320,22 +304,17 @@ export function extractAndFormatListingImages(listing: any, did: string): string
   if (listing.images && Array.isArray(listing.images)) {
     return listing.images
       .filter((img: any) => {
-        // Log each image for debugging
-        console.log('Processing image:', img);
         return img && img.ref && img.ref.$link;
       })
       .map((img: any) => {
         // Generate URL using the correct format
         const blobCid = img.ref.$link;
-        console.log(`Generating URL for blob: ${blobCid}`);
         const cdnUrl = generateCdnUrl(did, blobCid, 'feed_fullsize');
-        console.log(`Generated URL: ${cdnUrl}`);
         return cdnUrl || '';
       })
       .filter(Boolean); // Remove any null/empty URLs
   }
   
-  console.warn('No images found in listing object', listing);
   return [];
 }
 
@@ -349,8 +328,6 @@ export function extractAndFormatListingImages(listing: any, did: string): string
  * @returns An object with thumbnail and fullsize URLs
  */
 export function extractBlobCid(blobRef: any): string | null {
-  console.log('Extracting blob CID from:', JSON.stringify(blobRef, null, 2));
-  
   if (!blobRef) return null;
   
   // Direct approach - extract CID using regex
@@ -359,11 +336,14 @@ export function extractBlobCid(blobRef: any): string | null {
     const cidMatches = blobJson.match(/bafk(?:re)?[a-zA-Z0-9]{44,60}/g) || [];
     
     if (cidMatches.length > 0) {
-      console.log('Found CID in blob JSON:', cidMatches[0]);
-      return cidMatches[0];
+      // Use a type assertion to ensure TypeScript knows this is a string
+      return cidMatches[0] as string;
     }
+    // Add explicit return null here when no matches are found
+    return null;
   } catch (error) {
-    console.error('Error extracting CID using regex:', error);
+    // Add explicit return null to avoid implicit undefined return
+    return null;
   }
   
   // Handle different blob reference formats
@@ -380,15 +360,12 @@ export function extractBlobCid(blobRef: any): string | null {
   if (blobRef?.ref?.hash) {
     // If the blob ref has a hash property, it's likely a CID object
     // In this case, we need to extract the CID directly
-    console.log('Detected CID object format:', blobRef.ref);
     if (blobRef.ref.toString && typeof blobRef.ref.toString === 'function') {
       const cidString = blobRef.ref.toString();
-      console.log('CID toString() result:', cidString);
       return cidString;
     }
     
     // Fallback to the known CID for this example
-    console.log('Using fallback CID for known CID object');
     return 'bafkreiflo7dythmslsyzisekfpjlq3nypk7nsmupfw32z2ftsudzwpyhry';
   }
   
@@ -440,7 +417,6 @@ export function extractBlobCid(blobRef: any): string | null {
   
   // Fallback to known CID if available
   if (blobRef.original && JSON.stringify(blobRef.original).includes('bafkreiflo7dythmslsyzisekfpjlq3nypk7nsmupfw32z2ftsudzwpyhry')) {
-    console.log('Using fallback CID from original property');
     return 'bafkreiflo7dythmslsyzisekfpjlq3nypk7nsmupfw32z2ftsudzwpyhry';
   }
   
@@ -452,18 +428,11 @@ export function createBlueskyCdnImageUrls(
   did: string,
   mimeType: string = 'image/jpeg'
 ): { thumbnail: string; fullsize: string } {
-  // Debug the input object to understand its structure
-  console.log('createBlueskyCdnImageUrls - input blobRef:', 
-    typeof blobRef === 'object' ? JSON.stringify(blobRef, null, 2) : blobRef);
-  console.log('createBlueskyCdnImageUrls - did:', did);
-  console.log('createBlueskyCdnImageUrls - mimeType:', mimeType);
-  
   // Extract blob CID using our utility function
   const blobCid = extractBlobCid(blobRef);
   
   // Handle demo SVG images
   if (blobCid && (blobCid.endsWith('.svg') || blobCid.startsWith('demo-'))) {
-    console.log('Detected demo SVG image:', blobCid);
     return {
       thumbnail: `/${blobCid}`,
       fullsize: `/${blobCid}`
@@ -476,14 +445,11 @@ export function createBlueskyCdnImageUrls(
   }
   
   if (!blobCid) {
-    console.error('Could not extract blob CID');
     return {
       thumbnail: '/placeholder-image.svg',
       fullsize: '/placeholder-image.svg'
     };
   }
-  
-  console.log('Successfully extracted blob CID:', blobCid);
   
   // Normalize the DID
   const normalizedDid = did.trim();
@@ -504,9 +470,6 @@ export function createBlueskyCdnImageUrls(
   // Format the URLs
   const thumbnailUrl = `https://cdn.bsky.app/img/feed_thumbnail/plain/${normalizedDid}/${blobCid}@${extension}`;
   const fullsizeUrl = `https://cdn.bsky.app/img/feed_fullsize/plain/${normalizedDid}/${blobCid}@${extension}`;
-  
-  console.log('Generated thumbnail URL:', thumbnailUrl);
-  console.log('Generated fullsize URL:', fullsizeUrl);
   
   return {
     thumbnail: thumbnailUrl,

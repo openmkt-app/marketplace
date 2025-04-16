@@ -11,8 +11,9 @@ export default function LocationMap({ location }: LocationMapProps) {
   // In a real implementation, this would be a map component using a library like Leaflet, Google Maps, or Mapbox
   // For this demo, we'll just create a simple visual representation
   
-  const radius = location.radius || 5;
-  const locationName = [location.locality, location.county, location.state]
+  // Define a default radius since it's not in the LocationFilterValue type
+  const radius = 5; // Default fixed radius of 5 miles
+  const locationName = [location.city, location.county, location.state]
     .filter(Boolean)
     .join(', ');
 

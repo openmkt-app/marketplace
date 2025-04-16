@@ -12,7 +12,14 @@ import type { CommuteRoute } from '@/components/marketplace/filters/CommuteFilte
  */
 export function partialMatch(value: string, searchTerm: string): boolean {
   if (!searchTerm) return true; // Empty search term matches everything
-  return value.toLowerCase().includes(searchTerm.toLowerCase());
+  if (!value) return false; // Empty value doesn't match anything except empty search term
+  
+  // Convert both strings to lowercase for case-insensitive comparison
+  const lowerValue = value.toLowerCase();
+  const lowerSearchTerm = searchTerm.toLowerCase();
+  
+  // Check if the value includes the search term anywhere (partial match)
+  return lowerValue.includes(lowerSearchTerm);
 }
 
 /**
@@ -33,14 +40,14 @@ export function isListingWithinRadius(
     return false;
   }
 
-  // If locality is provided, check for partial match
-  if (filter.locality && !partialMatch(listing.location.locality, filter.locality)) {
+  // If city is provided, check for partial match with locality
+  if (filter.city && !partialMatch(listing.location.locality, filter.city)) {
     return false;
   }
 
-  // If ZIP prefix is provided, it must be an exact match at the start
-  if (filter.zipPrefix && 
-      (listing.location.zipPrefix?.indexOf(filter.zipPrefix) !== 0)) {
+  // If ZIP code is provided, it must be an exact match at the start
+  if (filter.zipCode && 
+      (listing.location.zipPrefix?.indexOf(filter.zipCode) !== 0)) {
     return false;
   }
 
@@ -63,8 +70,8 @@ export function isListingAlongCommuteRoute(
   // either the start or end location
   
   // Check if state or county partially matches route locations
-  const startName = route.startLocation.name.toLowerCase();
-  const endName = route.endLocation.name.toLowerCase();
+  const startName = route.startLocation.toLowerCase();
+  const endName = route.endLocation.toLowerCase();
   const listingState = listing.location.state.toLowerCase();
   const listingCounty = listing.location.county.toLowerCase();
   const listingLocality = listing.location.locality.toLowerCase();

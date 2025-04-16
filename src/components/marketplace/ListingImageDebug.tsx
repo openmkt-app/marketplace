@@ -23,10 +23,10 @@ export default function ListingImageDebug({ listing, show = false }: ListingImag
   // Extract the blob CID if an image exists
   const blobCid = firstImage ? extractBlobCid(firstImage) : null;
   
-  // Generate an example CDN URL
+  // Generate an example CDN URL - using undefined instead of null for compatibility with img src
   const generatedUrl = blobCid && authorDid 
     ? `https://cdn.bsky.app/img/feed_thumbnail/plain/${authorDid}/${blobCid}@jpeg`
-    : null;
+    : undefined; // Changed from null to undefined
   
   return (
     <div className="bg-gray-100 border border-gray-300 p-4 rounded-md text-xs mb-4">

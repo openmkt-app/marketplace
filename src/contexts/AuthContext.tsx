@@ -91,11 +91,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     try {
       setIsLoading(true);
-      const result = await client.login(username, password);
+      const sessionData = await client.login(username, password);
       
-      if (result.success && result.data) {
-        const sessionData = result.data;
-        
+      // MarketplaceClient.login() directly returns SessionData, not a {success, data} object
+      if (sessionData) {
         setIsLoggedIn(true);
         setUser({
           did: sessionData.did,
