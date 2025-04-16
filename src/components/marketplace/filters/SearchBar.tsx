@@ -50,7 +50,7 @@ export default function SearchBar({ initialValue = '', onSearchChange }: SearchB
         <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
           <svg 
             xmlns="http://www.w3.org/2000/svg" 
-            className="h-5 w-5 text-gray-400" 
+            className="h-5 w-5 text-neutral-medium" 
             fill="none" 
             viewBox="0 0 24 24" 
             stroke="currentColor"
@@ -68,7 +68,7 @@ export default function SearchBar({ initialValue = '', onSearchChange }: SearchB
           value={query}
           onChange={handleInputChange}
           placeholder="Search listings..."
-          className="w-full pl-10 pr-12 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full pl-10 pr-12 py-2 border border-neutral-light rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-color focus:border-transparent"
         />
         {query && (
           <button
@@ -78,7 +78,7 @@ export default function SearchBar({ initialValue = '', onSearchChange }: SearchB
           >
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
-              className="h-5 w-5 text-gray-400 hover:text-gray-600" 
+              className="h-5 w-5 text-neutral-medium hover:text-text-secondary" 
               viewBox="0 0 20 20" 
               fill="currentColor"
             >
@@ -92,7 +92,7 @@ export default function SearchBar({ initialValue = '', onSearchChange }: SearchB
         )}
         <button
           type="submit"
-          className="absolute inset-y-0 right-0 flex items-center px-3 bg-blue-600 rounded-r-lg hover:bg-blue-700 text-white"
+          className="absolute inset-y-0 right-0 flex items-center px-3 bg-primary-color rounded-r-lg hover:bg-primary-light text-white"
         >
           Search
         </button>

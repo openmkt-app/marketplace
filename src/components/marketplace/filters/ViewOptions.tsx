@@ -53,8 +53,8 @@ export default function ViewOptions({
           onClick={() => handleModeChange('grid')}
           className={`p-2 ${
             mode === 'grid' 
-              ? 'bg-blue-600 text-white' 
-              : 'bg-white text-gray-700 hover:bg-gray-100'
+              ? 'bg-primary-color text-white' 
+              : 'bg-white text-text-primary hover:bg-neutral-light'
           }`}
           title="Grid view"
         >
@@ -69,8 +69,8 @@ export default function ViewOptions({
           onClick={() => handleModeChange('list')}
           className={`p-2 ${
             mode === 'list' 
-              ? 'bg-blue-600 text-white' 
-              : 'bg-white text-gray-700 hover:bg-gray-100'
+              ? 'bg-primary-color text-white' 
+              : 'bg-white text-text-primary hover:bg-neutral-light'
           }`}
           title="List view"
         >
@@ -82,8 +82,8 @@ export default function ViewOptions({
           onClick={() => handleModeChange('map')}
           className={`p-2 ${
             mode === 'map' 
-              ? 'bg-blue-600 text-white' 
-              : 'bg-white text-gray-700 hover:bg-gray-100'
+              ? 'bg-primary-color text-white' 
+              : 'bg-white text-text-primary hover:bg-neutral-light'
           }`}
           title="Map view"
         >
@@ -97,7 +97,7 @@ export default function ViewOptions({
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center py-2 px-3 text-sm border rounded-md hover:bg-gray-50"
+          className="flex items-center py-2 px-3 text-sm border rounded-md hover:bg-neutral-light"
         >
           <span>{perPage} per page</span>
           <svg 
@@ -119,8 +119,8 @@ export default function ViewOptions({
                   onClick={() => handlePerPageChange(count)}
                   className={`block w-full text-left px-4 py-2 text-sm ${
                     perPage === count 
-                      ? 'bg-blue-100 text-blue-800' 
-                      : 'hover:bg-gray-100'
+                      ? 'bg-primary-light/20 text-primary-color' 
+                      : 'hover:bg-neutral-light'
                   }`}
                 >
                   {count} per page

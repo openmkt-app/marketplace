@@ -24,7 +24,7 @@ export default function ListingCard({ listing, showDebug = false }: ListingCardP
       <ListingImageDebug listing={listing} show={showDebug} />
       
       {/* Image Section */}
-      <div className="relative w-full h-48 mb-4 bg-gray-100 rounded-md overflow-hidden">
+      <div className="relative w-full h-48 mb-4 bg-neutral-light rounded-md overflow-hidden">
         <ListingImageDisplay 
           listing={listing}
           size="thumbnail"
@@ -34,13 +34,13 @@ export default function ListingCard({ listing, showDebug = false }: ListingCardP
       </div>
       
       {/* Listing Details */}
-      <h2 className="text-xl font-semibold mb-2">{listing.title}</h2>
-      <p className="text-gray-600 mb-2 flex-grow line-clamp-2">{listing.description}</p>
-      <p className="text-xl font-bold text-blue-600 mb-2">{listing.price}</p>
+      <h2 className="text-xl font-semibold mb-2 text-text-primary">{listing.title}</h2>
+      <p className="text-text-secondary mb-2 flex-grow line-clamp-2">{listing.description}</p>
+      <p className="text-xl font-bold text-primary-color mb-2">{listing.price}</p>
       
       {listing.authorHandle && (
         <div className="mb-2">
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-text-secondary">
             Listed by: {listing.authorDisplayName ? (
               <span className="font-medium">{listing.authorDisplayName}</span>
             ) : (
@@ -51,16 +51,16 @@ export default function ListingCard({ listing, showDebug = false }: ListingCardP
       )}
       
       <div className="mb-2">
-        <span className="text-sm text-gray-500">
+        <span className="text-sm text-text-secondary">
           Location: {listing.location.locality}, {listing.location.state}
         </span>
       </div>
       
       <div className="mb-3">
-        <span className="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2">
+        <span className="badge mr-2">
           {listing.category}
         </span>
-        <span className="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700">
+        <span className="badge">
           {listing.condition}
         </span>
       </div>
@@ -68,14 +68,14 @@ export default function ListingCard({ listing, showDebug = false }: ListingCardP
       {listing.uri ? (
         <Link
           href={`/listing/${encodeURIComponent(listing.uri)}`}
-          className="mt-auto inline-block py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md text-center w-full"
+          className="btn-primary w-full mt-auto"
         >
           View Details
         </Link>
       ) : (
         <Link
           href={`/listing/${encodeURIComponent(listing.title)}`}
-          className="mt-auto inline-block py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md text-center w-full"
+          className="btn-primary w-full mt-auto"
         >
           View Details
         </Link>

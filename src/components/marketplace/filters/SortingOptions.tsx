@@ -54,7 +54,7 @@ export default function SortingOptions({ sortBy, onChange }: SortingOptionsProps
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center py-2 px-3 text-sm bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700"
+        className="flex items-center py-2 px-3 text-sm bg-neutral-light hover:bg-neutral-medium rounded-md text-text-primary"
       >
         <span>Sort: {getDisplayName(selected)}</span>
         <svg 
@@ -73,7 +73,7 @@ export default function SortingOptions({ sortBy, onChange }: SortingOptionsProps
             <button
               onClick={() => handleSortChange('relevance')}
               className={`block px-4 py-2 text-sm w-full text-left ${
-                selected === 'relevance' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'
+                selected === 'relevance' ? 'bg-primary-light/20 text-primary-color' : 'hover:bg-neutral-light'
               }`}
             >
               Relevance
@@ -81,7 +81,7 @@ export default function SortingOptions({ sortBy, onChange }: SortingOptionsProps
             <button
               onClick={() => handleSortChange('recency')}
               className={`block px-4 py-2 text-sm w-full text-left ${
-                selected === 'recency' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'
+                selected === 'recency' ? 'bg-primary-light/20 text-primary-color' : 'hover:bg-neutral-light'
               }`}
             >
               Recently Listed
@@ -89,7 +89,7 @@ export default function SortingOptions({ sortBy, onChange }: SortingOptionsProps
             <button
               onClick={() => handleSortChange('price_asc')}
               className={`block px-4 py-2 text-sm w-full text-left ${
-                selected === 'price_asc' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'
+                selected === 'price_asc' ? 'bg-primary-light/20 text-primary-color' : 'hover:bg-neutral-light'
               }`}
             >
               Price: Low to High
@@ -97,7 +97,7 @@ export default function SortingOptions({ sortBy, onChange }: SortingOptionsProps
             <button
               onClick={() => handleSortChange('price_desc')}
               className={`block px-4 py-2 text-sm w-full text-left ${
-                selected === 'price_desc' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'
+                selected === 'price_desc' ? 'bg-primary-light/20 text-primary-color' : 'hover:bg-neutral-light'
               }`}
             >
               Price: High to Low
@@ -105,7 +105,7 @@ export default function SortingOptions({ sortBy, onChange }: SortingOptionsProps
             <button
               onClick={() => handleSortChange('distance')}
               className={`block px-4 py-2 text-sm w-full text-left ${
-                selected === 'distance' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'
+                selected === 'distance' ? 'bg-primary-light/20 text-primary-color' : 'hover:bg-neutral-light'
               }`}
             >
               Distance

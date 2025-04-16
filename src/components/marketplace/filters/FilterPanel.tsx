@@ -215,7 +215,7 @@ export default function FilterPanel({
       <div className="px-4 py-2 border-b flex justify-between items-center">
         <button
           onClick={() => setFiltersExpanded(!filtersExpanded)}
-          className="text-blue-600 font-medium flex items-center"
+          className="text-primary-color font-medium flex items-center"
         >
           {filtersExpanded ? 'Hide Filters' : 'Show Advanced Filters'}
           <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ml-1 transition-transform ${filtersExpanded ? 'transform rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
@@ -248,8 +248,8 @@ export default function FilterPanel({
                 onClick={() => setActiveTab(tab)}
                 className={`py-3 px-4 text-center font-medium whitespace-nowrap ${
                   activeTab === tab
-                    ? 'text-blue-600 border-b-2 border-blue-600'
-                    : 'text-gray-600 hover:text-gray-800'
+                    ? 'text-primary-color border-b-2 border-primary-color'
+                    : 'text-text-secondary hover:text-text-primary'
                 }`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -266,8 +266,8 @@ export default function FilterPanel({
                     onClick={() => setFilterValues(prev => ({ ...prev, locationType: 'basic' }))}
                     className={`flex-1 py-2 px-3 text-center rounded ${
                       filterValues.locationType === 'basic'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        ? 'bg-primary-color text-white'
+                        : 'bg-neutral-light text-text-primary hover:bg-neutral-medium'
                     }`}
                   >
                     Basic
@@ -276,8 +276,8 @@ export default function FilterPanel({
                     onClick={() => setFilterValues(prev => ({ ...prev, locationType: 'commute' }))}
                     className={`flex-1 py-2 px-3 text-center rounded ${
                       filterValues.locationType === 'commute'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        ? 'bg-primary-color text-white'
+                        : 'bg-neutral-light text-text-primary hover:bg-neutral-medium'
                     }`}
                   >
                     Commute
@@ -337,29 +337,29 @@ export default function FilterPanel({
           </div>
           
           {/* Saved Filters and Save Button */}
-          <div className="p-4 bg-gray-50 flex justify-between items-center">
+          <div className="p-4 bg-background flex justify-between items-center">
             <div className="flex items-center space-x-2">
-              <span className="text-sm font-medium text-gray-700">Saved Filters:</span>
+              <span className="text-sm font-medium text-text-primary">Saved Filters:</span>
               <div className="flex space-x-2">
                 {savedFilters.length > 0 ? (
                   savedFilters.map((savedFilter, index) => (
                     <button
                       key={index}
                       onClick={() => handleLoadFilter(savedFilter.filter)}
-                      className="text-sm bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded-full"
+                      className="text-sm bg-neutral-light hover:bg-neutral-medium px-3 py-1 rounded-full"
                     >
                       {savedFilter.name}
                     </button>
                   ))
                 ) : (
-                  <span className="text-sm text-gray-500">None saved</span>
+                  <span className="text-sm text-text-secondary">None saved</span>
                 )}
               </div>
             </div>
             
             <button
               onClick={() => setShowSaveDialog(true)}
-              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+              className="text-primary-color hover:text-primary-light text-sm font-medium"
             >
               Save Current Filter
             </button>
@@ -367,29 +367,29 @@ export default function FilterPanel({
           
           {/* Save Filter Dialog */}
           {showSaveDialog && (
-            <div className="p-4 bg-blue-50 border-t border-blue-100">
+            <div className="p-4 bg-primary-light/10 border-t border-primary-light/20">
               <div className="flex space-x-2">
                 <input
                   type="text"
                   value={filterName}
                   onChange={(e) => setFilterName(e.target.value)}
                   placeholder="Filter name"
-                  className="flex-1 px-3 py-2 border rounded-md"
+                  className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-color"
                 />
                 <button
                   onClick={handleSaveFilter}
                   disabled={!filterName}
                   className={`px-4 py-2 rounded-md ${
                     !filterName
-                      ? 'bg-gray-300 text-gray-500'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                      ? 'bg-neutral-medium text-text-secondary'
+                      : 'bg-primary-color text-white hover:bg-primary-light'
                   }`}
                 >
                   Save
                 </button>
                 <button
                   onClick={() => setShowSaveDialog(false)}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md"
+                  className="px-4 py-2 bg-neutral-light text-text-primary hover:bg-neutral-medium rounded-md"
                 >
                   Cancel
                 </button>

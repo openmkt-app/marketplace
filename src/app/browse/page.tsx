@@ -503,7 +503,7 @@ export default function BrowsePage() {
   
   return (
     <div className="max-w-6xl mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6">Browse Listings</h1>
+      <h1 className="text-3xl font-bold mb-6 text-text-primary">Browse Listings</h1>
       
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -522,12 +522,12 @@ export default function BrowsePage() {
       
       {!initialized || isLoading ? (
         <div className="text-center py-10">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
-          <p className="mt-2">Loading listings...</p>
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-color border-r-transparent"></div>
+          <p className="mt-2 text-text-primary">Loading listings...</p>
         </div>
       ) : realListingsCount > 0 && filteredListings.length > 0 ? (
         <div>
-          <p className="mb-4 text-gray-600">
+          <p className="mb-4 text-text-secondary">
             Showing {filteredListings.length} of {allListings.length} listings
             {filters.searchQuery && (
               <> matching <span className="font-medium">"{filters.searchQuery}"</span></>
@@ -569,7 +569,7 @@ export default function BrowsePage() {
                   onClick={() => listing.uri ? recordListingView(listing.uri) : null}
                   className="bg-white rounded-lg shadow-md overflow-hidden flex"
                 >
-                  <div className="w-48 h-48 bg-gray-100 flex-shrink-0">
+                  <div className="w-48 h-48 bg-neutral-light flex-shrink-0">
                     <ListingImageDisplay 
                       listing={listing}
                       size="thumbnail"
@@ -578,23 +578,23 @@ export default function BrowsePage() {
                     />
                   </div>
                   <div className="p-4 flex-grow">
-                    <h2 className="text-xl font-semibold mb-2">{listing.title}</h2>
-                    <p className="text-gray-600 mb-2">{listing.description.substring(0, 150)}...</p>
+                    <h2 className="text-xl font-semibold mb-2 text-text-primary">{listing.title}</h2>
+                    <p className="text-text-secondary mb-2">{listing.description.substring(0, 150)}...</p>
                     <div className="flex justify-between items-end">
                       <div>
-                        <div className="text-gray-500 text-sm">
+                        <div className="text-text-secondary text-sm">
                           {listing.location.locality}, {listing.location.state}
                         </div>
                         <div className="flex space-x-2 mt-2">
-                          <span className="px-2 py-1 bg-gray-200 rounded-full text-xs">{listing.category}</span>
-                          <span className="px-2 py-1 bg-gray-200 rounded-full text-xs">{listing.condition}</span>
+                          <span className="badge">{listing.category}</span>
+                          <span className="badge">{listing.condition}</span>
                         </div>
                       </div>
                       <div>
-                        <div className="text-xl font-bold text-blue-600 mb-2">{listing.price}</div>
+                        <div className="text-xl font-bold text-primary-color mb-2">{listing.price}</div>
                         <Link
                           href={`/listing/${encodeURIComponent(listing.uri || listing.title)}`}
-                          className="inline-block py-1 px-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md"
+                          className="btn-primary"
                         >
                           View Details
                         </Link>
@@ -607,8 +607,8 @@ export default function BrowsePage() {
           )}
           
           {filters.viewMode === 'map' && (
-            <div className="bg-gray-100 rounded-lg p-4 min-h-[400px] flex items-center justify-center">
-              <p className="text-gray-500">
+            <div className="bg-background rounded-lg p-4 min-h-[400px] flex items-center justify-center">
+              <p className="text-text-secondary">
                 Map view is coming soon! Listings will be displayed on an interactive map.
               </p>
             </div>
@@ -622,13 +622,13 @@ export default function BrowsePage() {
             {!auth.isLoggedIn && (
               <button 
                 onClick={() => window.location.href = '/login'}
-                className="mt-2 py-1 px-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded">
+                className="mt-2 py-1 px-3 bg-primary-color hover:bg-primary-light text-white text-sm font-medium rounded">
                 Log In
               </button>
             )}
           </div>
           
-          <p className="mb-4 text-gray-600">
+          <p className="mb-4 text-text-secondary">
             Showing {filteredListings.length} of {allListings.length} listings
             {filters.locationType === 'basic' && filters.location && (
               <>
@@ -665,7 +665,7 @@ export default function BrowsePage() {
                   onClick={() => listing.uri ? recordListingView(listing.uri) : null}
                   className="bg-white rounded-lg shadow-md overflow-hidden flex"
                 >
-                  <div className="w-48 h-48 bg-gray-100 flex-shrink-0">
+                  <div className="w-48 h-48 bg-neutral-light flex-shrink-0">
                     <ListingImageDisplay 
                       listing={listing}
                       size="thumbnail"
@@ -674,23 +674,23 @@ export default function BrowsePage() {
                     />
                   </div>
                   <div className="p-4 flex-grow">
-                    <h2 className="text-xl font-semibold mb-2">{listing.title}</h2>
-                    <p className="text-gray-600 mb-2">{listing.description.substring(0, 150)}...</p>
+                    <h2 className="text-xl font-semibold mb-2 text-text-primary">{listing.title}</h2>
+                    <p className="text-text-secondary mb-2">{listing.description.substring(0, 150)}...</p>
                     <div className="flex justify-between items-end">
                       <div>
-                        <div className="text-gray-500 text-sm">
+                        <div className="text-text-secondary text-sm">
                           {listing.location.locality}, {listing.location.state}
                         </div>
                         <div className="flex space-x-2 mt-2">
-                          <span className="px-2 py-1 bg-gray-200 rounded-full text-xs">{listing.category}</span>
-                          <span className="px-2 py-1 bg-gray-200 rounded-full text-xs">{listing.condition}</span>
+                          <span className="badge">{listing.category}</span>
+                          <span className="badge">{listing.condition}</span>
                         </div>
                       </div>
                       <div>
-                        <div className="text-xl font-bold text-blue-600 mb-2">{listing.price}</div>
+                        <div className="text-xl font-bold text-primary-color mb-2">{listing.price}</div>
                         <Link
                           href={`/listing/${encodeURIComponent(listing.uri || listing.title)}`}
-                          className="inline-block py-1 px-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md"
+                          className="btn-primary"
                         >
                           View Details
                         </Link>
@@ -703,8 +703,8 @@ export default function BrowsePage() {
           )}
           
           {filters.viewMode === 'map' && (
-            <div className="bg-gray-100 rounded-lg p-4 min-h-[400px] flex items-center justify-center">
-              <p className="text-gray-500">
+            <div className="bg-neutral-light rounded-lg p-4 min-h-[400px] flex items-center justify-center">
+              <p className="text-text-secondary">
                 Map view is coming soon! Listings will be displayed on an interactive map.
               </p>
             </div>
@@ -712,11 +712,11 @@ export default function BrowsePage() {
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-md p-8 text-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-neutral-medium mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <h2 className="text-xl font-semibold mb-2">No Matching Listings</h2>
-          <p className="text-gray-600 mb-6">
+          <h2 className="text-xl font-semibold mb-2 text-text-primary">No Matching Listings</h2>
+          <p className="text-text-secondary mb-6">
             We couldn't find any listings matching your current filters. Try adjusting your search criteria.
           </p>
           <button
@@ -726,7 +726,7 @@ export default function BrowsePage() {
               resultsPerPage: 12,
               sortBy: 'recency'
             })}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+            className="btn-primary"
           >
             Reset Filters
           </button>
