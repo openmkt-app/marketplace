@@ -97,6 +97,7 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
         category: formData.get('category') as string,
         condition: formData.get('condition') as string,
         images: images as any, // Type conversion for the API
+        hideFromFriends: hideFromFriends
       });
       
       // Extract the URI from the result for redirection
@@ -437,7 +438,7 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
           <div className="flex items-center justify-between">
             <div>
               <span className="font-medium text-text-secondary">Hide from friends</span>
-              <p className="text-sm text-text-secondary">This listing is still public. If you hide this listing from friends, they won't see it in most cases.</p>
+              <p className="text-sm text-text-secondary">When enabled, this listing won't appear in feeds of people who follow you on the AT Protocol network (Bluesky, this marketplace, etc.). This helps keep certain listings private from people you know.</p>
             </div>
             <label className="inline-flex items-center cursor-pointer">
               <input 

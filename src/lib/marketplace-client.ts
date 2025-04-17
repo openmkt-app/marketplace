@@ -47,6 +47,8 @@ export type MarketplaceListing = {
   isVerifiedSeller?: boolean;
   isSameNetwork?: boolean;
   lastViewed?: string;
+  // Added for privacy
+  hideFromFriends?: boolean;
 };
 
 export type CreateListingParams = Omit<MarketplaceListing, 'createdAt'>;
@@ -175,12 +177,14 @@ export class MarketplaceClient {
           title: listingDataWithoutImages.title,
           category: listingDataWithoutImages.category,
           imageCount: processedImages ? processedImages.length : 0,
+          hideFromFriends: listingDataWithoutImages.hideFromFriends || false
         }
       });
       
       logger.logApiRequest('POST', 'com.atproto.repo.createRecord', {
         collection: 'app.atprotomkt.marketplace.listing',
         imageCount: processedImages ? processedImages.length : 0,
+        hideFromFriends: listingDataWithoutImages.hideFromFriends || false
       });
       
       const result = await this.agent.api.com.atproto.repo.createRecord({
@@ -190,6 +194,7 @@ export class MarketplaceClient {
           ...listingDataWithoutImages,
           images: processedImages, // Add the processed images
           createdAt: new Date().toISOString(),
+          hideFromFriends: listingDataWithoutImages.hideFromFriends || false
         },
       });
       
@@ -581,9 +586,42 @@ export class MarketplaceClient {
         };
       });
       
-      // Update the cache
+      // Filter out listings that should be hidden from friends
+      // If the listing has hideFromFriends set to true and the current user follows the author,
+      // don't include it in the results
+      const authenticatedUserDid = this.agent.session.did;
+      
+      // Create a filter to check hideFromFriends flag
+      const filteredListings = await Promise.all(
+        processedListings.map(async listing => {
+          // If hideFromFriends is true, check if the current user follows the author
+          if (listing.hideFromFriends) {
+            // Check if the listing author follows the authenticated user (they are friends)
+            const isFollowing = await this.isUserFollowingMe(listing.authorDid);
+            
+            // If they're following the current user (friends), hide the listing
+            if (isFollowing) {
+              logger.info(`Filtering out listing ${listing.uri} as it's hidden from friends`);
+              return null;
+            }
+          }
+          
+          // Otherwise, include the listing
+          return listing;
+        })
+      );
+      
+      // Remove any null values (filtered listings)
+      const finalListings = filteredListings.filter(listing => listing !== null) as (MarketplaceListing & { 
+        authorDid: string; 
+        authorHandle: string; 
+        uri: string; 
+        cid: string;
+      })[];
+      
+      // Update the cache with filtered listings
       this.listingsCache = {
-        data: processedListings,
+        data: finalListings,
         timestamp: Date.now(),
         cacheTTL: this.cacheTTL,
         isValid: function() {
@@ -591,7 +629,7 @@ export class MarketplaceClient {
         }
       };
       
-      return processedListings;
+      return finalListings;
     } catch (error) {
       // If we encounter a rate limit error (429), use cached data if available
       if (error instanceof Error && error.message.includes('429')) {
@@ -664,6 +702,46 @@ export class MarketplaceClient {
     } catch (error) {
       logger.error(`Failed to fetch listing by URI: ${uri}`, error as Error);
       return null;
+    }
+  }
+  
+  /**
+   * Check if a user is following the authenticated user
+   * Used for the "Hide from friends" feature
+   */
+  async isUserFollowingMe(userDid: string): Promise<boolean> {
+    if (!this.isLoggedIn || !this.agent.session) {
+      logger.warn('User is not logged in, cannot check follow status');
+      return false;
+    }
+
+    try {
+      // Use the getFollows endpoint to check if the provided user follows the authenticated user
+      logger.info(`Checking if user ${userDid} follows ${this.agent.session.did}`);
+      logger.logApiRequest('GET', 'app.bsky.graph.getFollows', { 
+        actor: userDid
+      });
+
+      // First get the user's follows
+      const result = await this.agent.api.app.bsky.graph.getFollows({
+        actor: userDid,
+        limit: 100
+      });
+
+      if (!result.success) {
+        logger.warn(`Failed to get follows for user ${userDid}`);
+        return false;
+      }
+
+      // Check if any of the follows match the authenticated user's DID
+      const isFollowing = result.data.follows.some(follow => 
+        follow.did === this.agent.session!.did
+      );
+
+      return isFollowing;
+    } catch (error) {
+      logger.error(`Error checking if user ${userDid} follows authenticated user`, error as Error);
+      return false;
     }
   }
   
