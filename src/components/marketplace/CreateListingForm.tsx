@@ -1,5 +1,5 @@
 // src/components/marketplace/CreateListingForm.tsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import MarketplaceClient from '@/lib/marketplace-client';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { LocationFilterValue } from './filters/LocationFilter';
@@ -33,6 +33,17 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
   const [savedLocations] = useLocalStorage<SavedLocation[]>('saved-locations', []);
   const [selectedLocation, setSelectedLocation] = useState<SavedLocation | null>(null);
   
+  // Set up an effect to auto-dismiss error messages after a timeout
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError(null);
+      }, 8000); // 8 seconds
+      
+      return () => clearTimeout(timer); // Clean up the timer
+    }
+  }, [error]);
+  
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
@@ -43,6 +54,11 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
     if (images.length + newImages.length > 10) {
       setError("You can only upload a maximum of 10 images. Please remove some images first.");
       return;
+    }
+    
+    // Clear any existing error message since we're under the limit now
+    if (error && error.includes("maximum of 10 images")) {
+      setError(null);
     }
     
     setImages(prev => [...prev, ...newImages]);
@@ -59,6 +75,11 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
     // Remove the image and preview
     setImages(prev => prev.filter((_, i) => i !== index));
     setPreviewUrls(prev => prev.filter((_, i) => i !== index));
+    
+    // Clear any "too many images" error message since we're reducing the count
+    if (error && error.includes("maximum of 10 images")) {
+      setError(null);
+    }
   };
   
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -137,8 +158,16 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
       <p className="text-gray-600 mb-6">List your item for sale in the marketplace</p>
       
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 relative">
+          <span className="block sm:inline">{error}</span>
+          <button 
+            onClick={() => setError(null)} 
+            className="absolute top-0 bottom-0 right-0 px-4 py-3"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
         </div>
       )}
       
