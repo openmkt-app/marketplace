@@ -5,7 +5,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { LocationFilterValue } from './filters/LocationFilter';
 import { formatZipPrefix } from '@/lib/location-utils';
 import Image from 'next/image';
-import { CATEGORIES, CONDITIONS } from '@/lib/category-data';
+import { CATEGORIES, CONDITIONS, SubcategoryOption } from '@/lib/category-data';
 
 // Define the SavedLocation type
 interface SavedLocation {
@@ -29,6 +29,10 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [hideFromFriends, setHideFromFriends] = useState(false);
   
+  // Add state for category and subcategory
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [subcategories, setSubcategories] = useState<SubcategoryOption[]>([]);
+  
   // Get saved locations for quick selection
   const [savedLocations] = useLocalStorage<SavedLocation[]>('saved-locations', []);
   const [selectedLocation, setSelectedLocation] = useState<SavedLocation | null>(null);
@@ -43,6 +47,16 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
       return () => clearTimeout(timer); // Clean up the timer
     }
   }, [error]);
+  
+  // Update subcategories when category changes
+  useEffect(() => {
+    if (selectedCategory) {
+      const category = CATEGORIES.find(c => c.id === selectedCategory);
+      setSubcategories(category ? category.subcategories : []);
+    } else {
+      setSubcategories([]);
+    }
+  }, [selectedCategory]);
   
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -270,16 +284,8 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
                 name="category"
                 required
                 className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
-                onChange={(e) => {
-                  // Reset subcategory when category changes
-                  const form = e.target.form;
-                  if (form) {
-                    const subcategorySelect = form.elements.namedItem('subcategory') as HTMLSelectElement;
-                    if (subcategorySelect) {
-                      subcategorySelect.value = '';
-                    }
-                  }
-                }}
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
               >
                 <option value="">Select a category</option>
                 {CATEGORIES.map(category => (
@@ -300,25 +306,11 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
                 className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
               >
                 <option value="">Select subcategory (optional)</option>
-                {(() => {
-                  const form = document.getElementById('listing-form') as HTMLFormElement;
-                  if (!form) return null;
-                  
-                  const categorySelect = form.elements.namedItem('category') as HTMLSelectElement;
-                  if (!categorySelect) return null;
-                  
-                  const categoryId = categorySelect.value;
-                  if (!categoryId) return null;
-                  
-                  const category = CATEGORIES.find(c => c.id === categoryId);
-                  if (!category) return null;
-                  
-                  return category.subcategories.map(subcategory => (
-                    <option key={subcategory.id} value={subcategory.id}>
-                      {subcategory.name}
-                    </option>
-                  ));
-                })()}
+                {subcategories.map(subcategory => (
+                  <option key={subcategory.id} value={subcategory.id}>
+                    {subcategory.name}
+                  </option>
+                ))}
               </select>
             </div>
             
