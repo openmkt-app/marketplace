@@ -46,8 +46,13 @@ export default function ListingCard({ listing, showDebug = false }: ListingCardP
       {/* Content Section - Flex grow to fill space */}
       <div className="flex flex-col flex-grow">
         {/* Listing Details */}
-        <h2 className="text-xl font-semibold mb-2 text-text-primary">{listing.title}</h2>
-        <p className="text-text-secondary mb-2 line-clamp-2 h-10">{cleanDescription}</p>
+        <h2 className="text-xl font-semibold mb-2 text-text-primary line-clamp-1">{listing.title}</h2>
+        
+        {/* Description with proper two-line height and ellipsis */}
+        <div className="mb-2 h-[3em] overflow-hidden relative">
+          <p className="text-text-secondary line-clamp-2">{cleanDescription}</p>
+        </div>
+        
         <p className="text-xl font-bold text-primary-color mb-2">{formatPrice(listing.price)}</p>
         
         {/* Metadata Section - Push to bottom with margin-top auto */}

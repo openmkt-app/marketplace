@@ -75,6 +75,23 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
         setSelectedLocation(lastLocation);
         // Keep accordion closed if we have a saved location
         setIsLocationExpanded(false);
+        
+        // We need to update the form fields after the component has mounted
+        // and the form is available in the DOM
+        setTimeout(() => {
+          const form = document.getElementById('listing-form') as HTMLFormElement;
+          if (form) {
+            const stateInput = form.elements.namedItem('state') as HTMLInputElement;
+            const countyInput = form.elements.namedItem('county') as HTMLInputElement;
+            const localityInput = form.elements.namedItem('locality') as HTMLInputElement;
+            const zipPrefixInput = form.elements.namedItem('zipPrefix') as HTMLInputElement;
+            
+            if (stateInput) stateInput.value = lastLocation.state || '';
+            if (countyInput) countyInput.value = lastLocation.county || '';
+            if (localityInput) localityInput.value = lastLocation.locality || '';
+            if (zipPrefixInput) zipPrefixInput.value = lastLocation.zipPrefix || '';
+          }
+        }, 100); // Small delay to ensure form is rendered
       } catch (e) {
         console.error('Error parsing saved location:', e);
       }
@@ -415,13 +432,33 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
         }
       }
       
-      // Collect the location data from the form
-      const locationData = {
-        state: formData.get('state') as string,
-        county: formData.get('county') as string,
-        locality: formData.get('locality') as string,
-        zipPrefix: formData.get('zipPrefix') as string || undefined,
-      };
+      // Collect the location data from the form or use selected location
+      let locationData;
+      
+      // If we have a selectedLocation and the accordion is closed (i.e., the user is using the saved location)
+      if (selectedLocation && !isLocationExpanded) {
+        locationData = {
+          state: selectedLocation.state,
+          county: selectedLocation.county,
+          locality: selectedLocation.locality,
+          zipPrefix: selectedLocation.zipPrefix
+        };
+      } else {
+        // Get location from form inputs
+        locationData = {
+          state: formData.get('state') as string,
+          county: formData.get('county') as string,
+          locality: formData.get('locality') as string,
+          zipPrefix: formData.get('zipPrefix') as string || undefined,
+        };
+      }
+      
+      // Validate location data
+      if (!locationData.state || !locationData.county || !locationData.locality) {
+        setError("Please provide complete location information (state, county, and city/town).");
+        setIsSubmitting(false);
+        return;
+      }
       
       // Validate price input before formatting
       if (!priceInput.trim()) {
@@ -472,6 +509,7 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
         metadata: metadata // Include metadata here - client will need to be updated to process this
       };
       
+      console.log('Creating listing with location:', locationData);
       const result = await client.createListing(listingData);
       
       // Save the location for future use
