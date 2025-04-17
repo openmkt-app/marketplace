@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import LocationFilter, { LocationFilterValue } from './LocationFilter';
-import CommuteFilter, { CommuteRoute } from './CommuteFilter';
 import PriceFilter from './PriceFilter';
 import CategoryFilter from './CategoryFilter';
 import ConditionFilter from './ConditionFilter';
@@ -11,15 +10,18 @@ import SearchBar from './SearchBar';
 import SellerFilter from './SellerFilter';
 import RecencyFilter from './RecencyFilter';
 import ViewOptions from './ViewOptions';
+// Import commented out for now - will revisit later
+// import CommuteFilter, { CommuteRoute } from './CommuteFilter';
 
 export interface FilterValues {
   // Search
   searchQuery?: string;
   
   // Location filtering
-  locationType: 'basic' | 'commute' | 'radius';
   location?: LocationFilterValue;
-  commuteRoute?: CommuteRoute;
+  
+  // Commute filtering - commented out for now, will revisit later
+  // commuteRoute?: CommuteRoute;
   
   // Category filtering
   category?: string;
@@ -35,7 +37,8 @@ export interface FilterValues {
   
   // Condition filtering
   condition?: string[];
-  age?: string;
+  // Item age filtering - commented out for now, will revisit later
+  // age?: string;
   
   // Seller filtering
   sellerVerified?: boolean;
@@ -75,7 +78,6 @@ export default function FilterPanel({
   
   const [filterValues, setFilterValues] = useState<FilterValues>(
     initialValues || {
-      locationType: 'basic',
       viewMode: 'grid',
       resultsPerPage: 12
     }
@@ -90,19 +92,7 @@ export default function FilterPanel({
   const handleLocationFilterChange = useCallback((locationFilter: LocationFilterValue) => {
     setFilterValues(prev => ({
       ...prev,
-      locationType: 'basic',
-      location: locationFilter,
-      commuteRoute: undefined
-    }));
-  }, []);
-
-  // Handle commute filter changes
-  const handleCommuteFilterChange = useCallback((commuteRoute: CommuteRoute | null) => {
-    setFilterValues(prev => ({
-      ...prev,
-      locationType: 'commute',
-      commuteRoute: commuteRoute || undefined,
-      location: undefined
+      location: locationFilter
     }));
   }, []);
 
@@ -128,7 +118,8 @@ export default function FilterPanel({
     setFilterValues(prev => ({
       ...prev,
       condition,
-      age
+      // age field commented out for now, will revisit later
+      // age
     }));
   }, []);
 
@@ -174,6 +165,16 @@ export default function FilterPanel({
       resultsPerPage
     }));
   }, []);
+
+  // Handle commute filter changes - commented out for now, will revisit later
+  /*
+  const handleCommuteFilterChange = useCallback((commuteRoute: CommuteRoute | null) => {
+    setFilterValues(prev => ({
+      ...prev,
+      commuteRoute: commuteRoute || undefined
+    }));
+  }, []);
+  */
 
   // Handle save filter
   const handleSaveFilter = () => {
@@ -260,41 +261,20 @@ export default function FilterPanel({
           {/* Filter Content */}
           <div className="p-4">
             {activeTab === 'location' && (
-              <div className="space-y-4">
-                <div className="flex space-x-4 mb-4">
-                  <button
-                    onClick={() => setFilterValues(prev => ({ ...prev, locationType: 'basic' }))}
-                    className={`flex-1 py-2 px-3 text-center rounded ${
-                      filterValues.locationType === 'basic'
-                        ? 'bg-primary-color text-white'
-                        : 'bg-neutral-light text-text-primary hover:bg-neutral-medium'
-                    }`}
-                  >
-                    Basic
-                  </button>
-                  <button
-                    onClick={() => setFilterValues(prev => ({ ...prev, locationType: 'commute' }))}
-                    className={`flex-1 py-2 px-3 text-center rounded ${
-                      filterValues.locationType === 'commute'
-                        ? 'bg-primary-color text-white'
-                        : 'bg-neutral-light text-text-primary hover:bg-neutral-medium'
-                    }`}
-                  >
-                    Commute
-                  </button>
-                </div>
-                {filterValues.locationType === 'basic' ? (
-                  <LocationFilter 
-                    initialValue={filterValues.location}
-                    onFilterChange={handleLocationFilterChange}
-                  />
-                ) : (
-                  <CommuteFilter 
-                    onFilterChange={handleCommuteFilterChange}
-                  />
-                )}
-              </div>
+              <LocationFilter 
+                initialValue={filterValues.location}
+                onFilterChange={handleLocationFilterChange}
+              />
             )}
+            
+            {/* CommuteFilter commented out for now - will revisit later
+            {activeTab === 'commute' && (
+              <CommuteFilter 
+                initialRoute={filterValues.commuteRoute}
+                onFilterChange={handleCommuteFilterChange}
+              />
+            )}
+            */}
             
             {activeTab === 'price' && (
               <PriceFilter 
@@ -314,7 +294,8 @@ export default function FilterPanel({
             {activeTab === 'condition' && (
               <ConditionFilter 
                 selectedConditions={filterValues.condition}
-                selectedAge={filterValues.age}
+                // selectedAge field commented out for now, will revisit later
+                // selectedAge={filterValues.age}
                 onChange={handleConditionFilterChange}
               />
             )}

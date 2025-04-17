@@ -54,7 +54,7 @@ export default function CommuteFilter({
           value={startLocation}
           onChange={(e) => setStartLocation(e.target.value)}
           placeholder="Enter a starting point"
-          className="w-full p-2 border rounded-md"
+          className="w-full p-2 border rounded-md focus:ring-2 focus:ring-primary-color focus:border-primary-color"
         />
       </div>
       
@@ -68,7 +68,7 @@ export default function CommuteFilter({
           value={endLocation}
           onChange={(e) => setEndLocation(e.target.value)}
           placeholder="Enter a destination"
-          className="w-full p-2 border rounded-md"
+          className="w-full p-2 border rounded-md focus:ring-2 focus:ring-primary-color focus:border-primary-color"
         />
       </div>
       
@@ -84,7 +84,7 @@ export default function CommuteFilter({
           step="5"
           value={maxTime}
           onChange={(e) => setMaxTime(parseInt(e.target.value, 10))}
-          className="w-full"
+          className="w-full accent-primary-color"
         />
         <div className="flex justify-between text-xs text-text-secondary mt-1">
           <span>5 min</span>
@@ -97,7 +97,7 @@ export default function CommuteFilter({
       {(startLocation || endLocation) && (
         <button
           onClick={handleClear}
-          className="text-sm text-primary-color hover:text-primary-light"
+          className="text-sm text-primary-color hover:text-primary-light font-medium"
         >
           Clear commute filter
         </button>

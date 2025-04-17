@@ -8,13 +8,13 @@ interface RecencyFilterProps {
   onChange: (postedWithin?: string, recentlyViewed?: boolean) => void;
 }
 
-// Time frame options
+// Time frame options updated to match market requirements
 const timeFrames = [
   { id: 'day', label: 'Last 24 hours' },
   { id: 'week', label: 'Last week' },
   { id: 'month', label: 'Last month' },
   { id: 'quarter', label: 'Last 3 months' },
-  { id: 'year', label: 'Last year' }
+  { id: 'older', label: 'Older listings' }
 ];
 
 export default function RecencyFilter({ 

@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 
 interface ConditionFilterProps {
   selectedConditions?: string[];
-  selectedAge?: string;
+  // Item age filtering - commented out for now, will revisit later
+  // selectedAge?: string;
   onChange: (conditions?: string[], age?: string) => void;
 }
 
@@ -17,7 +18,8 @@ const conditionOptions = [
   { id: 'poor', label: 'Poor/For Parts' }
 ];
 
-// Available age options
+// Available age options - commented out for now, will revisit later
+/*
 const ageOptions = [
   { id: 'any', label: 'Any age' },
   { id: 'last-month', label: 'Last month' },
@@ -25,14 +27,15 @@ const ageOptions = [
   { id: 'last-year', label: 'Last year' },
   { id: 'over-1-year', label: 'Over 1 year' }
 ];
+*/
 
 export default function ConditionFilter({ 
   selectedConditions = [], 
-  selectedAge,
+  // selectedAge, - commented out for now, will revisit later
   onChange 
 }: ConditionFilterProps) {
   const [conditions, setConditions] = useState<string[]>(selectedConditions);
-  const [age, setAge] = useState<string | undefined>(selectedAge);
+  // const [age, setAge] = useState<string | undefined>(selectedAge); - commented out for now, will revisit later
 
   // Toggle a condition selection
   const toggleCondition = (conditionId: string) => {
@@ -45,7 +48,8 @@ export default function ConditionFilter({
     });
   };
 
-  // Set age selection
+  // Set age selection - commented out for now, will revisit later
+  /*
   const handleAgeChange = (ageId: string) => {
     if (age === ageId) {
       setAge(undefined);
@@ -53,11 +57,13 @@ export default function ConditionFilter({
       setAge(ageId);
     }
   };
+  */
 
   // Update parent component when selections change
   useEffect(() => {
-    onChange(conditions.length > 0 ? conditions : undefined, age);
-  }, [conditions, age, onChange]);
+    // Passing undefined for age parameter since it's commented out
+    onChange(conditions.length > 0 ? conditions : undefined, undefined);
+  }, [conditions, onChange]);
 
   return (
     <div className="space-y-4">
@@ -78,6 +84,7 @@ export default function ConditionFilter({
         </div>
       </div>
 
+      {/* Item Age section - commented out for now, will revisit later
       <div>
         <h3 className="font-medium text-text-primary mb-2">Item Age</h3>
         <div className="space-y-1">
@@ -96,6 +103,7 @@ export default function ConditionFilter({
           ))}
         </div>
       </div>
+      */}
     </div>
   );
 } 

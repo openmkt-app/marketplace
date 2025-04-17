@@ -132,20 +132,23 @@ function filterListingsByCategory(
 function filterListingsByCondition(
   listings: MarketplaceListing[], 
   conditions?: string[],
-  age?: string
+  // age parameter commented out for now, will revisit later
+  // age?: string
 ): MarketplaceListing[] {
-  if (!conditions?.length && !age) return listings;
+  // if (!conditions?.length && !age) return listings;
+  if (!conditions?.length) return listings;
   
   return listings.filter(listing => {
     // Filter by condition
     if (conditions?.length && !conditions.includes(listing.condition)) return false;
     
-    // Filter by age
-    // Note: This is a placeholder since our current data model doesn't include age
+    // Filter by age - commented out for now, will revisit later
+    /*
     if (age) {
       // This would be a more sophisticated check in a real application
       return true; // Placeholder for age filtering
     }
+    */
     
     return true;
   });
@@ -188,32 +191,39 @@ function filterListingsByRecency(
   
   return listings.filter(listing => {
     // Filter by posting time
-    if (postedWithin && postedWithin !== 'anytime') {
+    if (postedWithin) {
       const createdAt = new Date(listing.createdAt);
       const now = new Date();
       
       switch (postedWithin) {
-        case 'today':
-          if (now.getDate() !== createdAt.getDate() || 
-              now.getMonth() !== createdAt.getMonth() || 
-              now.getFullYear() !== createdAt.getFullYear()) {
-            return false;
-          }
+        case 'day': // Last 24 hours
+          const oneDayAgo = new Date(now);
+          oneDayAgo.setDate(now.getDate() - 1);
+          if (createdAt < oneDayAgo) return false;
           break;
-        case 'week':
+          
+        case 'week': // Last week
           const oneWeekAgo = new Date(now);
           oneWeekAgo.setDate(now.getDate() - 7);
           if (createdAt < oneWeekAgo) return false;
           break;
-        case 'month':
+          
+        case 'month': // Last month
           const oneMonthAgo = new Date(now);
           oneMonthAgo.setMonth(now.getMonth() - 1);
           if (createdAt < oneMonthAgo) return false;
           break;
-        case 'threemonths':
+          
+        case 'quarter': // Last 3 months
           const threeMonthsAgo = new Date(now);
           threeMonthsAgo.setMonth(now.getMonth() - 3);
           if (createdAt < threeMonthsAgo) return false;
+          break;
+          
+        case 'older': // Older listings - show listings older than 3 months
+          const olderThanThreeMonths = new Date(now);
+          olderThanThreeMonths.setMonth(now.getMonth() - 3);
+          if (createdAt > olderThanThreeMonths) return false;
           break;
       }
     }
@@ -279,9 +289,27 @@ export default function BrowsePage() {
   // Memoize demo data to have a stable reference
   const memoDemoListings = useMemo(() => demoListingsData, []);
   
-  // Get search params for debug mode
+  // Get search params for debug mode and listing status
   const searchParams = useSearchParams();
   const debugMode = searchParams.get('debug') === 'true';
+  const listingCreated = searchParams.get('listingCreated') === 'true';
+  
+  // Success message state for newly created listings
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  
+  // Check for newly created listing redirect
+  useEffect(() => {
+    if (listingCreated) {
+      setShowSuccessMessage(true);
+      
+      // Auto-hide the message after 8 seconds
+      const timer = setTimeout(() => {
+        setShowSuccessMessage(false);
+      }, 8000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [listingCreated]);
   
   // Start with empty listings and set auth state first
   const [showDemoListings, setShowDemoListings] = useState(false);
@@ -293,7 +321,6 @@ export default function BrowsePage() {
   
   // Filtering state
   const [filters, setFilters] = useState<FilterValues>({
-    locationType: 'basic',
     viewMode: 'grid',
     resultsPerPage: 12,
     sortBy: 'recency'
@@ -443,11 +470,16 @@ export default function BrowsePage() {
     }
     
     // Apply location filters
-    if (filters.locationType === 'basic' && filters.location) {
+    if (filters.location) {
       filtered = fixFilterResults(filterListingsByLocation(filtered, filters.location));
-    } else if (filters.locationType === 'commute' && filters.commuteRoute) {
+    }
+    
+    // Apply commute route filter - commented out for now, will revisit later
+    /*
+    if (filters.commuteRoute) {
       filtered = fixFilterResults(filterListingsByCommuteRoute(filtered, filters.commuteRoute));
     }
+    */
     
     // Apply price filter
     if (filters.price) {
@@ -460,8 +492,8 @@ export default function BrowsePage() {
     }
     
     // Apply condition filter
-    if (filters.condition?.length || filters.age) {
-      filtered = filterListingsByCondition(filtered, filters.condition, filters.age);
+    if (filters.condition?.length) {
+      filtered = filterListingsByCondition(filtered, filters.condition);
     }
     
     // Apply seller filter
@@ -503,7 +535,53 @@ export default function BrowsePage() {
   
   return (
     <div className="max-w-6xl mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6 text-text-primary">Browse Listings</h1>
+      {showSuccessMessage && (
+        <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-6 sticky top-0 z-10 shadow-md">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              <span className="text-green-600">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </span>
+              <div>
+                <p className="font-medium text-green-800">Your item has been listed in the marketplace!</p>
+                <p className="text-sm text-green-700">Your listing is now visible to the community. Check it out below!</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setShowSuccessMessage(false)}
+              className="text-green-500 hover:text-green-800"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+      
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-text-primary">Browse Listings</h1>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setFilters({
+              viewMode: 'grid',
+              resultsPerPage: 12,
+              sortBy: 'recency'
+            })}
+            className="btn-outline"
+          >
+            Reset Filters
+          </button>
+          <button
+            onClick={() => setFilters(prev => ({ ...prev, postedWithin: 'day' }))}
+            className="btn-secondary"
+          >
+            Show Recent Listings
+          </button>
+        </div>
+      </div>
       
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -532,16 +610,27 @@ export default function BrowsePage() {
             {filters.searchQuery && (
               <> matching <span className="font-medium">"{filters.searchQuery}"</span></>
             )}
-            {filters.locationType === 'basic' && filters.location && (
+            {filters.location && (
               <>
                 {filters.location.state && <> in <span className="font-medium">{filters.location.state}</span></>}
                 {filters.location.county && <>, <span className="font-medium">{filters.location.county}</span></>}
                 {filters.location.city && <>, <span className="font-medium">{filters.location.city}</span></>}
               </>
             )}
-            {filters.locationType === 'commute' && filters.commuteRoute && (
-              <> along route from <span className="font-medium">{filters.commuteRoute.startLocation}</span> to <span className="font-medium">{filters.commuteRoute.endLocation}</span></>
+            {filters.postedWithin && (
+              <>
+                {filters.postedWithin === 'day' && <> from <span className="font-medium">the last 24 hours</span></>}
+                {filters.postedWithin === 'week' && <> from <span className="font-medium">the last week</span></>}
+                {filters.postedWithin === 'month' && <> from <span className="font-medium">the last month</span></>}
+                {filters.postedWithin === 'quarter' && <> from <span className="font-medium">the last 3 months</span></>}
+                {filters.postedWithin === 'older' && <> that are <span className="font-medium">older than 3 months</span></>}
+              </>
             )}
+            {/* Commute route display commented out for now
+            {filters.commuteRoute && (
+              <> along commute from <span className="font-medium">{filters.commuteRoute.startLocation}</span> to <span className="font-medium">{filters.commuteRoute.endLocation}</span> ({filters.commuteRoute.maxTime} min)</>
+            )}
+            */}
           </p>
           
           {filters.viewMode === 'grid' && (
@@ -630,13 +719,27 @@ export default function BrowsePage() {
           
           <p className="mb-4 text-text-secondary">
             Showing {filteredListings.length} of {allListings.length} listings
-            {filters.locationType === 'basic' && filters.location && (
+            {filters.location && (
               <>
-                {filters.location.state && <> matching <span className="font-medium">{filters.location.state}</span></>}
+                {filters.location.state && <> in <span className="font-medium">{filters.location.state}</span></>}
                 {filters.location.county && <>, <span className="font-medium">{filters.location.county}</span></>}
                 {filters.location.city && <>, <span className="font-medium">{filters.location.city}</span></>}
               </>
             )}
+            {filters.postedWithin && (
+              <>
+                {filters.postedWithin === 'day' && <> from <span className="font-medium">the last 24 hours</span></>}
+                {filters.postedWithin === 'week' && <> from <span className="font-medium">the last week</span></>}
+                {filters.postedWithin === 'month' && <> from <span className="font-medium">the last month</span></>}
+                {filters.postedWithin === 'quarter' && <> from <span className="font-medium">the last 3 months</span></>}
+                {filters.postedWithin === 'older' && <> that are <span className="font-medium">older than 3 months</span></>}
+              </>
+            )}
+            {/* Commute route display commented out for now
+            {filters.commuteRoute && (
+              <> along commute from <span className="font-medium">{filters.commuteRoute.startLocation}</span> to <span className="font-medium">{filters.commuteRoute.endLocation}</span> ({filters.commuteRoute.maxTime} min)</>
+            )}
+            */}
           </p>
           
           {/* Render listings based on view mode */}
@@ -721,7 +824,6 @@ export default function BrowsePage() {
           </p>
           <button
             onClick={() => setFilters({
-              locationType: 'basic',
               viewMode: 'grid',
               resultsPerPage: 12,
               sortBy: 'recency'

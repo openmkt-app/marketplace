@@ -128,7 +128,7 @@ export default function Home() {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold mb-1 text-text-primary">Pics That Actually Show Details</h3>
-                    <p className="text-text-primary">Upload up to 4 crystal-clear photos so buyers can see what they're getting into.</p>
+                    <p className="text-text-primary">Upload up to 10 crystal-clear photos so buyers can see what they're getting.</p>
                   </div>
                 </div>
                 

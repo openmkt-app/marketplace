@@ -18,7 +18,7 @@ interface SavedLocation {
 
 interface CreateListingFormProps {
   client: MarketplaceClient;
-  onSuccess?: () => void;
+  onSuccess?: (listingUri?: string) => void;
 }
 
 export default function CreateListingForm({ client, onSuccess }: CreateListingFormProps) {
@@ -38,6 +38,13 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
     if (!files) return;
     
     const newImages = Array.from(files);
+    
+    // Check if adding these images would exceed the 10 image limit
+    if (images.length + newImages.length > 10) {
+      setError("You can only upload a maximum of 10 images. Please remove some images first.");
+      return;
+    }
+    
     setImages(prev => [...prev, ...newImages]);
     
     // Create preview URLs
@@ -77,7 +84,7 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
         }
       }
       
-      await client.createListing({
+      const result = await client.createListing({
         title: formData.get('title') as string,
         description: description,
         price: formData.get('price') as string,
@@ -92,7 +99,11 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
         images: images as any, // Type conversion for the API
       });
       
-      if (onSuccess) onSuccess();
+      // Extract the URI from the result for redirection
+      const listingUri = result?.uri ? String(result.uri) : undefined;
+      
+      // Pass the listing URI to the onSuccess callback
+      if (onSuccess) onSuccess(listingUri);
     } catch (err) {
       setError(`Failed to create listing: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -103,6 +114,20 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
   // Load saved location data into form
   const handleSelectLocation = (location: SavedLocation) => {
     setSelectedLocation(location);
+    
+    // Update form fields directly
+    const form = document.getElementById('listing-form') as HTMLFormElement;
+    if (form) {
+      const stateInput = form.elements.namedItem('state') as HTMLInputElement;
+      const countyInput = form.elements.namedItem('county') as HTMLInputElement;
+      const localityInput = form.elements.namedItem('locality') as HTMLInputElement;
+      const zipPrefixInput = form.elements.namedItem('zipPrefix') as HTMLInputElement;
+      
+      if (stateInput) stateInput.value = location.state || '';
+      if (countyInput) countyInput.value = location.county || '';
+      if (localityInput) localityInput.value = location.locality || '';
+      if (zipPrefixInput) zipPrefixInput.value = location.zipPrefix || '';
+    }
   };
   
   return (
@@ -164,7 +189,7 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
             className="hidden"
           />
           <p className="text-xs text-text-secondary">
-            Add up to 10 photos. The first image will be the cover photo.
+            Upload up to 10 crystal-clear photos so buyers can see what they're getting. The first image will be used as the cover photo.
           </p>
         </div>
         
@@ -341,8 +366,8 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
                 id="state"
                 name="state"
                 required
-                value={selectedLocation?.state || ''}
-                onChange={() => setSelectedLocation(null)}
+                defaultValue={selectedLocation?.state || ''}
+                placeholder="e.g. California"
                 className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
               />
             </div>
@@ -356,8 +381,8 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
                 id="county"
                 name="county"
                 required
-                value={selectedLocation?.county || ''}
-                onChange={() => setSelectedLocation(null)}
+                defaultValue={selectedLocation?.county || ''}
+                placeholder="e.g. Los Angeles County"
                 className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
               />
             </div>
@@ -371,8 +396,8 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
                 id="locality"
                 name="locality"
                 required
-                value={selectedLocation?.locality || ''}
-                onChange={() => setSelectedLocation(null)}
+                defaultValue={selectedLocation?.locality || ''}
+                placeholder="e.g. Los Angeles"
                 className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
               />
             </div>
@@ -387,8 +412,8 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
                 name="zipPrefix"
                 maxLength={3}
                 pattern="[0-9]{3}"
-                value={selectedLocation?.zipPrefix || ''}
-                onChange={() => setSelectedLocation(null)}
+                defaultValue={selectedLocation?.zipPrefix || ''}
+                placeholder="e.g. 900"
                 className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
               />
               {selectedLocation?.zipPrefix && (
@@ -428,7 +453,7 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
         
         <div className="bg-gray-50 p-4 rounded-md">
           <p className="text-sm text-text-secondary mb-4">
-            Marketplace items are public and can be seen by anyone on or off the platform. Items like animals, drugs, weapons, counterfeits, and other items that infringe intellectual property aren't allowed on this Marketplace.
+            Your listing will be visible to the entire AT Protocol community. Please note that we don't allow listings for live animals, controlled substances, weapons, counterfeit items, or anything that violates intellectual property rights. Keep it legal and community-friendly!
           </p>
           
           <button

@@ -9,9 +9,22 @@ export default function CreateListingPage() {
   const { client, isLoggedIn, isLoading } = useAuth();
   const router = useRouter();
   
-  const handleCreateSuccess = () => {
-    // This will be handled directly in the form
-    console.log('Listing creation successful');
+  const handleCreateSuccess = (listingUri?: string) => {
+    console.log('Listing creation successful:', listingUri);
+    
+    // If we have a URI, redirect to the listing page with success flag
+    if (listingUri) {
+      // Extract the ID part from the URI to construct the URL
+      const uriParts = listingUri.split('/');
+      const listingId = uriParts[uriParts.length - 1];
+      
+      // Redirect to the listing page with a success flag
+      // The flag will be used to show a confirmation message
+      router.push(`/listing/${listingId}?newListing=true`);
+    } else {
+      // If no URI, redirect to browse with a generic success message
+      router.push('/browse?listingCreated=true');
+    }
   };
   
   if (isLoading) {
