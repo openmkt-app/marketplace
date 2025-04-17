@@ -75,22 +75,22 @@ a {
   /* Button styles */
   .btn-primary {
     @apply px-4 py-2 bg-primary-color text-white font-medium rounded-lg shadow-sm 
-    hover:bg-primary-light transition-all duration-300 hover:shadow-md;
+    hover:bg-primary-light hover:text-white transition-all duration-300 hover:shadow-md;
   }
   
   .btn-secondary {
     @apply px-4 py-2 bg-white border border-neutral-medium text-text-primary font-medium 
-    rounded-lg shadow-sm hover:bg-neutral-light transition-all duration-300;
+    rounded-lg shadow-sm hover:bg-neutral-light hover:text-text-primary transition-all duration-300;
   }
   
   .btn-outline {
     @apply px-4 py-2 bg-transparent border border-primary-color text-primary-color font-medium 
-    rounded-lg hover:bg-primary-light/10 transition-all duration-300;
+    rounded-lg hover:bg-primary-light/10 hover:text-primary-color transition-all duration-300;
   }
   
   .btn-tertiary {
     @apply px-3 py-1.5 bg-transparent text-primary-color hover:bg-neutral-light/50 
-    font-medium rounded-lg transition-colors duration-300;
+    hover:text-primary-color font-medium rounded-lg transition-colors duration-300;
   }
   
   /* Input styles */
@@ -112,7 +112,8 @@ a {
   
   /* Badge styles */
   .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-light/20 text-primary-color;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+    bg-primary-light/20 text-primary-color hover:bg-primary-light/30 hover:text-primary-color;
   }
   
   /* Container styles */

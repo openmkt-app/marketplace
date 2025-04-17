@@ -5,6 +5,10 @@ import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { BskyAgent } from '@atproto/api';
 import { createBlueskyCdnImageUrls } from '@/lib/image-utils';
+import { formatConditionForDisplay } from '@/lib/condition-utils';
+import { formatPrice } from '@/lib/price-utils';
+import { formatCategoryDisplay } from '@/lib/category-utils';
+import { extractSubcategoryFromDescription } from '@/lib/category-utils';
 
 export default function ListingDetailPage() {
   const [listing, setListing] = useState<any>(null);
@@ -452,23 +456,25 @@ export default function ListingDetailPage() {
           
           <div className="p-6">
             <div className="text-2xl font-bold text-primary-color mb-4">
-              {formattedPrice}
+              {formatPrice(listing.price)}
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h2 className="text-lg font-semibold mb-2 text-text-primary">Description</h2>
-                <p className="text-text-secondary mb-4">{listing.description}</p>
+                <p className="text-text-secondary mb-4">
+                  {extractSubcategoryFromDescription(listing.description).cleanDescription}
+                </p>
                 
                 <h2 className="text-lg font-semibold mb-2 text-text-primary">Details</h2>
                 <div className="space-y-2">
                   <div className="flex">
                     <span className="font-medium w-24">Category:</span> 
-                    <span className="badge">{listing.category}</span>
+                    <span className="badge">{formatCategoryDisplay(listing.category, listing)}</span>
                   </div>
                   <div className="flex">
                     <span className="font-medium w-24">Condition:</span> 
-                    <span className="badge">{listing.condition}</span>
+                    <span className="badge">{formatConditionForDisplay(listing.condition)}</span>
                   </div>
                   <div className="flex">
                     <span className="font-medium w-24">Location:</span> 

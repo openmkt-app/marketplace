@@ -397,18 +397,21 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
       // Get selected category
       const categoryId = formData.get('category') as string;
       
-      // Get the subcategory value - not used in the API directly but kept for UI
+      // Get the subcategory value
       const subcategory = formData.get('subcategory') as string;
-      let description = formData.get('description') as string;
+      const description = formData.get('description') as string;
       
-      // If subcategory is selected, append it to the description
+      // Prepare listing data
+      let subcategoryName = '';
+      
+      // Get subcategory name if selected
       if (subcategory) {
         const categorySelect = event.currentTarget.elements.namedItem('category') as HTMLSelectElement;
         const category = CATEGORIES.find(c => c.id === categorySelect.value);
         const subcategoryObj = category?.subcategories.find(s => s.id === subcategory);
         
         if (subcategoryObj) {
-          description += `\n\nSubcategory: ${subcategoryObj.name}`;
+          subcategoryName = subcategoryObj.name;
         }
       }
       
@@ -451,7 +454,13 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
       // Update the price input to show the formatted price
       setPriceInput(formattedPrice);
       
-      const result = await client.createListing({
+      // Create custom metadata for inclusion in description
+      const metadata = {
+        subcategory: subcategoryName
+      };
+      
+      // Prepare listing data with metadata embedded as JSON
+      const listingData = {
         title: formData.get('title') as string,
         description: description,
         price: formattedPrice,
@@ -459,8 +468,11 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
         category: categoryId,
         condition: formData.get('condition') as string,
         images: images as any, // Type conversion for the API
-        hideFromFriends: hideFromFriends
-      });
+        hideFromFriends: hideFromFriends,
+        metadata: metadata // Include metadata here - client will need to be updated to process this
+      };
+      
+      const result = await client.createListing(listingData);
       
       // Save the location for future use
       saveCurrentLocation(locationData);

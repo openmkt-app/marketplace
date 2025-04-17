@@ -20,6 +20,11 @@ export type ListingImage = {
   size: number;
 };
 
+export type ListingMetadata = {
+  subcategory?: string;
+  [key: string]: any;
+};
+
 export type MarketplaceListing = {
   title: string;
   description: string;
@@ -29,6 +34,8 @@ export type MarketplaceListing = {
   category: string;
   condition: string;
   createdAt: string;
+  // Added for listing metadata, like subcategory
+  metadata?: ListingMetadata;
   // Added for UI display
   formattedImages?: Array<{
     thumbnail: string;
@@ -176,6 +183,7 @@ export class MarketplaceClient {
         meta: {
           title: listingDataWithoutImages.title,
           category: listingDataWithoutImages.category,
+          subcategory: listingDataWithoutImages.metadata?.subcategory,
           imageCount: processedImages ? processedImages.length : 0,
           hideFromFriends: listingDataWithoutImages.hideFromFriends || false
         }
@@ -194,7 +202,8 @@ export class MarketplaceClient {
           ...listingDataWithoutImages,
           images: processedImages, // Add the processed images
           createdAt: new Date().toISOString(),
-          hideFromFriends: listingDataWithoutImages.hideFromFriends || false
+          hideFromFriends: listingDataWithoutImages.hideFromFriends || false,
+          metadata: listingDataWithoutImages.metadata || {} // Include metadata with subcategory
         },
       });
       

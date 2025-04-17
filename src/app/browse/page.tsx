@@ -15,6 +15,10 @@ import {
   calculateDistance,
   partialMatch
 } from '@/lib/location-utils';
+import { formatConditionForDisplay } from '@/lib/condition-utils';
+import { formatPrice } from '@/lib/price-utils';
+import { formatCategoryDisplay } from '@/lib/category-utils';
+import { extractSubcategoryFromDescription } from '@/lib/category-utils';
 import { demoListingsData } from './demo-data';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 
@@ -138,9 +142,24 @@ function filterListingsByCondition(
   // if (!conditions?.length && !age) return listings;
   if (!conditions?.length) return listings;
   
+  // Map from potentially old condition IDs to the new ones
+  const mapConditionId = (id: string): string => {
+    const mapping: Record<string, string> = {
+      'like-new': 'likeNew',
+      // We don't need to map 'poor' anymore
+    };
+    return mapping[id] || id;
+  };
+  
+  // Normalize condition IDs to ensure compatibility
+  const normalizedConditions = conditions.map(mapConditionId);
+  
   return listings.filter(listing => {
+    // Normalize the listing condition ID too for comparison
+    const listingCondition = mapConditionId(listing.condition);
+    
     // Filter by condition
-    if (conditions?.length && !conditions.includes(listing.condition)) return false;
+    if (normalizedConditions.length && !normalizedConditions.includes(listingCondition)) return false;
     
     // Filter by age - commented out for now, will revisit later
     /*
@@ -652,46 +671,60 @@ export default function BrowsePage() {
           
           {filters.viewMode === 'list' && (
             <div className="space-y-4">
-              {filteredListings.map((listing: any, index) => (
-                <div 
-                  key={index} 
-                  onClick={() => listing.uri ? recordListingView(listing.uri) : null}
-                  className="bg-white rounded-lg shadow-md overflow-hidden flex"
-                >
-                  <div className="w-48 h-48 bg-neutral-light flex-shrink-0">
-                    <ListingImageDisplay 
-                      listing={listing}
-                      size="thumbnail"
-                      height="100%"
-                      fallbackText="No image"
-                    />
-                  </div>
-                  <div className="p-4 flex-grow">
-                    <h2 className="text-xl font-semibold mb-2 text-text-primary">{listing.title}</h2>
-                    <p className="text-text-secondary mb-2">{listing.description.substring(0, 150)}...</p>
-                    <div className="flex justify-between items-end">
-                      <div>
-                        <div className="text-text-secondary text-sm">
-                          {listing.location.locality}, {listing.location.state}
+              {filteredListings.map((listing, index) => {
+                // Get clean description without subcategory text
+                const { cleanDescription } = extractSubcategoryFromDescription(listing.description);
+                
+                // Set character limit for description
+                const charLimit = 150;
+                // Check if description is longer than the limit
+                const isTruncated = cleanDescription.length > charLimit;
+                // Get the description to display (truncated or full)
+                const displayDescription = isTruncated 
+                  ? `${cleanDescription.substring(0, charLimit)}...` 
+                  : cleanDescription;
+                
+                return (
+                  <div 
+                    key={index} 
+                    onClick={() => listing.uri ? recordListingView(listing.uri) : null}
+                    className="bg-white rounded-lg shadow-md overflow-hidden flex"
+                  >
+                    <div className="w-48 h-48 bg-neutral-light flex-shrink-0">
+                      <ListingImageDisplay 
+                        listing={listing}
+                        size="thumbnail"
+                        height="100%"
+                        fallbackText="No image"
+                      />
+                    </div>
+                    <div className="p-4 flex-grow">
+                      <h2 className="text-xl font-semibold mb-2 text-text-primary">{listing.title}</h2>
+                      <p className="text-text-secondary mb-2">{displayDescription}</p>
+                      <div className="flex justify-between items-end">
+                        <div>
+                          <div className="text-text-secondary text-sm">
+                            {listing.location.locality}, {listing.location.state}
+                          </div>
+                          <div className="flex space-x-2 mt-2">
+                            <span className="badge">{formatCategoryDisplay(listing.category, listing)}</span>
+                            <span className="badge">{formatConditionForDisplay(listing.condition)}</span>
+                          </div>
                         </div>
-                        <div className="flex space-x-2 mt-2">
-                          <span className="badge">{listing.category}</span>
-                          <span className="badge">{listing.condition}</span>
+                        <div>
+                          <div className="text-xl font-bold text-primary-color mb-2">{formatPrice(listing.price)}</div>
+                          <Link
+                            href={`/listing/${encodeURIComponent(listing.uri || listing.title)}`}
+                            className="btn-primary"
+                          >
+                            View Details
+                          </Link>
                         </div>
-                      </div>
-                      <div>
-                        <div className="text-xl font-bold text-primary-color mb-2">{listing.price}</div>
-                        <Link
-                          href={`/listing/${encodeURIComponent(listing.uri || listing.title)}`}
-                          className="btn-primary"
-                        >
-                          View Details
-                        </Link>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
           
@@ -762,46 +795,60 @@ export default function BrowsePage() {
           
           {filters.viewMode === 'list' && (
             <div className="space-y-4">
-              {filteredListings.map((listing, index) => (
-                <div 
-                  key={index} 
-                  onClick={() => listing.uri ? recordListingView(listing.uri) : null}
-                  className="bg-white rounded-lg shadow-md overflow-hidden flex"
-                >
-                  <div className="w-48 h-48 bg-neutral-light flex-shrink-0">
-                    <ListingImageDisplay 
-                      listing={listing}
-                      size="thumbnail"
-                      height="100%"
-                      fallbackText="No image"
-                    />
-                  </div>
-                  <div className="p-4 flex-grow">
-                    <h2 className="text-xl font-semibold mb-2 text-text-primary">{listing.title}</h2>
-                    <p className="text-text-secondary mb-2">{listing.description.substring(0, 150)}...</p>
-                    <div className="flex justify-between items-end">
-                      <div>
-                        <div className="text-text-secondary text-sm">
-                          {listing.location.locality}, {listing.location.state}
+              {filteredListings.map((listing, index) => {
+                // Get clean description without subcategory text
+                const { cleanDescription } = extractSubcategoryFromDescription(listing.description);
+                
+                // Set character limit for description
+                const charLimit = 150;
+                // Check if description is longer than the limit
+                const isTruncated = cleanDescription.length > charLimit;
+                // Get the description to display (truncated or full)
+                const displayDescription = isTruncated 
+                  ? `${cleanDescription.substring(0, charLimit)}...` 
+                  : cleanDescription;
+                
+                return (
+                  <div 
+                    key={index} 
+                    onClick={() => listing.uri ? recordListingView(listing.uri) : null}
+                    className="bg-white rounded-lg shadow-md overflow-hidden flex"
+                  >
+                    <div className="w-48 h-48 bg-neutral-light flex-shrink-0">
+                      <ListingImageDisplay 
+                        listing={listing}
+                        size="thumbnail"
+                        height="100%"
+                        fallbackText="No image"
+                      />
+                    </div>
+                    <div className="p-4 flex-grow">
+                      <h2 className="text-xl font-semibold mb-2 text-text-primary">{listing.title}</h2>
+                      <p className="text-text-secondary mb-2">{displayDescription}</p>
+                      <div className="flex justify-between items-end">
+                        <div>
+                          <div className="text-text-secondary text-sm">
+                            {listing.location.locality}, {listing.location.state}
+                          </div>
+                          <div className="flex space-x-2 mt-2">
+                            <span className="badge">{formatCategoryDisplay(listing.category, listing)}</span>
+                            <span className="badge">{formatConditionForDisplay(listing.condition)}</span>
+                          </div>
                         </div>
-                        <div className="flex space-x-2 mt-2">
-                          <span className="badge">{listing.category}</span>
-                          <span className="badge">{listing.condition}</span>
+                        <div>
+                          <div className="text-xl font-bold text-primary-color mb-2">{formatPrice(listing.price)}</div>
+                          <Link
+                            href={`/listing/${encodeURIComponent(listing.uri || listing.title)}`}
+                            className="btn-primary"
+                          >
+                            View Details
+                          </Link>
                         </div>
-                      </div>
-                      <div>
-                        <div className="text-xl font-bold text-primary-color mb-2">{listing.price}</div>
-                        <Link
-                          href={`/listing/${encodeURIComponent(listing.uri || listing.title)}`}
-                          className="btn-primary"
-                        >
-                          View Details
-                        </Link>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
           

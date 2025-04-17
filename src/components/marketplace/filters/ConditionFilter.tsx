@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { CONDITIONS } from '@/lib/category-data';
+import { formatConditionForDisplay } from '@/lib/condition-utils';
 
 interface ConditionFilterProps {
   selectedConditions?: string[];
@@ -9,14 +11,22 @@ interface ConditionFilterProps {
   onChange: (conditions?: string[], age?: string) => void;
 }
 
-// Available conditions
-const conditionOptions = [
-  { id: 'new', label: 'New' },
-  { id: 'like-new', label: 'Like New' },
-  { id: 'good', label: 'Good' },
-  { id: 'fair', label: 'Fair' },
-  { id: 'poor', label: 'Poor/For Parts' }
-];
+// Map the previous condition IDs to the new ones for backwards compatibility
+const mapOldToNewConditionId = (oldId: string): string => {
+  const mapping: Record<string, string> = {
+    'new': 'new',
+    'like-new': 'likeNew',
+    'good': 'good',
+    'fair': 'fair'
+  };
+  return mapping[oldId] || oldId;
+};
+
+// Use condition options directly from category-data.ts shared data
+const conditionOptions = CONDITIONS.map(condition => ({
+  id: condition.id,
+  label: formatConditionForDisplay(condition.id)
+}));
 
 // Available age options - commented out for now, will revisit later
 /*
@@ -34,7 +44,9 @@ export default function ConditionFilter({
   // selectedAge, - commented out for now, will revisit later
   onChange 
 }: ConditionFilterProps) {
-  const [conditions, setConditions] = useState<string[]>(selectedConditions);
+  // Map any old-format IDs in the selectedConditions to the new format
+  const mappedSelectedConditions = selectedConditions.map(mapOldToNewConditionId);
+  const [conditions, setConditions] = useState<string[]>(mappedSelectedConditions);
   // const [age, setAge] = useState<string | undefined>(selectedAge); - commented out for now, will revisit later
 
   // Toggle a condition selection
@@ -64,6 +76,14 @@ export default function ConditionFilter({
     // Passing undefined for age parameter since it's commented out
     onChange(conditions.length > 0 ? conditions : undefined, undefined);
   }, [conditions, onChange]);
+
+  // Update local state if selectedConditions changes externally
+  useEffect(() => {
+    const mappedConditions = selectedConditions.map(mapOldToNewConditionId);
+    if (JSON.stringify(mappedConditions) !== JSON.stringify(conditions)) {
+      setConditions(mappedConditions);
+    }
+  }, [selectedConditions]);
 
   return (
     <div className="space-y-4">

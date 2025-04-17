@@ -24,7 +24,10 @@ export const demoListingsData: MarketplaceListing[] = [
     },
     category: 'furniture',
     condition: 'good',
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    metadata: {
+      subcategory: 'Living Room'
+    }
   },
   {
     title: 'Mountain Bike',
@@ -47,7 +50,10 @@ export const demoListingsData: MarketplaceListing[] = [
     },
     category: 'sports',
     condition: 'likeNew',
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    metadata: {
+      subcategory: 'Bicycles'
+    }
   },
   {
     title: 'iPhone 13',
@@ -70,7 +76,10 @@ export const demoListingsData: MarketplaceListing[] = [
     },
     category: 'electronics',
     condition: 'good',
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    metadata: {
+      subcategory: 'Smartphones'
+    }
   },
   // Additional listings to test filtering
   {
@@ -85,7 +94,10 @@ export const demoListingsData: MarketplaceListing[] = [
     },
     category: 'furniture',
     condition: 'good',
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    metadata: {
+      subcategory: 'Dining Room'
+    }
   },
   {
     title: 'Gaming Laptop',
@@ -99,7 +111,10 @@ export const demoListingsData: MarketplaceListing[] = [
     },
     category: 'electronics',
     condition: 'likeNew',
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    metadata: {
+      subcategory: 'Laptops'
+    }
   },
   {
     title: 'MacBook Pro',
@@ -113,7 +128,10 @@ export const demoListingsData: MarketplaceListing[] = [
     },
     category: 'electronics',
     condition: 'good',
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    metadata: {
+      subcategory: 'Laptops'
+    }
   },
   {
     title: 'Leather Sofa',
@@ -127,7 +145,10 @@ export const demoListingsData: MarketplaceListing[] = [
     },
     category: 'furniture',
     condition: 'good',
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    metadata: {
+      subcategory: 'Living Room'
+    }
   },
   {
     title: 'Electric Guitar',
@@ -141,7 +162,10 @@ export const demoListingsData: MarketplaceListing[] = [
     },
     category: 'other',
     condition: 'likeNew',
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    metadata: {
+      subcategory: 'Musical Instruments'
+    }
   },
   {
     title: 'Road Bike',
@@ -155,6 +179,9 @@ export const demoListingsData: MarketplaceListing[] = [
     },
     category: 'sports',
     condition: 'likeNew',
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    metadata: {
+      subcategory: 'Bicycles'
+    }
   }
 ];
