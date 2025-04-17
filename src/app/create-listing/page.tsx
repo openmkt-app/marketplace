@@ -84,7 +84,8 @@ export default function CreateListingPage() {
       <div className="max-w-3xl mx-auto px-4 py-12">
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="bg-gradient-to-r from-primary-color to-primary-light px-6 py-4">
-            <h1 className="text-2xl font-bold text-white">Create New Listing!</h1>
+            <h1 className="text-2xl font-bold text-white">Create New Listing</h1>
+            <p className="text-white text-opacity-90 mt-1">List your item for sale in the marketplace</p>
           </div>
           
           <div className="p-6">

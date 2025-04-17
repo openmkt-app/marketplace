@@ -370,8 +370,7 @@ export const CONDITIONS: CategoryOption[] = [
   { id: 'new', name: 'New' },
   { id: 'likeNew', name: 'Like New' },
   { id: 'good', name: 'Good' },
-  { id: 'fair', name: 'Fair' },
-  { id: 'poor', name: 'Poor' }
+  { id: 'fair', name: 'Fair' }
 ];
 
 // Helper function to get a flat list of all categories for simple dropdowns

@@ -50,6 +50,10 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
   // Add state for price input
   const [priceInput, setPriceInput] = useState('');
   
+  // Add state for Free category confirmation dialog
+  const [showFreeConfirmation, setShowFreeConfirmation] = useState(false);
+  const [previousCategory, setPreviousCategory] = useState<string>('');
+  
   // Set up an effect to auto-dismiss error messages after a timeout
   useEffect(() => {
     if (error) {
@@ -296,7 +300,7 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
     const cleanedPrice = price.replace(/[^0-9.]/g, '');
     
     // Handle empty input
-    if (!cleanedPrice) return '0.00';
+    if (!cleanedPrice) return '';
     
     // Check if it contains a decimal point
     if (cleanedPrice.includes('.')) {
@@ -320,35 +324,66 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
     // and only allow one decimal point
     const sanitizedValue = value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
     
-    // Limit to two decimal places if decimal is present
-    let formattedValue = sanitizedValue;
-    if (sanitizedValue.includes('.')) {
-      const [whole, decimal] = sanitizedValue.split('.');
-      formattedValue = `${whole}.${decimal.substring(0, 2)}`;
+    // Split the value into whole and decimal parts
+    let [wholePart, decimalPart] = sanitizedValue.split('.');
+    
+    // Limit the whole part to 7 digits
+    if (wholePart.length > 7) {
+      wholePart = wholePart.substring(0, 7);
+    }
+    
+    // Limit the decimal part to 2 digits if it exists
+    let formattedValue = wholePart;
+    if (decimalPart !== undefined) {
+      formattedValue = `${wholePart}.${decimalPart.substring(0, 2)}`;
     }
     
     // Store the sanitized value
     setPriceInput(formattedValue);
     
     // If price is 0, automatically set category to "Free Stuff"
-    const isZeroPrice = parseFloat(formattedValue) === 0 || formattedValue === '0' || formattedValue === '0.0' || formattedValue === '0.00' || formattedValue === '';
-    if (isZeroPrice) {
+    const isZeroPrice = parseFloat(formattedValue) === 0 || formattedValue === '0' || formattedValue === '0.0' || formattedValue === '0.00';
+    if (isZeroPrice && formattedValue !== '') {
       setSelectedCategory('free');
+    } else if (!isZeroPrice && selectedCategory === 'free') {
+      // If price is non-zero and category is "Free Stuff", reset category
+      setSelectedCategory('');
     }
   };
   
   // Check if price is zero (for category locking)
-  const isPriceZero = parseFloat(priceInput) === 0 || priceInput === '0' || priceInput === '0.0' || priceInput === '0.00' || priceInput === '';
+  const isPriceZero = parseFloat(priceInput) === 0 || priceInput === '0' || priceInput === '0.0' || priceInput === '0.00';
   
   // Handle category selection changes
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const categoryId = e.target.value;
-    setSelectedCategory(categoryId);
     
-    // If "Free Stuff" category is selected, automatically set price to 0
-    if (categoryId === 'free') {
-      setPriceInput('0.00');
+    // If selecting Free category, show confirmation dialog
+    if (categoryId === 'free' && selectedCategory !== 'free') {
+      setPreviousCategory(selectedCategory);
+      setShowFreeConfirmation(true);
+    } else {
+      // Set the category directly for other categories
+      setSelectedCategory(categoryId);
+      
+      // If "Free Stuff" category is selected, automatically set price to 0
+      if (categoryId === 'free') {
+        setPriceInput('0.00');
+      }
     }
+  };
+  
+  // Handle Free category confirmation
+  const handleFreeConfirmation = (confirmed: boolean) => {
+    if (confirmed) {
+      setSelectedCategory('free');
+      setPriceInput('0.00');
+    } else {
+      // Revert to the previous category or empty if there was none
+      setSelectedCategory(previousCategory || '');
+    }
+    
+    setShowFreeConfirmation(false);
   };
   
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -384,6 +419,13 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
         locality: formData.get('locality') as string,
         zipPrefix: formData.get('zipPrefix') as string || undefined,
       };
+      
+      // Validate price input before formatting
+      if (!priceInput.trim()) {
+        setError("Please enter a price for your listing.");
+        setIsSubmitting(false);
+        return;
+      }
       
       // Format the price to ensure consistent decimal places
       const formattedPrice = formatPrice(priceInput);
@@ -437,9 +479,6 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
   
   return (
     <div className="max-w-2xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-1">Create New Listing</h1>
-      <p className="text-gray-600 mb-6">List your item for sale in the marketplace</p>
-      
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 relative">
           <span className="block sm:inline">{error}</span>
@@ -454,6 +493,34 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
         </div>
       )}
       
+      {/* Free Category Confirmation Dialog */}
+      {showFreeConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+            <h3 className="text-lg font-bold mb-2">Change to Free Stuff category?</h3>
+            <p className="mb-4 text-text-secondary">
+              Changing to the "Free Stuff" category will set your item's price to $0.00. Do you want to continue?
+            </p>
+            <div className="flex space-x-3 justify-end">
+              <button
+                type="button"
+                onClick={() => handleFreeConfirmation(false)}
+                className="px-4 py-2 border border-neutral-light rounded-md hover:bg-neutral-light/50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFreeConfirmation(true)}
+                className="px-4 py-2 bg-primary-color hover:bg-primary-light text-white rounded-md"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <form id="listing-form" onSubmit={handleSubmit} className="space-y-8">
         {/* Photos Section */}
         <div className="bg-white p-6 rounded-lg shadow-sm border border-neutral-light">
@@ -544,26 +611,14 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
                   className="w-full pl-7 pr-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
                 />
               </div>
-              <p className="mt-1 text-xs text-text-secondary">
-                Enter price without currency symbol. Decimals will be added automatically if not provided.
-                {selectedCategory === 'free' ? (
-                  <span className="block mt-1 text-primary-color">
-                    Free items must be listed with a price of $0.00.
-                  </span>
-                ) : priceInput === '0' || priceInput === '0.0' || priceInput === '0.00' || priceInput === '' ? (
-                  <span className="block mt-1 text-primary-color">
-                    Items with price $0.00 will be listed in the Free Stuff category.
-                  </span>
-                ) : null}
-              </p>
             </div>
             
             <div>
               <label htmlFor="category" className="block text-sm font-medium text-text-secondary mb-1">
                 Category <span className="text-red-500">*</span>
-                {isPriceZero && (
+                {isPriceZero && priceInput !== '' && (
                   <span className="ml-2 text-xs text-primary-color">
-                    (Locked to Free Stuff - change price to unlock)
+                    ($0.00 = Free Stuff category only - Change price to unlock)
                   </span>
                 )}
               </label>
@@ -571,14 +626,17 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
                 id="category"
                 name="category"
                 required
-                className={`w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light ${isPriceZero ? 'bg-neutral-light/50 cursor-not-allowed' : ''}`}
+                className={`w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light ${isPriceZero && priceInput !== '' ? 'bg-neutral-light/50 cursor-not-allowed' : ''}`}
                 value={selectedCategory}
                 onChange={handleCategoryChange}
-                disabled={isPriceZero}
+                disabled={isPriceZero && priceInput !== ''}
               >
                 <option value="">Select a category</option>
                 {CATEGORIES.map(category => (
-                  <option key={category.id} value={category.id}>
+                  <option 
+                    key={category.id} 
+                    value={category.id}
+                  >
                     {category.name}
                   </option>
                 ))}
@@ -631,7 +689,7 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
                 name="description"
                 required
                 rows={4}
-                placeholder="Describe your item in detail. Include condition, features, and why you're selling."
+                placeholder="Describe your item in detail. Include features, specifications, and why you're selling. The more details you provide, the more likely buyers will be interested."
                 className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
               />
             </div>
