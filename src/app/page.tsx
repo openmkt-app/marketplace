@@ -129,7 +129,7 @@ export default function Home() {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold mb-1 text-text-primary">Photo Gallery That Doesn't Suck</h3>
+                    <h3 className="text-lg font-semibold mb-1 text-text-primary">Photo Gallery That Doesn&apos;t Suck</h3>
                     <p className="text-text-primary">Swipe through multiple pics without the usual clunky interface most marketplaces have.</p>
                   </div>
                 </div>
@@ -253,7 +253,7 @@ export default function Home() {
               href="/browse"
               className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-white text-primary-color font-medium text-lg hover:bg-neutral-light transition-colors"
             >
-              Let's Go Shopping
+              Let&apos;s Go Shopping
             </Link>
           </div>
         </div>

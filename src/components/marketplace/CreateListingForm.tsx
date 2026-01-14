@@ -551,7 +551,7 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
           <div className="bg-white rounded-lg p-6 max-w-md mx-4">
             <h3 className="text-lg font-bold mb-2">Change to Free Stuff category?</h3>
             <p className="mb-4 text-text-secondary">
-              Changing to the "Free Stuff" category will set your item's price to $0.00. Do you want to continue?
+              Changing to the &ldquo;Free Stuff&rdquo; category will set your item&apos;s price to $0.00. Do you want to continue?
             </p>
             <div className="flex space-x-3 justify-end">
               <button

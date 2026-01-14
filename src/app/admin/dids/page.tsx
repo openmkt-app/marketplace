@@ -155,7 +155,7 @@ export default function ManageDIDsPage() {
       <div className="mt-6 bg-yellow-50 border-l-4 border-yellow-500 p-4">
         <p className="font-bold">Note:</p>
         <p className="text-sm text-gray-700 mt-2">
-          These DIDs are stored in your browser's localStorage. They persist across sessions but are local to this browser.
+          These DIDs are stored in your browser&apos;s localStorage. They persist across sessions but are local to this browser.
           For production use, consider implementing a backend service to maintain a shared registry of marketplace participants.
         </p>
       </div>

@@ -60,7 +60,7 @@ export default function LoginPage() {
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">Hmm, that didn't work</h3>
+                  <h3 className="text-sm font-medium text-red-800">Hmm, that didn&apos;t work</h3>
                   <p className="text-sm text-red-700 mt-1">{error}</p>
                 </div>
               </div>

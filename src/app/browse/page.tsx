@@ -812,7 +812,7 @@ const BrowsePageContent = () => {
           <p className="mb-4 text-text-secondary">
             Showing {filteredListings.length} of {allListings.length} listings
             {filters.searchQuery && (
-              <> matching <span className="font-medium">"{filters.searchQuery}"</span></>
+              <> matching <span className="font-medium">&ldquo;{filters.searchQuery}&rdquo;</span></>
             )}
             {filters.location && filters.location.locationName && (
               <> near <span className="font-medium">{filters.location.locationName}</span>
@@ -1063,7 +1063,7 @@ const BrowsePageContent = () => {
           </svg>
           <h2 className="text-xl font-semibold mb-2 text-text-primary">No Matching Listings</h2>
           <p className="text-text-secondary mb-6">
-            We couldn't find any listings matching your current filters. Try adjusting your search criteria.
+            We couldn&apos;t find any listings matching your current filters. Try adjusting your search criteria.
           </p>
           <button
             onClick={() => setFilters({

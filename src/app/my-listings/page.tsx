@@ -71,7 +71,7 @@ export default function MyListingsPage() {
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
             <h2 className="text-xl font-semibold mb-2">No listings yet</h2>
             <p className="text-gray-600 mb-4">
-              You haven't created any listings yet. Start selling your items by creating your first listing.
+              You haven&apos;t created any listings yet. Start selling your items by creating your first listing.
             </p>
             <Link 
               href="/create-listing"
