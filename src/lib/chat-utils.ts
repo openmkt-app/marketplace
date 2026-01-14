@@ -14,40 +14,43 @@ Listing: ${listingUrl}`;
 }
 
 /**
- * Open Bluesky chat with the seller
- * This function attempts to open the Bluesky app or website with a pre-filled message
+ * Open Bluesky to contact the seller
+ * Opens the seller's profile where the user can click "Message" to start a chat
+ * Note: Bluesky doesn't support direct DM links, so we link to the profile instead
  */
 export function contactSellerViaBluesky(
-  sellerHandle: string, 
+  sellerHandle: string,
   listing: MarketplaceListing
 ): void {
-  const message = generateSellerMessage(listing);
-  const encodedMessage = encodeURIComponent(message);
-  
-  // Try to open the Bluesky app first (mobile), then fallback to web
-  const blueskyAppUrl = `bluesky://dm/${sellerHandle}?text=${encodedMessage}`;
-  const blueskyWebUrl = `https://bsky.app/messages/${sellerHandle}?text=${encodedMessage}`;
-  
+  // Clean up the handle (remove @ if present)
+  const cleanHandle = sellerHandle.startsWith('@') ? sellerHandle.slice(1) : sellerHandle;
+
+  // Bluesky profile URL - users can click "Message" button from the profile
+  const blueskyProfileUrl = `https://bsky.app/profile/${cleanHandle}`;
+
   // Detect if we're on mobile
   const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
     navigator.userAgent
   );
-  
+
   if (isMobile) {
-    // Try app first, fallback to web
-    try {
-      window.location.href = blueskyAppUrl;
-      // Fallback to web after a short delay if app doesn't open
-      setTimeout(() => {
-        window.open(blueskyWebUrl, '_blank');
-      }, 2000);
-    } catch (error) {
-      // If app fails, open web version
-      window.open(blueskyWebUrl, '_blank');
-    }
+    // Try to open Bluesky app with profile URL scheme
+    const blueskyAppUrl = `bluesky://profile/${cleanHandle}`;
+
+    // Create a hidden iframe to try the app URL
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = blueskyAppUrl;
+    document.body.appendChild(iframe);
+
+    // Fallback to web after a short delay if app doesn't open
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+      window.open(blueskyProfileUrl, '_blank');
+    }, 1500);
   } else {
-    // Desktop: just open web version
-    window.open(blueskyWebUrl, '_blank');
+    // Desktop: open web profile
+    window.open(blueskyProfileUrl, '_blank');
   }
 }
 

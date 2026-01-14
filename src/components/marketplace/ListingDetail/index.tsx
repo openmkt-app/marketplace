@@ -102,7 +102,7 @@ export default function ListingDetail({ listing }: ListingDetailProps) {
                 className="contact-button"
                 onClick={() => contactSellerViaBluesky(listing.authorHandle!, listing)}
               >
-                Contact Seller via Bluesky
+                Message Seller on Bluesky
               </button>
             ) : (
               <button
