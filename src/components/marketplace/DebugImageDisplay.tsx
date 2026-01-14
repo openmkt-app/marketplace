@@ -2,6 +2,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 
 interface DebugImageDisplayProps {
   listing: any;
@@ -53,12 +54,16 @@ export default function DebugImageDisplay({ listing }: DebugImageDisplayProps) {
       
       <div className="mb-4">
         <h4 className="font-semibold mb-2">Main Image (Direct URL):</h4>
-        <div className="border border-gray-300 rounded-md p-2">
+        <div className="border border-gray-300 rounded-md p-2 relative" style={{ maxHeight: '400px' }}>
           {imageUrls[0] && (
-            <img 
+            <Image
               src={imageUrls[0].fullsize}
               alt="Debug fullsize image"
-              style={{ maxWidth: '100%', height: 'auto', maxHeight: '400px', objectFit: 'contain' }}
+              width={600}
+              height={400}
+              className="object-contain"
+              style={{ maxWidth: '100%', height: 'auto' }}
+              unoptimized
             />
           )}
         </div>
@@ -78,11 +83,13 @@ export default function DebugImageDisplay({ listing }: DebugImageDisplayProps) {
         <h4 className="font-semibold mb-2">All Thumbnails:</h4>
         <div className="flex flex-wrap gap-2">
           {imageUrls.map((url: any, index: number) => (
-            <div key={index} className="border border-gray-300 rounded-md overflow-hidden">
-              <img 
+            <div key={index} className="border border-gray-300 rounded-md overflow-hidden relative w-[100px] h-[100px]">
+              <Image
                 src={url.thumbnail}
                 alt={`Debug thumbnail ${index + 1}`}
-                style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+                fill
+                className="object-cover"
+                unoptimized
               />
             </div>
           ))}

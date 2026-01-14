@@ -2,6 +2,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { extractBlobCid } from '@/lib/image-utils';
 
 interface ListingImageDebugProps {
@@ -52,16 +53,14 @@ export default function ListingImageDebug({ listing, show = false }: ListingImag
             )}
             <div className="mt-4">
               <strong>Direct Image Test:</strong>
-              {blobCid && authorDid ? (
-                <div className="border border-gray-300 p-2 mt-1">
-                  <img 
+              {blobCid && authorDid && generatedUrl ? (
+                <div className="border border-gray-300 p-2 mt-1 relative w-20 h-20">
+                  <Image
                     src={generatedUrl}
                     alt="Test image"
-                    className="h-20 w-20 object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).parentElement?.classList.add('bg-red-100');
-                      (e.target as HTMLImageElement).parentElement?.classList.add('border-red-300');
-                    }}
+                    fill
+                    className="object-cover"
+                    unoptimized
                   />
                 </div>
               ) : (

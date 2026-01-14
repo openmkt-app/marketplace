@@ -2,9 +2,11 @@
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import SearchBar from '../marketplace/filters/SearchBar';
+import { generateAvatarUrl } from '@/lib/image-utils';
 
 // Wrapper for search param usage
 const NavbarContent = () => {
@@ -139,9 +141,21 @@ const NavbarContent = () => {
                 >
                   Log Out
                 </button>
-                <div className="h-8 w-8 rounded-full bg-primary-color/10 border-2 border-white shadow-sm overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary-color transition-all flex items-center justify-center text-primary-color font-bold">
-                  {user?.handle ? user.handle.charAt(0).toUpperCase() : 'U'}
-                </div>
+                {user?.did && user?.avatarCid ? (
+                  <div className="h-8 w-8 rounded-full border-2 border-white shadow-sm overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary-color transition-all relative">
+                    <Image
+                      src={generateAvatarUrl(user.did, user.avatarCid) || ''}
+                      alt={user.displayName || user.handle || 'User'}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-primary-color/10 border-2 border-white shadow-sm overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary-color transition-all flex items-center justify-center text-primary-color font-bold">
+                    {user?.handle ? user.handle.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                )}
               </div>
             ) : (
               <Link
