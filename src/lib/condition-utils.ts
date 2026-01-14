@@ -9,13 +9,15 @@
 export function formatConditionForDisplay(condition: string): string {
   const conditionMap: Record<string, string> = {
     'new': 'New',
+    'openBox': 'Open Box',
     'likeNew': 'Like New',
     'good': 'Good',
     'fair': 'Fair',
+    'forParts': 'For Parts / Not Working',
     // Legacy mapping for backwards compatibility
     'like-new': 'Like New',
     'poor': 'Poor' // Include for backward compatibility but should not be used
   };
-  
+
   return conditionMap[condition] || condition.charAt(0).toUpperCase() + condition.slice(1);
 } 

@@ -123,7 +123,7 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
       return;
     }
     
-    // Clear any existing error message since we're under the limit now
+    // Clear any existing error message since we&apos;re under the limit now
     if (error && error.includes("maximum of 10 images")) {
       setError(null);
     }
@@ -143,7 +143,7 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
     setImages(prev => prev.filter((_, i) => i !== index));
     setPreviewUrls(prev => prev.filter((_, i) => i !== index));
     
-    // Clear any "too many images" error message since we're reducing the count
+    // Clear any "too many images" error message since we&apos;re reducing the count
     if (error && error.includes("maximum of 10 images")) {
       setError(null);
     }
@@ -340,15 +340,17 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
     // Remove any non-numeric characters except for decimal point
     // and only allow one decimal point
     const sanitizedValue = value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
-    
+
     // Split the value into whole and decimal parts
-    let [wholePart, decimalPart] = sanitizedValue.split('.');
-    
+    const parts = sanitizedValue.split('.');
+    let wholePart = parts[0];
+    const decimalPart = parts[1];
+
     // Limit the whole part to 7 digits
     if (wholePart.length > 7) {
       wholePart = wholePart.substring(0, 7);
     }
-    
+
     // Limit the decimal part to 2 digits if it exists
     let formattedValue = wholePart;
     if (decimalPart !== undefined) {
@@ -619,7 +621,7 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
             className="hidden"
           />
           <p className="text-xs text-text-secondary">
-            Upload up to 10 crystal-clear photos so buyers can see what they're getting. The first image will be used as the cover photo.
+            Upload up to 10 crystal-clear photos so buyers can see what they&apos;re getting. The first image will be used as the cover photo.
           </p>
         </div>
         
@@ -739,7 +741,7 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
                 name="description"
                 required
                 rows={4}
-                placeholder="Describe your item in detail. Include features, specifications, and why you're selling. The more details you provide, the more likely buyers will be interested."
+                placeholder="Describe your item in detail. Include features, specifications, and why you&apos;re selling. The more details you provide, the more likely buyers will be interested."
                 className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
               />
             </div>
@@ -930,7 +932,7 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
           <div className="flex items-center justify-between">
             <div>
               <span className="font-medium text-text-secondary">Hide from friends</span>
-              <p className="text-sm text-text-secondary">When enabled, this listing won't appear in feeds of people who follow you on the AT Protocol network (Bluesky, this marketplace, etc.). This helps keep certain listings private from people you know.</p>
+              <p className="text-sm text-text-secondary">When enabled, this listing won&apos;t appear in feeds of people who follow you on the AT Protocol network (Bluesky, this marketplace, etc.). This helps keep certain listings private from people you know.</p>
             </div>
             <label className="inline-flex items-center cursor-pointer">
               <input 
@@ -946,7 +948,7 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
         
         <div className="bg-gray-50 p-4 rounded-md">
           <p className="text-sm text-text-secondary mb-4">
-            Your listing will be visible to the entire AT Protocol community. Please note that we don't allow listings for live animals, controlled substances, weapons, counterfeit items, or anything that violates intellectual property rights. Keep it legal and community-friendly!
+            Your listing will be visible to the entire AT Protocol community. Please note that we don&apos;t allow listings for live animals, controlled substances, weapons, counterfeit items, or anything that violates intellectual property rights. Keep it legal and community-friendly!
           </p>
           
           <button

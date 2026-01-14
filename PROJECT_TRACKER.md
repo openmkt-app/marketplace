@@ -3,7 +3,11 @@
 ## Features to Implement
 
 ### High Priority
-- ...
+### High Priority
+- [ ] **Global Header Search Integration**: Move the search bar to the global header/navigation to match the new design.
+- [ ] **Filter Bar Refinement**: Clean up the `HorizontalFilterBar` layout to prevent merging of controls and implement proper spacing.
+- [ ] **Browse Page Cleanup**: Remove the redundant "Browse Listings" header and green badge to align with the cleaner Google AI Studio design.
+- [ ] **Mobile Responsiveness**: Ensure the new filter and header changes work well on mobile devices.
 
 ### Medium Priority
 - **Implement CommuteFilter functionality**: Enable users to filter listings based on commute routes with specified start/end locations and maximum commute time.

@@ -97,8 +97,26 @@
   border: none;
   cursor: pointer;
   transition: background-color 0.2s;
+  width: 100%;
+  margin-bottom: 1rem;
 }
 
 .contact-button:hover {
   background-color: #1d4ed8;
+}
+
+.contact-button-disabled {
+  background-color: #9ca3af !important;
+  cursor: not-allowed !important;
+}
+
+.contact-button-disabled:hover {
+  background-color: #9ca3af !important;
+}
+
+.seller-info {
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin: 0;
 }

@@ -1,11 +1,37 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Home() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, isLoading } = useAuth();
+  const router = useRouter();
   
+  // Redirect to browse page if user is logged in
+  useEffect(() => {
+    // Only redirect after auth state has been determined (not loading)
+    // and user is logged in
+    if (!isLoading && isLoggedIn) {
+      router.push('/browse');
+    }
+  }, [isLoggedIn, isLoading, router]);
+
+  // If still loading or user is logged in and about to be redirected,
+  // return null to prevent flashing the homepage content
+  if (isLoading || isLoggedIn) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-color border-r-transparent"></div>
+          <p className="mt-2 text-text-primary">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Only render the homepage content for non-logged-in users
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)]">
       {/* Hero Section */}
@@ -34,27 +60,15 @@ export default function Home() {
                 </svg>
                 Check Out Listings
               </Link>
-              {isLoggedIn ? (
-                <Link
-                  href="/create-listing"
-                  className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-neutral-light text-primary-color font-medium text-lg hover:bg-neutral-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-light focus:ring-offset-primary-color"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Post Your Stuff
-                </Link>
-              ) : (
-                <Link
-                  href="/login"
-                  className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-neutral-light text-primary-color font-medium text-lg hover:bg-neutral-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-light focus:ring-offset-primary-color"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                  </svg>
-                  Jump in & Start Selling
-                </Link>
-              )}
+              <Link
+                href="/login"
+                className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-neutral-light text-primary-color font-medium text-lg hover:bg-neutral-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-light focus:ring-offset-primary-color"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
+                Jump in & Start Selling
+              </Link>
             </div>
           </div>
         </div>
@@ -128,7 +142,7 @@ export default function Home() {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold mb-1 text-text-primary">Pics That Actually Show Details</h3>
-                    <p className="text-text-primary">Upload up to 10 crystal-clear photos so buyers can see what they're getting.</p>
+                    <p className="text-text-primary">Upload up to 10 crystal-clear photos so buyers can see what they&apos;re getting.</p>
                   </div>
                 </div>
                 
@@ -215,21 +229,12 @@ export default function Home() {
                 <p className="text-text-primary mb-6">
                   Already on Bluesky? Just log in with the same account—no new passwords to remember!
                 </p>
-                {isLoggedIn ? (
-                  <Link
-                    href="/create-listing"
-                    className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-primary-color text-white font-medium hover:bg-primary-light transition-colors"
-                  >
-                    Post Your First Item
-                  </Link>
-                ) : (
-                  <Link
-                    href="/login"
-                    className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-primary-color text-white font-medium hover:bg-primary-light transition-colors"
-                  >
-                    Sign In With Your Account
-                  </Link>
-                )}
+                <Link
+                  href="/login"
+                  className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-primary-color text-white font-medium hover:bg-primary-light transition-colors"
+                >
+                  Sign In With Your Account
+                </Link>
               </div>
             </div>
           </div>

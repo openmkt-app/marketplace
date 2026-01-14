@@ -27,7 +27,12 @@ export const demoListingsData: MarketplaceListing[] = [
     createdAt: new Date().toISOString(),
     metadata: {
       subcategory: 'Living Room'
-    }
+    },
+    authorHandle: 'vintagefinder.bsky.social',
+    authorDid: 'did:plc:demo1',
+    sellerDid: 'did:plc:demo1',
+    uri: 'demo-listing-1',
+    cid: 'demo-cid-1'
   },
   {
     title: 'Mountain Bike',
@@ -53,7 +58,12 @@ export const demoListingsData: MarketplaceListing[] = [
     createdAt: new Date().toISOString(),
     metadata: {
       subcategory: 'Bicycles'
-    }
+    },
+    authorHandle: 'bikeenthusiast.bsky.social',
+    authorDid: 'did:plc:demo2',
+    sellerDid: 'did:plc:demo2',
+    uri: 'demo-listing-2',
+    cid: 'demo-cid-2'
   },
   {
     title: 'iPhone 13',
@@ -78,8 +88,13 @@ export const demoListingsData: MarketplaceListing[] = [
     condition: 'good',
     createdAt: new Date().toISOString(),
     metadata: {
-      subcategory: 'Smartphones'
-    }
+      subcategory: 'Mobile Phones'
+    },
+    authorHandle: 'techseller.bsky.social',
+    authorDid: 'did:plc:demo3',
+    sellerDid: 'did:plc:demo3',
+    uri: 'demo-listing-3',
+    cid: 'demo-cid-3'
   },
   // Additional listings to test filtering
   {
@@ -165,7 +180,9 @@ export const demoListingsData: MarketplaceListing[] = [
     createdAt: new Date().toISOString(),
     metadata: {
       subcategory: 'Musical Instruments'
-    }
+    },
+    uri: 'demo-listing-5',
+    cid: 'demo-cid-5'
   },
   {
     title: 'Road Bike',

@@ -9,6 +9,13 @@ import { formatConditionForDisplay } from '@/lib/condition-utils';
 import { formatPrice } from '@/lib/price-utils';
 import { formatCategoryDisplay } from '@/lib/category-utils';
 import { extractSubcategoryFromDescription } from '@/lib/category-utils';
+import {
+  contactSellerViaBluesky,
+  canContactSeller,
+  formatSellerHandle,
+  showContactInfo,
+  getSellerDisplayName
+} from '@/lib/chat-utils';
 
 interface ListingDetailProps {
   listing: MarketplaceListing & {
@@ -27,19 +34,19 @@ export default function ListingDetail({ listing }: ListingDetailProps) {
     month: 'long',
     day: 'numeric'
   });
-  
+
   // Get clean description without subcategory text
   const { cleanDescription } = extractSubcategoryFromDescription(listing.description);
-  
+
   // Determine if we have formatted images to display
   const hasFormattedImages = listing.formattedImages && listing.formattedImages.length > 0;
-  
+
   return (
     <div className="listing-detail">
       <div className="listing-detail-grid">
         <div className="listing-images">
           {hasFormattedImages ? (
-            <ListingImageGallery 
+            <ListingImageGallery
               images={listing.formattedImages!}
               title={listing.title}
             />
@@ -49,11 +56,11 @@ export default function ListingDetail({ listing }: ListingDetailProps) {
             </div>
           )}
         </div>
-        
+
         <div className="listing-info">
           <h1 className="listing-title">{listing.title}</h1>
           <div className="listing-price">{formatPrice(listing.price)}</div>
-          
+
           <div className="listing-meta">
             <div className="meta-item">
               <span className="meta-label">Category:</span>
@@ -77,20 +84,41 @@ export default function ListingDetail({ listing }: ListingDetailProps) {
             {listing.authorHandle && (
               <div className="meta-item">
                 <span className="meta-label">Listed by:</span>
-                <span className="meta-value">@{listing.authorHandle}</span>
+                <span className="meta-value">
+                  {getSellerDisplayName(listing)}
+                </span>
               </div>
             )}
           </div>
-          
+
           <div className="listing-description">
             <h2>Description</h2>
             <p>{cleanDescription}</p>
           </div>
-          
+
           <div className="listing-action">
-            <button className="contact-button">
-              Contact Seller
-            </button>
+            {canContactSeller(listing) ? (
+              <button
+                className="contact-button"
+                onClick={() => contactSellerViaBluesky(listing.authorHandle!, listing)}
+              >
+                Contact Seller via Bluesky
+              </button>
+            ) : (
+              <button
+                className="contact-button contact-button-disabled"
+                disabled
+                title="Seller contact information not available"
+              >
+                Contact Unavailable
+              </button>
+            )}
+
+            {listing.authorHandle && (
+              <p className="seller-info">
+                Seller: {getSellerDisplayName(listing)}
+              </p>
+            )}
           </div>
         </div>
       </div>

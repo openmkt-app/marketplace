@@ -17,9 +17,9 @@ export async function getListingsByLocationFilter(
 ): Promise<MarketplaceListing[]> {
   // First, get all listings
   const allListings = await client.getAllListings();
-  
+
   // Then apply the location filter
-  return filterListingsByLocation(allListings, locationFilter);
+  return filterListingsByLocation(allListings, locationFilter) as MarketplaceListing[];
 }
 
 /**
@@ -31,9 +31,9 @@ export async function getListingsByCommuteRoute(
 ): Promise<MarketplaceListing[]> {
   // First, get all listings
   const allListings = await client.getAllListings();
-  
+
   // Then apply the commute route filter
-  return filterListingsByCommuteRoute(allListings, commuteRoute);
+  return filterListingsByCommuteRoute(allListings, commuteRoute) as MarketplaceListing[];
 }
 
 /**
@@ -45,9 +45,9 @@ export async function getListingsByZipPrefix(
 ): Promise<MarketplaceListing[]> {
   // First, get all listings
   const allListings = await client.getAllListings();
-  
+
   // Filter by ZIP prefix
-  return allListings.filter(listing => 
+  return allListings.filter(listing =>
     listing.location.zipPrefix === zipPrefix
   );
 }
@@ -64,8 +64,8 @@ export function addDistanceToListings(
   return listings.map(listing => {
     // In a real implementation, this would calculate actual distances
     // For demo purposes, we'll generate a random distance
-    const distanceMiles = Math.floor(Math.random() * (baseLocation.radius || 10)) + 1;
-    
+    const distanceMiles = Math.floor(Math.random() * ((baseLocation as any).radius || 10)) + 1;
+
     return {
       ...listing,
       distanceMiles
