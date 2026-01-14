@@ -1,7 +1,8 @@
 // src/components/marketplace/ListingImageGallery/index.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import Image from 'next/image';
 import './styles.css';
 
 interface ListingImage {
@@ -47,25 +48,30 @@ export default function ListingImageGallery({ images, title }: ListingImageGalle
   
   return (
     <div className="listing-image-gallery">
-      <div className="main-image-container">
-        <img 
-          src={images[selectedImageIndex].fullsize} 
+      <div className="main-image-container relative">
+        <Image
+          src={images[selectedImageIndex].fullsize}
           alt={`${title} - Image ${selectedImageIndex + 1}`}
-          className="main-image"
+          fill
+          className="main-image object-contain"
+          unoptimized
         />
       </div>
-      
+
       {images.length > 1 && (
         <div className="thumbnails-container">
           {images.map((image, index) => (
-            <div 
+            <div
               key={`thumb-${index}`}
-              className={`thumbnail ${index === selectedImageIndex ? 'selected' : ''}`}
+              className={`thumbnail ${index === selectedImageIndex ? 'selected' : ''} relative`}
               onClick={() => setSelectedImageIndex(index)}
             >
-              <img 
-                src={image.thumbnail} 
+              <Image
+                src={image.thumbnail}
                 alt={`${title} - Thumbnail ${index + 1}`}
+                fill
+                className="object-cover"
+                unoptimized
               />
             </div>
           ))}

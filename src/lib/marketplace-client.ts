@@ -51,6 +51,7 @@ export type MarketplaceListing = {
   authorDid?: string;
   authorHandle?: string;
   authorDisplayName?: string;
+  authorAvatarCid?: string;
   // Added for display and filtering
   isVerifiedSeller?: boolean;
   isSameNetwork?: boolean;

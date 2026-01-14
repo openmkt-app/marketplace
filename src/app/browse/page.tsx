@@ -416,18 +416,53 @@ const BrowsePageContent = () => {
       });
 
       if (profileRecord.data && profileRecord.data.value) {
-        const handle = typeof profileRecord.data.value.handle === 'string'
-          ? profileRecord.data.value.handle
+        const profileValue = profileRecord.data.value as Record<string, unknown>;
+
+        const handle = typeof profileValue.handle === 'string'
+          ? profileValue.handle
           : did.split(':')[2];
 
-        const displayName = typeof profileRecord.data.value.displayName === 'string'
-          ? profileRecord.data.value.displayName
+        const displayName = typeof profileValue.displayName === 'string'
+          ? profileValue.displayName
           : undefined;
+
+        // Extract avatar blob CID if available
+        let avatarCid: string | undefined;
+        const avatar = profileValue.avatar;
+
+        // Debug: log the raw avatar object
+        console.log('Avatar for', did, ':', avatar);
+
+        if (avatar && typeof avatar === 'object') {
+          const avatarObj = avatar as Record<string, unknown>;
+          // Try ref.$link format first (standard blob format)
+          if (avatarObj.ref && typeof avatarObj.ref === 'object') {
+            const ref = avatarObj.ref as Record<string, unknown>;
+            if (typeof ref.$link === 'string') {
+              avatarCid = ref.$link;
+            }
+          }
+          // Fallback: try direct $link on avatar
+          if (!avatarCid && typeof avatarObj.$link === 'string') {
+            avatarCid = avatarObj.$link;
+          }
+          // Try regex extraction as last resort (finds bafk... patterns)
+          if (!avatarCid) {
+            const avatarStr = JSON.stringify(avatar);
+            const cidMatch = avatarStr.match(/bafkrei[a-z0-9]{52,}/i);
+            if (cidMatch) {
+              avatarCid = cidMatch[0];
+            }
+          }
+        }
+
+        console.log('Profile fetched for', did, '- avatarCid:', avatarCid);
 
         return {
           did: did,
           handle,
-          displayName
+          displayName,
+          avatarCid
         };
       }
     } catch (error) {
@@ -464,7 +499,7 @@ const BrowsePageContent = () => {
           const uniqueDids = Array.from(new Set(listings.map(l => l.authorDid).filter(Boolean) as string[]));
 
           // Map to store profiles
-          const profilesMap = new Map<string, { handle: string; displayName?: string }>();
+          const profilesMap = new Map<string, { handle: string; displayName?: string; avatarCid?: string }>();
 
           // Fetch profiles in parallel
           await Promise.all(
@@ -474,7 +509,8 @@ const BrowsePageContent = () => {
                 if (profile) {
                   profilesMap.set(did, {
                     handle: profile.handle,
-                    displayName: profile.displayName
+                    displayName: profile.displayName,
+                    avatarCid: profile.avatarCid
                   });
                 }
               }
@@ -488,7 +524,8 @@ const BrowsePageContent = () => {
               return {
                 ...listing,
                 authorHandle: profile.handle,
-                authorDisplayName: profile.displayName
+                authorDisplayName: profile.displayName,
+                authorAvatarCid: profile.avatarCid
               };
             }
             return listing;

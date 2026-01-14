@@ -3,13 +3,15 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { MapPin, Tag, User } from 'lucide-react';
+import Image from 'next/image';
+import { MapPin } from 'lucide-react';
 import ListingImageDisplay from './ListingImageDisplay';
 import ListingImageDebug from './ListingImageDebug';
 import type { MarketplaceListing } from '@/lib/marketplace-client';
 import { formatConditionForDisplay } from '@/lib/condition-utils';
 import { formatPrice } from '@/lib/price-utils';
 import { extractSubcategoryFromDescription, getCategoryName } from '@/lib/category-utils';
+import { generateAvatarUrl } from '@/lib/image-utils';
 
 interface ListingCardProps {
   listing: MarketplaceListing & {
@@ -17,6 +19,7 @@ interface ListingCardProps {
     authorDid?: string;
     authorHandle?: string;
     authorDisplayName?: string;
+    authorAvatarCid?: string;
   };
   showDebug?: boolean;
 }
@@ -103,10 +106,22 @@ const ListingCard = React.memo(({ listing, showDebug = false }: ListingCardProps
 
           <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              {/* Placeholder Avatar or Initials */}
-              <div className="w-5 h-5 rounded-full bg-primary-light/10 flex items-center justify-center text-[10px] text-primary-color font-bold ring-1 ring-primary-color/20">
-                {listing.authorDisplayName ? listing.authorDisplayName.charAt(0).toUpperCase() : (listing.authorHandle?.charAt(0).toUpperCase() || '?')}
-              </div>
+              {/* Avatar - shows profile image or fallback to initials */}
+              {listing.authorDid && listing.authorAvatarCid ? (
+                <div className="w-5 h-5 rounded-full overflow-hidden relative ring-1 ring-primary-color/20">
+                  <Image
+                    src={generateAvatarUrl(listing.authorDid, listing.authorAvatarCid) || ''}
+                    alt={listing.authorDisplayName || listing.authorHandle || 'Seller'}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-primary-light/10 flex items-center justify-center text-[10px] text-primary-color font-bold ring-1 ring-primary-color/20">
+                  {listing.authorDisplayName ? listing.authorDisplayName.charAt(0).toUpperCase() : (listing.authorHandle?.charAt(0).toUpperCase() || '?')}
+                </div>
+              )}
               <span className="text-xs font-medium text-slate-600 truncate max-w-[100px]">
                 {listing.authorDisplayName || listing.authorHandle || 'Unknown Seller'}
               </span>

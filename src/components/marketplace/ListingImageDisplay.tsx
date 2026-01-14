@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { createBlueskyCdnImageUrls, extractBlobCid } from '@/lib/image-utils';
 import type { ListingImage } from '@/lib/marketplace-client';
 
@@ -114,12 +115,15 @@ export default function ListingImageDisplay({
   
   // Render the image
   return (
-    <img
-      src={imageUrl}
-      alt={listing.title || 'Listing image'}
-      className={className}
-      onError={handleImageError}
-      style={{ height }}
-    />
+    <div className="relative w-full" style={{ height }}>
+      <Image
+        src={imageUrl}
+        alt={listing.title || 'Listing image'}
+        fill
+        className={className}
+        onError={handleImageError}
+        unoptimized
+      />
+    </div>
   );
 }

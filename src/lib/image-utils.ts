@@ -423,6 +423,22 @@ export function extractBlobCid(blobRef: any): string | null {
   return null;
 }
 
+/**
+ * Generates a Bluesky CDN URL for a user's avatar
+ *
+ * @param did User's DID
+ * @param avatarBlobCid Avatar blob CID from the profile
+ * @returns CDN URL for the avatar thumbnail
+ */
+export function generateAvatarUrl(did: string, avatarBlobCid: string): string | null {
+  if (!did || !avatarBlobCid) {
+    return null;
+  }
+
+  // Format: https://cdn.bsky.app/img/avatar_thumbnail/plain/[DID]/[BLOB_CID]@jpeg
+  return `https://cdn.bsky.app/img/avatar_thumbnail/plain/${did.trim()}/${avatarBlobCid.trim()}@jpeg`;
+}
+
 export function createBlueskyCdnImageUrls(
   blobRef: string | { $link: string } | any,
   did: string,
