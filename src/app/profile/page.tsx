@@ -70,7 +70,7 @@ export default function ProfilePage() {
           
           <div className="bg-white rounded-lg shadow-md p-6 text-center">
             <p className="text-gray-600 mb-4">
-              You don't have any active listings yet.
+              You don&apos;t have any active listings yet.
             </p>
             <Link 
               href="/create-listing"

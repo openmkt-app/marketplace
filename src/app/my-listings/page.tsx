@@ -21,7 +21,7 @@ export default function MyListingsPage() {
       
       try {
         // In a real app, you would fetch the user's listings from their AT Protocol repo
-        // For this example, we're just using sample data
+        // For this example, we&apos;re just using sample data
         
         // Simulate API call delay
         await new Promise(resolve => setTimeout(resolve, 1000));

@@ -20,6 +20,7 @@
     "@atproto/api": "^0.14.22",
     "@atproto/common": "^0.4.10",
     "@atproto/lexicon": "^0.4.10",
+    "lucide-react": "^0.562.0",
     "next": "^15.3.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

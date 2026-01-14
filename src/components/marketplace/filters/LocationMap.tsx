@@ -10,12 +10,9 @@ interface LocationMapProps {
 export default function LocationMap({ location }: LocationMapProps) {
   // In a real implementation, this would be a map component using a library like Leaflet, Google Maps, or Mapbox
   // For this demo, we'll just create a simple visual representation
-  
-  // Define a default radius since it's not in the LocationFilterValue type
-  const radius = 5; // Default fixed radius of 5 miles
-  const locationName = [location.city, location.county, location.state]
-    .filter(Boolean)
-    .join(', ');
+
+  const radius = location.radius || 25; // Use the radius from location filter
+  const locationName = location.locationName || 'No location selected';
 
   return (
     <div className="bg-gray-100 border rounded-md overflow-hidden">
@@ -62,7 +59,7 @@ export default function LocationMap({ location }: LocationMapProps) {
       
       <div className="p-3 bg-white">
         <p className="text-sm font-medium">Search Radius: {radius} miles</p>
-        <p className="text-xs text-gray-600">{locationName || 'No location selected'}</p>
+        <p className="text-xs text-gray-600">{locationName}</p>
       </div>
     </div>
   );

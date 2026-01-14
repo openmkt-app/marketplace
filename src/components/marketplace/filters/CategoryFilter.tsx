@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CATEGORIES } from '@/lib/category-data';
 
 interface CategoryFilterProps {
@@ -9,17 +9,18 @@ interface CategoryFilterProps {
   onChange: (category?: string, subcategory?: string) => void;
 }
 
-export default function CategoryFilter({ 
-  selectedCategory, 
-  selectedSubcategory, 
-  onChange 
+export default function CategoryFilter({
+  selectedCategory,
+  selectedSubcategory,
+  onChange
 }: CategoryFilterProps) {
   const [category, setCategory] = useState<string | undefined>(selectedCategory);
   const [subcategory, setSubcategory] = useState<string | undefined>(selectedSubcategory);
+  const isFirstRender = useRef(true);
 
   // Get selected category object
   const selectedCategoryObj = CATEGORIES.find(c => c.id === category);
-  
+
   // Handle category selection
   const handleCategoryChange = (categoryId: string) => {
     if (category === categoryId) {
@@ -31,7 +32,7 @@ export default function CategoryFilter({
       setSubcategory(undefined);
     }
   };
-  
+
   // Handle subcategory selection
   const handleSubcategoryChange = (subId: string) => {
     if (subcategory === subId) {
@@ -41,9 +42,15 @@ export default function CategoryFilter({
       setSubcategory(subId);
     }
   };
-  
+
   // Update parent component when selections change
   useEffect(() => {
+    // Skip on first render to avoid triggering filter on mount
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
     onChange(category, subcategory);
   }, [category, subcategory, onChange]);
 

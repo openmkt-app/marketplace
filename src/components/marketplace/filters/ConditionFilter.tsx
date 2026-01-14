@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CONDITIONS } from '@/lib/category-data';
 import { formatConditionForDisplay } from '@/lib/condition-utils';
 
@@ -15,9 +15,11 @@ interface ConditionFilterProps {
 const mapOldToNewConditionId = (oldId: string): string => {
   const mapping: Record<string, string> = {
     'new': 'new',
+    'open-box': 'openBox',
     'like-new': 'likeNew',
     'good': 'good',
-    'fair': 'fair'
+    'fair': 'fair',
+    'for-parts': 'forParts'
   };
   return mapping[oldId] || oldId;
 };
@@ -39,18 +41,22 @@ const ageOptions = [
 ];
 */
 
-export default function ConditionFilter({ 
-  selectedConditions = [], 
+export default function ConditionFilter({
+  selectedConditions = [],
   // selectedAge, - commented out for now, will revisit later
-  onChange 
+  onChange
 }: ConditionFilterProps) {
   // Map any old-format IDs in the selectedConditions to the new format
   const mappedSelectedConditions = selectedConditions.map(mapOldToNewConditionId);
   const [conditions, setConditions] = useState<string[]>(mappedSelectedConditions);
   // const [age, setAge] = useState<string | undefined>(selectedAge); - commented out for now, will revisit later
 
+  // Track if the change is from internal user action to avoid loops
+  const isInternalChangeRef = useRef(false);
+
   // Toggle a condition selection
   const toggleCondition = (conditionId: string) => {
+    isInternalChangeRef.current = true;
     setConditions(prev => {
       if (prev.includes(conditionId)) {
         return prev.filter(id => id !== conditionId);
@@ -71,19 +77,27 @@ export default function ConditionFilter({
   };
   */
 
-  // Update parent component when selections change
+  // Update parent component when selections change (only for internal changes)
   useEffect(() => {
-    // Passing undefined for age parameter since it's commented out
-    onChange(conditions.length > 0 ? conditions : undefined, undefined);
+    if (isInternalChangeRef.current) {
+      isInternalChangeRef.current = false;
+      // Passing undefined for age parameter since it's commented out
+      onChange(conditions.length > 0 ? conditions : undefined, undefined);
+    }
   }, [conditions, onChange]);
 
   // Update local state if selectedConditions changes externally
   useEffect(() => {
-    const mappedConditions = selectedConditions.map(mapOldToNewConditionId);
-    if (JSON.stringify(mappedConditions) !== JSON.stringify(conditions)) {
-      setConditions(mappedConditions);
+    if (!isInternalChangeRef.current) {
+      const mappedConditions = selectedConditions.map(mapOldToNewConditionId);
+      // Only update if actually different to avoid unnecessary re-renders
+      const sortedMapped = [...mappedConditions].sort().join(',');
+      const sortedCurrent = [...conditions].sort().join(',');
+      if (sortedMapped !== sortedCurrent) {
+        setConditions(mappedConditions);
+      }
     }
-  }, [selectedConditions]);
+  }, [selectedConditions, conditions]);
 
   return (
     <div className="space-y-4">

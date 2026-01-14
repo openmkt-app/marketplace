@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface PriceFilterProps {
   initialValue?: {
@@ -22,19 +22,26 @@ export default function PriceFilter({ initialValue, onChange }: PriceFilterProps
   const [max, setMax] = useState<string>(initialValue?.max?.toString() || '');
   const [bracket, setBracket] = useState<string>(initialValue?.bracket || '');
   const [deals, setDeals] = useState<boolean>(initialValue?.deals || false);
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
+    // Skip on first render to avoid triggering filter on mount
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
     // Convert string inputs to numbers for the filter
     const minVal = min ? parseInt(min, 10) : undefined;
     const maxVal = max ? parseInt(max, 10) : undefined;
-    
+
     const filterValue = {
       min: minVal,
       max: maxVal,
       bracket,
       deals
     };
-    
+
     onChange(filterValue);
   }, [min, max, bracket, deals, onChange]);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface RecencyFilterProps {
   postedWithin?: string;
@@ -17,13 +17,14 @@ const timeFrames = [
   { id: 'older', label: 'Older listings' }
 ];
 
-export default function RecencyFilter({ 
-  postedWithin, 
+export default function RecencyFilter({
+  postedWithin,
   recentlyViewed = false,
-  onChange 
+  onChange
 }: RecencyFilterProps) {
   const [selectedTimeFrame, setSelectedTimeFrame] = useState<string | undefined>(postedWithin);
   const [showRecentlyViewed, setShowRecentlyViewed] = useState<boolean>(recentlyViewed);
+  const isFirstRender = useRef(true);
 
   // Handle time frame selection
   const handleTimeFrameChange = (timeFrame: string) => {
@@ -42,6 +43,12 @@ export default function RecencyFilter({
 
   // Update parent component when selections change
   useEffect(() => {
+    // Skip on first render to avoid triggering filter on mount
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
     onChange(selectedTimeFrame, showRecentlyViewed);
   }, [selectedTimeFrame, showRecentlyViewed, onChange]);
 
