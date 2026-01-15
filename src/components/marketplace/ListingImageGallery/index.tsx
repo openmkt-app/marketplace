@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import './styles.css';
+import { Heart } from 'lucide-react';
 
 interface ListingImage {
   thumbnail: string;
@@ -18,52 +18,71 @@ interface ListingImageGalleryProps {
 
 export default function ListingImageGallery({ images, title }: ListingImageGalleryProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  
+  const [isFavorited, setIsFavorited] = useState(false);
+
   // If no images are provided, show a placeholder
   if (!images || images.length === 0) {
     return (
-      <div className="listing-image-gallery">
-        <div className="main-image-container placeholder">
-          <div className="placeholder-text">No images available</div>
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="relative w-full h-[400px] bg-gray-100 flex items-center justify-center">
+          <span className="text-gray-500">No images available</span>
         </div>
       </div>
     );
   }
-  
+
   // Check that the images are properly formatted
-  const hasValidImages = images.every(img => 
-    img.fullsize && typeof img.fullsize === 'string' && 
+  const hasValidImages = images.every(img =>
+    img.fullsize && typeof img.fullsize === 'string' &&
     img.thumbnail && typeof img.thumbnail === 'string'
   );
-  
+
   if (!hasValidImages) {
     return (
-      <div className="listing-image-gallery">
-        <div className="main-image-container placeholder">
-          <div className="placeholder-text">Image format error</div>
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="relative w-full h-[400px] bg-gray-100 flex items-center justify-center">
+          <span className="text-gray-500">Image format error</span>
         </div>
       </div>
     );
   }
-  
+
   return (
-    <div className="listing-image-gallery">
-      <div className="main-image-container relative">
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      {/* Main Image with Heart Icon */}
+      <div className="relative w-full h-[400px] sm:h-[450px]">
         <Image
           src={images[selectedImageIndex].fullsize}
           alt={`${title} - Image ${selectedImageIndex + 1}`}
           fill
-          className="main-image object-contain"
+          className="object-cover"
           unoptimized
         />
+
+        {/* Favorite Heart Button */}
+        <button
+          onClick={() => setIsFavorited(!isFavorited)}
+          className="absolute top-4 right-4 w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center hover:scale-110 transition-transform"
+          aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          <Heart
+            size={22}
+            className={isFavorited ? 'fill-red-500 text-red-500' : 'text-gray-400'}
+          />
+        </button>
       </div>
 
+      {/* Thumbnails */}
       {images.length > 1 && (
-        <div className="thumbnails-container">
+        <div className="flex gap-2 p-3 overflow-x-auto">
           {images.map((image, index) => (
-            <div
+            <button
               key={`thumb-${index}`}
-              className={`thumbnail ${index === selectedImageIndex ? 'selected' : ''} relative`}
+              className={`relative w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${
+                index === selectedImageIndex
+                  ? 'border-blue-500'
+                  : 'border-transparent hover:border-gray-300'
+              }`}
               onClick={() => setSelectedImageIndex(index)}
             >
               <Image
@@ -73,7 +92,7 @@ export default function ListingImageGallery({ images, title }: ListingImageGalle
                 className="object-cover"
                 unoptimized
               />
-            </div>
+            </button>
           ))}
         </div>
       )}

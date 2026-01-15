@@ -51,8 +51,8 @@ const ListingCard = React.memo(({ listing, showDebug = false }: ListingCardProps
         <ListingImageDebug listing={listing} show={showDebug} />
       </div>
 
-      {/* Image Container */}
-      <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+      {/* Image Container - Using square aspect ratio for cleaner look */}
+      <div className="relative aspect-square overflow-hidden bg-gray-100">
         <ListingImageDisplay
           listing={listing}
           size="thumbnail"
@@ -63,15 +63,8 @@ const ListingCard = React.memo(({ listing, showDebug = false }: ListingCardProps
 
         {/* Condition Badge */}
         <div className="absolute top-3 right-3 z-20 pointer-events-none">
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/90 backdrop-blur-sm text-slate-800 shadow-sm">
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-white/95 backdrop-blur-sm text-gray-700 shadow-sm">
             {formatConditionForDisplay(listing.condition)}
-          </span>
-        </div>
-
-        {/* Quick View Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex justify-center z-10">
-          <span className="px-4 py-2 bg-white text-slate-900 rounded-lg font-medium text-sm shadow-lg">
-            Quick View
           </span>
         </div>
       </div>
@@ -79,57 +72,56 @@ const ListingCard = React.memo(({ listing, showDebug = false }: ListingCardProps
       {/* Content */}
       <div className="p-4 flex flex-col flex-grow relative z-20 pointer-events-none">
         {listing.category && (
-          <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-1">
+          <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">
             {getCategoryName(listing.category)}
           </span>
         )}
-        <h3 className="font-semibold text-slate-900 line-clamp-1 group-hover:text-brand-600 transition-colors">
+        <h3 className="font-semibold text-gray-900 line-clamp-1 mb-1 group-hover:text-blue-600 transition-colors">
           {listing.title}
         </h3>
 
-        <p className="text-xl font-bold text-slate-900 mb-2">
+        <p className="text-lg font-bold text-gray-900 mb-2">
           {formatPrice(listing.price)}
         </p>
 
-        <p className="text-sm text-slate-500 line-clamp-2 mb-4 flex-grow">
+        <p className="text-sm text-gray-500 line-clamp-2 mb-3 flex-grow">
           {cleanDescription}
         </p>
 
-        {/* Footer Info */}
-        <div className="mt-auto space-y-2">
-          <div className="flex items-center text-xs text-slate-400">
-            <MapPin size={12} className="mr-1" />
-            <span className="truncate">
-              {listing.location.locality}, {listing.location.state}
+        {/* Location */}
+        <div className="flex items-center text-xs text-gray-400 mb-3">
+          <MapPin size={12} className="mr-1 flex-shrink-0" />
+          <span className="truncate">
+            {listing.location.locality}, {listing.location.state}
+          </span>
+        </div>
+
+        {/* Footer - Author and Date */}
+        <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0">
+            {/* Avatar - shows profile image or fallback to initials */}
+            {listing.authorDid && listing.authorAvatarCid ? (
+              <div className="w-6 h-6 rounded-full overflow-hidden relative flex-shrink-0 ring-1 ring-gray-200">
+                <Image
+                  src={generateAvatarUrl(listing.authorDid, listing.authorAvatarCid) || ''}
+                  alt={listing.authorDisplayName || listing.authorHandle || 'Seller'}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs text-blue-600 font-semibold flex-shrink-0">
+                {listing.authorDisplayName ? listing.authorDisplayName.charAt(0).toUpperCase() : (listing.authorHandle?.charAt(0).toUpperCase() || '?')}
+              </div>
+            )}
+            <span className="text-sm text-gray-600 truncate">
+              {listing.authorDisplayName || listing.authorHandle || 'Unknown'}
             </span>
           </div>
-
-          <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {/* Avatar - shows profile image or fallback to initials */}
-              {listing.authorDid && listing.authorAvatarCid ? (
-                <div className="w-5 h-5 rounded-full overflow-hidden relative ring-1 ring-primary-color/20">
-                  <Image
-                    src={generateAvatarUrl(listing.authorDid, listing.authorAvatarCid) || ''}
-                    alt={listing.authorDisplayName || listing.authorHandle || 'Seller'}
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
-                </div>
-              ) : (
-                <div className="w-5 h-5 rounded-full bg-primary-light/10 flex items-center justify-center text-[10px] text-primary-color font-bold ring-1 ring-primary-color/20">
-                  {listing.authorDisplayName ? listing.authorDisplayName.charAt(0).toUpperCase() : (listing.authorHandle?.charAt(0).toUpperCase() || '?')}
-                </div>
-              )}
-              <span className="text-xs font-medium text-slate-600 truncate max-w-[100px]">
-                {listing.authorDisplayName || listing.authorHandle || 'Unknown Seller'}
-              </span>
-            </div>
-            <div className="text-[10px] text-slate-400 bg-slate-50 px-2 py-1 rounded-full">
-              {postedDate}
-            </div>
-          </div>
+          <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
+            {postedDate}
+          </span>
         </div>
       </div>
     </div>
