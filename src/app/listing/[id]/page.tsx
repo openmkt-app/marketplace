@@ -210,15 +210,39 @@ export default function ListingDetailPage() {
             if (profileRecord.data && profileRecord.data.value) {
               profileData.displayName = (profileRecord.data.value as any).displayName;
               profileData.description = (profileRecord.data.value as any).description;
-              
-              if ((profileRecord.data.value as any).avatar && 
-                  (profileRecord.data.value as any).avatar.ref && 
-                  (profileRecord.data.value as any).avatar.ref.$link) {
-                const avatarCid = (profileRecord.data.value as any).avatar.ref.$link;
-                const mimeType = (profileRecord.data.value as any).avatar.mimeType || 'image/jpeg';
-                const extension = mimeType.split('/')[1] || 'jpeg';
-                
-                profileData.avatarUrl = `https://cdn.bsky.app/img/avatar/plain/${did}/${avatarCid}@${extension}`;
+
+              // Extract avatar blob CID with multiple fallback methods
+              const avatar = (profileRecord.data.value as any).avatar;
+              let avatarCid: string | undefined;
+
+              if (avatar && typeof avatar === 'object') {
+                const avatarObj = avatar as Record<string, unknown>;
+
+                // Try ref.$link format first (standard blob format)
+                if (avatarObj.ref && typeof avatarObj.ref === 'object') {
+                  const ref = avatarObj.ref as Record<string, unknown>;
+                  if (typeof ref.$link === 'string') {
+                    avatarCid = ref.$link;
+                  }
+                }
+
+                // Fallback: try direct $link on avatar
+                if (!avatarCid && typeof avatarObj.$link === 'string') {
+                  avatarCid = avatarObj.$link;
+                }
+
+                // Try regex extraction as last resort (finds bafk... patterns)
+                if (!avatarCid) {
+                  const avatarStr = JSON.stringify(avatar);
+                  const cidMatch = avatarStr.match(/bafkrei[a-z0-9]{52,}/i);
+                  if (cidMatch) {
+                    avatarCid = cidMatch[0];
+                  }
+                }
+              }
+
+              if (avatarCid) {
+                profileData.avatarUrl = `https://cdn.bsky.app/img/avatar/plain/${did}/${avatarCid}@jpeg`;
               }
             }
           } catch (profileRecordError) {
@@ -309,7 +333,7 @@ export default function ListingDetailPage() {
   }
   
   return (
-    <div className="bg-background min-h-screen pb-12">
+    <div className="bg-gray-50 min-h-screen pb-12">
       {showSuccessMessage && (
         <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-6 sticky top-0 z-10 shadow-md">
           <div className="flex justify-between items-center">
@@ -324,7 +348,7 @@ export default function ListingDetailPage() {
                 <p className="text-sm text-green-700">Others can discover and engage with your listing right away.</p>
               </div>
             </div>
-            <button 
+            <button
               onClick={() => setShowSuccessMessage(false)}
               className="text-green-500 hover:text-green-800"
             >
@@ -335,15 +359,21 @@ export default function ListingDetailPage() {
           </div>
         </div>
       )}
-      
-      <div className="max-w-4xl mx-auto p-4">
-        <div className="flex justify-between items-center mb-8">
-          <Link href="/browse" className="text-primary-color hover:text-primary-light hover:underline">
-            ← Back to Listings
+
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        <div className="mb-6">
+          <Link
+            href="/browse"
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to listings
           </Link>
         </div>
-        
-        <ListingDetail listing={listing} />
+
+        <ListingDetail listing={listing} sellerProfile={sellerProfile} />
         
         {process.env.NODE_ENV === 'development' && listing && (
           <div className="mt-8 p-4 bg-gray-100 rounded">

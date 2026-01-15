@@ -851,7 +851,7 @@ const BrowsePageContent = () => {
           </p>
 
           {filters.viewMode === 'grid' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
               {filteredListings.map((listing: any, index) => (
                 <div key={index} onClick={() => listing.uri ? recordListingView(listing.uri) : null}>
                   <ListingCard
@@ -973,7 +973,7 @@ const BrowsePageContent = () => {
 
           {/* Render listings based on view mode */}
           {filters.viewMode === 'grid' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
               {filteredListings.map((listing, index) => (
                 <div key={index} onClick={() => listing.uri ? recordListingView(listing.uri) : null}>
                   <ListingCard
