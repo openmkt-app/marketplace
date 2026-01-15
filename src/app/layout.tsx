@@ -9,8 +9,8 @@ import Footer from '@/components/layout/Footer'
 const inter = Inter({ subsets: ['latin'], display: 'swap' })
 
 export const metadata = {
-  title: 'AT Protocol Marketplace',
-  description: 'A local marketplace built on the AT Protocol',
+  title: 'Open Market - openmkt.app',
+  description: 'A decentralized local marketplace built on the AT Protocol',
 }
 
 export default function RootLayout({

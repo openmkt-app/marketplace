@@ -9,7 +9,7 @@ import ListingImageDisplay from './ListingImageDisplay';
 import ListingImageDebug from './ListingImageDebug';
 import type { MarketplaceListing } from '@/lib/marketplace-client';
 import { formatConditionForDisplay } from '@/lib/condition-utils';
-import { formatPrice } from '@/lib/price-utils';
+import { formatPrice, formatDate, formatLocation } from '@/lib/price-utils';
 import { extractSubcategoryFromDescription, getCategoryName } from '@/lib/category-utils';
 import { generateAvatarUrl } from '@/lib/image-utils';
 import { getSellerDisplayName } from '@/lib/chat-utils';
@@ -35,11 +35,10 @@ const ListingCard = React.memo(({ listing, showDebug = false }: ListingCardProps
     : `/listing/${encodeURIComponent(listing.title)}`;
 
   // Format date
-  const postedDate = new Date(listing.createdAt).toLocaleDateString();
+  const postedDate = formatDate(listing.createdAt);
 
-  // Format location - handle missing values
-  const locationParts = [listing.location?.locality, listing.location?.state].filter(Boolean);
-  const locationString = locationParts.length > 0 ? locationParts.join(', ') : '';
+  // Format location - clean up prefixes and abbreviate state
+  const locationString = formatLocation(listing.location?.locality, listing.location?.state);
 
   return (
     <div className="group bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full relative">

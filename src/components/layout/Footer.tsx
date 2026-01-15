@@ -11,7 +11,7 @@ export default function Footer() {
         <div className="py-12 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <h3 className="text-xl font-bold text-primary-color mb-4">
-              AT Marketplace
+              Open Market
             </h3>
             <p className="text-text-primary text-sm">
               A decentralized local marketplace built on the AT Protocol,
@@ -80,7 +80,7 @@ export default function Footer() {
         </div>
         
         <div className="py-4 border-t border-neutral-light text-sm text-text-primary text-center">
-          <p>© {currentYear} AT Marketplace. All rights reserved.</p>
+          <p>© {currentYear} Open Market (openmkt.app). All rights reserved.</p>
         </div>
       </div>
     </footer>

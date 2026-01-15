@@ -17,7 +17,7 @@ import {
   partialMatch
 } from '@/lib/location-utils';
 import { formatConditionForDisplay } from '@/lib/condition-utils';
-import { formatPrice } from '@/lib/price-utils';
+import { formatPrice, formatDate, formatLocation } from '@/lib/price-utils';
 import { formatCategoryDisplay, getCategoryName } from '@/lib/category-utils';
 import { extractSubcategoryFromDescription } from '@/lib/category-utils';
 import { demoListingsData } from './demo-data';
@@ -434,6 +434,19 @@ const BrowsePageContent = () => {
     filters.recentlyViewed
   );
 
+  // Compute active categories from actual listings (for dynamic filter chips)
+  const activeCategories = useMemo(() => {
+    const categorySet = new Set<string>();
+    allListings.forEach(listing => {
+      if (listing.category) {
+        // Get the main category (before any slash)
+        const mainCategory = listing.category.split('/')[0];
+        categorySet.add(mainCategory);
+      }
+    });
+    return Array.from(categorySet);
+  }, [allListings]);
+
   // Update navbar filter props when filter state changes
   useEffect(() => {
     setFilterProps({
@@ -447,7 +460,8 @@ const BrowsePageContent = () => {
       viewMode: filters.viewMode || 'grid',
       resultsPerPage: filters.resultsPerPage || 12,
       onViewOptionsChange: handleViewOptionsChange,
-      hasActiveFilters
+      hasActiveFilters,
+      activeCategories
     });
 
     // Clean up when component unmounts (leaving browse page)
@@ -462,6 +476,7 @@ const BrowsePageContent = () => {
     filteredListings.length,
     showAdvancedFilters,
     hasActiveFilters,
+    activeCategories,
     handleSelectCategory,
     handleSortChange,
     handleViewOptionsChange,
@@ -877,11 +892,10 @@ const BrowsePageContent = () => {
                   }
 
                   // Format date
-                  const postedDate = new Date(listing.createdAt).toLocaleDateString();
+                  const postedDate = formatDate(listing.createdAt);
 
-                  // Format location - handle missing values
-                  const locationParts = [listing.location.locality, listing.location.state].filter(Boolean);
-                  const locationString = locationParts.length > 0 ? locationParts.join(', ') : '';
+                  // Format location - clean up prefixes and abbreviate state
+                  const locationString = formatLocation(listing.location.locality, listing.location.state);
 
                   return (
                     <div
@@ -1044,11 +1058,10 @@ const BrowsePageContent = () => {
                   }
 
                   // Format date
-                  const postedDate = new Date(listing.createdAt).toLocaleDateString();
+                  const postedDate = formatDate(listing.createdAt);
 
-                  // Format location - handle missing values
-                  const locationParts = [listing.location.locality, listing.location.state].filter(Boolean);
-                  const locationString = locationParts.length > 0 ? locationParts.join(', ') : '';
+                  // Format location - clean up prefixes and abbreviate state
+                  const locationString = formatLocation(listing.location.locality, listing.location.state);
 
                   return (
                     <div

@@ -14,6 +14,8 @@ interface NavbarFilterProps {
   resultsPerPage: number;
   onViewOptionsChange: (mode: 'grid' | 'list' | 'map', perPage: number) => void;
   hasActiveFilters: boolean;
+  // Categories that have actual listings (for dynamic filter chips)
+  activeCategories?: string[];
 }
 
 interface NavbarFilterContextType {

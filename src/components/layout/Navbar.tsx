@@ -11,16 +11,6 @@ import { generateAvatarUrl } from '@/lib/image-utils';
 import { Bell, Filter, ChevronDown, LayoutGrid, List } from 'lucide-react';
 import { CATEGORIES } from '@/lib/category-data';
 
-// Featured categories for quick access pills
-const FEATURED_CATEGORIES = [
-  { id: 'electronics', name: 'Electronics' },
-  { id: 'garden', name: 'Garden & Outdoor' },
-  { id: 'home', name: 'Home' },
-  { id: 'apparel', name: 'Clothing' },
-  { id: 'vehicles', name: 'Vehicles' },
-  { id: 'other', name: 'Other' },
-];
-
 const SORT_OPTIONS = [
   { value: 'recency', label: 'Recently Listed' },
   { value: 'price_asc', label: 'Price: Low to High' },
@@ -40,13 +30,25 @@ const NavbarFilterRow = ({
   viewMode,
   resultsPerPage,
   onViewOptionsChange,
-  hasActiveFilters
+  hasActiveFilters,
+  activeCategories = []
 }: NavbarFilterProps) => {
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState(false);
 
-  // Check if selected category is in featured list
-  const isSelectedInFeatured = !selectedCategory || FEATURED_CATEGORIES.some(c => c.id === selectedCategory);
+  // Get categories that have active listings, sorted by name
+  // Show up to 7 categories as pills, rest go in dropdown
+  const MAX_VISIBLE_PILLS = 7;
+
+  const activeCategoryObjects = CATEGORIES
+    .filter(cat => activeCategories.includes(cat.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const visibleCategories = activeCategoryObjects.slice(0, MAX_VISIBLE_PILLS);
+  const dropdownCategories = activeCategoryObjects.slice(MAX_VISIBLE_PILLS);
+
+  // Check if selected category is in the visible pills
+  const isSelectedInVisible = !selectedCategory || visibleCategories.some(c => c.id === selectedCategory);
 
   return (
     <div className="flex items-center justify-between gap-3 py-2.5 border-t border-gray-50">
@@ -63,8 +65,8 @@ const NavbarFilterRow = ({
           All
         </button>
 
-        {/* Featured Categories */}
-        {FEATURED_CATEGORIES.map((cat) => (
+        {/* Dynamic Categories based on active listings */}
+        {visibleCategories.map((cat) => (
           <button
             key={cat.id}
             onClick={() => onSelectCategory(cat.id)}
@@ -77,46 +79,48 @@ const NavbarFilterRow = ({
           </button>
         ))}
 
-        {/* More Categories Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setShowAllCategories(!showAllCategories)}
-            className={`whitespace-nowrap px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all duration-200 flex-shrink-0 flex items-center gap-1 ${!isSelectedInFeatured
-                ? 'bg-gray-900 text-white'
-                : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300'
-              }`}
-          >
-            {!isSelectedInFeatured
-              ? CATEGORIES.find(c => c.id === selectedCategory)?.name || 'More'
-              : 'More'
-            }
-            <ChevronDown size={12} className={`transition-transform ${showAllCategories ? 'rotate-180' : ''}`} />
-          </button>
+        {/* More Categories Dropdown - only show if there are more categories */}
+        {dropdownCategories.length > 0 && (
+          <div className="relative">
+            <button
+              onClick={() => setShowAllCategories(!showAllCategories)}
+              className={`whitespace-nowrap px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all duration-200 flex-shrink-0 flex items-center gap-1 ${!isSelectedInVisible
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300'
+                }`}
+            >
+              {!isSelectedInVisible
+                ? CATEGORIES.find(c => c.id === selectedCategory)?.name || 'More'
+                : 'More'
+              }
+              <ChevronDown size={12} className={`transition-transform ${showAllCategories ? 'rotate-180' : ''}`} />
+            </button>
 
-          {showAllCategories && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setShowAllCategories(false)}
-              />
-              <div className="absolute top-full left-0 mt-1.5 bg-white rounded-lg shadow-lg border border-gray-200 py-1.5 z-50 min-w-[180px] max-h-[280px] overflow-y-auto">
-                {CATEGORIES.filter(cat => !FEATURED_CATEGORIES.some(fc => fc.id === cat.id)).map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => {
-                      onSelectCategory(cat.id);
-                      setShowAllCategories(false);
-                    }}
-                    className={`w-full text-left px-3 py-1.5 text-[13px] hover:bg-gray-50 transition-colors ${selectedCategory === cat.id ? 'text-sky-600 font-medium' : 'text-gray-700'
-                      }`}
-                  >
-                    {cat.name}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+            {showAllCategories && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowAllCategories(false)}
+                />
+                <div className="absolute top-full left-0 mt-1.5 bg-white rounded-lg shadow-lg border border-gray-200 py-1.5 z-50 min-w-[180px] max-h-[280px] overflow-y-auto">
+                  {dropdownCategories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => {
+                        onSelectCategory(cat.id);
+                        setShowAllCategories(false);
+                      }}
+                      className={`w-full text-left px-3 py-1.5 text-[13px] hover:bg-gray-50 transition-colors ${selectedCategory === cat.id ? 'text-sky-600 font-medium' : 'text-gray-700'
+                        }`}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Right side - Item count and controls */}
@@ -278,7 +282,7 @@ const NavbarContent = () => {
               </svg>
             </div>
             <span className="font-bold text-xl tracking-tight text-slate-900">
-              AT <span className="text-primary-color">Market</span>
+              Open <span className="text-primary-color">Market</span>
             </span>
           </Link>
 
