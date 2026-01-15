@@ -5,10 +5,10 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import MarketplaceClient, { MarketplaceListing, ListingLocation } from '@/lib/marketplace-client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavbarFilter } from '@/contexts/NavbarFilterContext';
 import ListingCard from '@/components/marketplace/ListingCard';
 import ListingImageDisplay from '@/components/marketplace/ListingImageDisplay';
 import FilterPanel, { FilterValues } from '@/components/marketplace/filters/FilterPanel';
-import HorizontalFilterBar from '@/components/marketplace/filters/HorizontalFilterBar';
 import { LocationFilterValue } from '@/components/marketplace/filters/LocationFilter';
 import {
   filterListingsByCommuteRoute,
@@ -372,6 +372,9 @@ const BrowsePageContent = () => {
   // Get auth context to use existing client if available
   const auth = useAuth();
 
+  // Get navbar filter context to inject filter controls into navbar
+  const { setFilterProps } = useNavbarFilter();
+
   // Advanced filters visibility state
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
@@ -402,6 +405,69 @@ const BrowsePageContent = () => {
       resultsPerPage
     }));
   }, []);
+
+  // Handle reset filters
+  const handleResetFilters = useCallback(() => {
+    setFilters(prev => ({
+      ...prev,
+      searchQuery: undefined,
+      category: undefined,
+      subcategory: undefined,
+      price: undefined,
+      condition: [],
+      // Preserve location but clear the radius constraint
+      location: prev.location ? { ...prev.location, radius: undefined } : undefined,
+      postedWithin: undefined,
+      recentlyViewed: false
+    }));
+  }, []);
+
+  // Check if there are any active filters
+  const hasActiveFilters = Boolean(
+    filters.searchQuery ||
+    filters.category ||
+    filters.subcategory ||
+    filters.price ||
+    (filters.condition && filters.condition.length > 0) ||
+    (filters.location && filters.location.radius) ||
+    filters.postedWithin ||
+    filters.recentlyViewed
+  );
+
+  // Update navbar filter props when filter state changes
+  useEffect(() => {
+    setFilterProps({
+      selectedCategory: filters.category,
+      onSelectCategory: handleSelectCategory,
+      itemCount: filteredListings.length,
+      onToggleFilters: toggleAdvancedFilters,
+      showFilters: showAdvancedFilters,
+      sortBy: filters.sortBy || 'recency',
+      onSortChange: handleSortChange,
+      viewMode: filters.viewMode || 'grid',
+      resultsPerPage: filters.resultsPerPage || 12,
+      onViewOptionsChange: handleViewOptionsChange,
+      hasActiveFilters
+    });
+
+    // Clean up when component unmounts (leaving browse page)
+    return () => {
+      setFilterProps(null);
+    };
+  }, [
+    filters.category,
+    filters.sortBy,
+    filters.viewMode,
+    filters.resultsPerPage,
+    filteredListings.length,
+    showAdvancedFilters,
+    hasActiveFilters,
+    handleSelectCategory,
+    handleSortChange,
+    handleViewOptionsChange,
+    toggleAdvancedFilters,
+    setFilterProps
+  ]);
 
   // Fetch profile information for a listing
   const fetchAuthorProfile = useCallback(async (did: string, client: MarketplaceClient) => {
@@ -707,86 +773,44 @@ const BrowsePageContent = () => {
     }
   }, [searchParams, filters.searchQuery]);
 
-  // Handle reset filters
-  const handleResetFilters = useCallback(() => {
-    setFilters(prev => ({
-      ...prev,
-      searchQuery: undefined,
-      category: undefined,
-      subcategory: undefined,
-      price: undefined,
-      condition: [],
-      // Preserve location but clear the radius constraint
-      location: prev.location ? { ...prev.location, radius: undefined } : undefined,
-      postedWithin: undefined,
-      recentlyViewed: false
-    }));
-  }, []);
-
-  // Check if there are any active filters
-  const hasActiveFilters = Boolean(
-    filters.searchQuery ||
-    filters.category ||
-    filters.subcategory ||
-    filters.price ||
-    (filters.condition && filters.condition.length > 0) ||
-    (filters.location && filters.location.radius) ||
-    filters.postedWithin ||
-    filters.recentlyViewed
-  );
-
   return (
-    <div className="max-w-6xl mx-auto p-4">
-      {showSuccessMessage && (
-        <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-6 sticky top-0 z-10 shadow-md">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center">
-              <span className="text-green-600">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </span>
-              <div>
-                <p className="font-medium text-green-800">Your item has been listed in the marketplace!</p>
-                <p className="text-sm text-green-700">Your listing is now visible to the community. Check it out below!</p>
+    <div className="bg-gray-50 min-h-screen">
+      {/* Main content area */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        {showSuccessMessage && (
+          <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-6 sticky top-0 z-10 shadow-md">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center">
+                <span className="text-green-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </span>
+                <div>
+                  <p className="font-medium text-green-800">Your item has been listed in the marketplace!</p>
+                  <p className="text-sm text-green-700">Your listing is now visible to the community. Check it out below!</p>
+                </div>
               </div>
+              <button
+                onClick={() => setShowSuccessMessage(false)}
+                className="text-green-500 hover:text-green-800"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
             </div>
-            <button
-              onClick={() => setShowSuccessMessage(false)}
-              className="text-green-500 hover:text-green-800"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </button>
           </div>
-        </div>
-      )}
+        )}
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
-      )}
-
-      <div className="mb-8">
-        <HorizontalFilterBar
-          selectedCategory={filters.category}
-          onSelectCategory={handleSelectCategory}
-          itemCount={filteredListings.length}
-          onToggleFilters={toggleAdvancedFilters}
-          showFilters={showAdvancedFilters}
-          sortBy={filters.sortBy || 'recency'}
-          onSortChange={handleSortChange}
-          viewMode={filters.viewMode || 'grid'}
-          resultsPerPage={filters.resultsPerPage || 12}
-          onViewOptionsChange={handleViewOptionsChange}
-          onResetFilters={handleResetFilters}
-          hasActiveFilters={hasActiveFilters}
-        />
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+            {error}
+          </div>
+        )}
 
         {showAdvancedFilters && (
-          <div className="mt-4">
+          <div className="mb-6">
             <FilterPanel
               initialValues={filters}
               onFilterChange={handleFilterChange}
@@ -795,288 +819,366 @@ const BrowsePageContent = () => {
             />
           </div>
         )}
-      </div>
 
-      <NewListingsToast
-        count={newRealTimeListings.length}
-        onClick={handleShowNewListings}
-      />
-
-      {!initialized || isLoading ? (
-        <div className="text-center py-10">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-color border-r-transparent"></div>
-          <p className="mt-2 text-text-primary">Loading listings...</p>
+        {/* Page Header */}
+        <div className="mb-5">
+          <h1 className="text-2xl font-bold text-gray-900">Browse Listings</h1>
+          <p className="text-sm text-gray-500 mt-1">Discover what the community is selling.</p>
         </div>
-      ) : realListingsCount > 0 && filteredListings.length > 0 ? (
-        <div>
-          <p className="mb-4 text-text-secondary">
-            Showing {filteredListings.length} of {allListings.length} listings
-            {filters.searchQuery && (
-              <> matching <span className="font-medium">&ldquo;{filters.searchQuery}&rdquo;</span></>
-            )}
-            {filters.location && filters.location.locationName && (
-              <> near <span className="font-medium">{filters.location.locationName}</span>
-                {filters.location.radius && <> (within <span className="font-medium">{filters.location.radius} mi</span>)</>}
-              </>
-            )}
-            {filters.category && (
-              <> in <span className="font-medium">{getCategoryName(filters.category)}</span></>
-            )}
-            {filters.price && (
-              <>
-                {filters.price.min !== undefined && filters.price.max !== undefined && <> priced between <span className="font-medium">${filters.price.min} - ${filters.price.max}</span></>}
-                {filters.price.min !== undefined && filters.price.max === undefined && <> priced over <span className="font-medium">${filters.price.min}</span></>}
-                {filters.price.max !== undefined && filters.price.min === undefined && <> priced under <span className="font-medium">${filters.price.max}</span></>}
-                {filters.price.bracket && <> priced <span className="font-medium">{filters.price.bracket.replace('_', ' ')}</span></>}
-                {filters.price.deals && <> <span className="font-medium">(deals only)</span></>}
-              </>
-            )}
-            {filters.condition && filters.condition.length > 0 && (
-              <> in <span className="font-medium">{filters.condition.map(c => formatConditionForDisplay(c)).join(' or ')}</span> condition</>
-            )}
-            {filters.postedWithin && (
-              <>
-                {filters.postedWithin === 'day' && <> from <span className="font-medium">the last 24 hours</span></>}
-                {filters.postedWithin === 'week' && <> from <span className="font-medium">the last week</span></>}
-                {filters.postedWithin === 'month' && <> from <span className="font-medium">the last month</span></>}
-                {filters.postedWithin === 'quarter' && <> from <span className="font-medium">the last 3 months</span></>}
-                {filters.postedWithin === 'older' && <> that are <span className="font-medium">older than 3 months</span></>}
-              </>
-            )}
-            {/* Commute route display commented out for now
-            {filters.commuteRoute && (
-              <> along commute from <span className="font-medium">{filters.commuteRoute.startLocation}</span> to <span className="font-medium">{filters.commuteRoute.endLocation}</span> ({filters.commuteRoute.maxTime} min)</>
-            )}
-            */}
-          </p>
 
-          {filters.viewMode === 'grid' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-              {filteredListings.map((listing: any, index) => (
-                <div key={index} onClick={() => listing.uri ? recordListingView(listing.uri) : null}>
-                  <ListingCard
-                    listing={{
-                      ...listing,
-                      // Make sure we have the authorDid to generate image URLs
-                      authorDid: listing.authorDid || auth.user?.did || 'did:plc:oyhgprn7edb3dpdaq4mlgfkv'
-                    }}
-                    showDebug={debugMode}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
+        <NewListingsToast
+          count={newRealTimeListings.length}
+          onClick={handleShowNewListings}
+        />
 
-          {filters.viewMode === 'list' && (
-            <div className="space-y-4">
-              {filteredListings.map((listing, index) => {
-                // Get clean description without subcategory text
-                const { cleanDescription } = extractSubcategoryFromDescription(listing.description);
+        {!initialized || isLoading ? (
+          <div className="text-center py-10">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-color border-r-transparent"></div>
+            <p className="mt-2 text-text-primary">Loading listings...</p>
+          </div>
+        ) : realListingsCount > 0 && filteredListings.length > 0 ? (
+          <div>
+            {filters.viewMode === 'grid' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                {filteredListings.map((listing: any, index) => (
+                  <div key={index} onClick={() => listing.uri ? recordListingView(listing.uri) : null}>
+                    <ListingCard
+                      listing={{
+                        ...listing,
+                        // Make sure we have the authorDid to generate image URLs
+                        authorDid: listing.authorDid || auth.user?.did || 'did:plc:oyhgprn7edb3dpdaq4mlgfkv'
+                      }}
+                      showDebug={debugMode}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
 
-                // Set character limit for description
-                const charLimit = 150;
-                // Check if description is longer than the limit
-                const isTruncated = cleanDescription.length > charLimit;
-                // Get the description to display (truncated or full)
-                const displayDescription = isTruncated
-                  ? `${cleanDescription.substring(0, charLimit)}...`
-                  : cleanDescription;
+            {filters.viewMode === 'list' && (
+              <div className="space-y-3">
+                {filteredListings.map((listing, index) => {
+                  // Get clean description without subcategory text
+                  const { cleanDescription, subcategory } = extractSubcategoryFromDescription(listing.description);
 
-                return (
-                  <div
-                    key={index}
-                    onClick={() => listing.uri ? recordListingView(listing.uri) : null}
-                    className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex hover:shadow-md transition-shadow duration-200"
-                  >
-                    <div className="w-48 h-48 bg-neutral-light flex-shrink-0">
-                      <ListingImageDisplay
-                        listing={listing}
-                        size="thumbnail"
-                        height="100%"
-                        fallbackText="No image"
-                      />
-                    </div>
-                    <div className="p-4 flex-grow">
-                      <h2 className="text-xl font-semibold mb-2 text-text-primary">{listing.title}</h2>
-                      <p className="text-text-secondary mb-2">{displayDescription}</p>
-                      <div className="flex justify-between items-end">
-                        <div>
-                          <div className="text-text-secondary text-sm">
-                            {listing.location.locality}, {listing.location.state}
-                          </div>
-                          <div className="flex space-x-2 mt-2">
-                            <span className="badge">{formatCategoryDisplay(listing.category, listing)}</span>
-                            <span className="badge">{formatConditionForDisplay(listing.condition)}</span>
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-xl font-bold text-primary-color mb-2">{formatPrice(listing.price)}</div>
-                          <Link
-                            href={`/listing/${encodeURIComponent(listing.uri || listing.title)}`}
-                            className="btn-primary"
-                          >
-                            View Details
-                          </Link>
+                  // Set character limit for description
+                  const charLimit = 120;
+                  const displayDescription = cleanDescription.length > charLimit
+                    ? `${cleanDescription.substring(0, charLimit)}...`
+                    : cleanDescription;
+
+                  // Get tags - show category and subcategory
+                  const tags: string[] = [];
+                  if (listing.category) {
+                    tags.push(getCategoryName(listing.category));
+                  }
+                  if (subcategory && !tags.includes(subcategory)) {
+                    tags.push(subcategory);
+                  }
+
+                  // Format date
+                  const postedDate = new Date(listing.createdAt).toLocaleDateString();
+
+                  // Format location - handle missing values
+                  const locationParts = [listing.location.locality, listing.location.state].filter(Boolean);
+                  const locationString = locationParts.length > 0 ? locationParts.join(', ') : '';
+
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => listing.uri ? recordListingView(listing.uri) : null}
+                      className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex hover:shadow-xl hover:border-sky-200 transition-all duration-300 group cursor-pointer"
+                    >
+                      {/* Image with condition badge */}
+                      <div className="w-72 flex-shrink-0 relative bg-gray-100 overflow-hidden">
+                        <ListingImageDisplay
+                          listing={listing}
+                          size="thumbnail"
+                          height="100%"
+                          className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                          fallbackText="No image"
+                        />
+                        {/* Condition Badge */}
+                        <div className="absolute top-3 left-3">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-white/95 backdrop-blur-sm text-slate-800 shadow-sm">
+                            {formatConditionForDisplay(listing.condition)}
+                          </span>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
 
-          {filters.viewMode === 'map' && (
-            <div className="bg-neutral-light rounded-lg p-4 min-h-[400px] flex items-center justify-center">
-              <p className="text-text-secondary">
-                Map view is coming soon! Listings will be displayed on an interactive map.
-              </p>
-            </div>
-          )}
-        </div>
-      ) : showDemoListings && filteredListings.length > 0 ? (
-        <div>
-          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6" role="alert">
-            <p className="font-bold">Demo Mode</p>
-            <p>{auth.isLoggedIn ? 'No real listings found.' : 'You need to log in to see real listings.'} Showing demo content for illustration purposes.</p>
-            {!auth.isLoggedIn && (
-              <Link
-                href="/login"
-                className="inline-block mt-2 py-1 px-3 bg-primary-color hover:bg-primary-light text-white text-sm font-medium rounded">
-                Log In
-              </Link>
+                      {/* Content */}
+                      <div className="flex-1 p-6 flex flex-col justify-between">
+                        <div>
+                          {/* Category and Title/Price row */}
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <span className="text-xs font-bold text-sky-600 uppercase tracking-wide mb-1 block">
+                                {getCategoryName(listing.category)}
+                              </span>
+                              <h2 className="text-xl font-bold text-slate-900 group-hover:text-sky-600 transition-colors line-clamp-1">
+                                {listing.title}
+                              </h2>
+                            </div>
+                            <span className="text-2xl font-bold text-slate-900 flex-shrink-0 ml-4">
+                              {formatPrice(listing.price)}
+                            </span>
+                          </div>
+
+                          {/* Description */}
+                          <p className="text-slate-500 text-sm line-clamp-2 mb-4 leading-relaxed">
+                            {displayDescription}
+                          </p>
+
+                          {/* Tags */}
+                          {tags.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-4">
+                              {tags.map((tag, i) => (
+                                <span key={i} className="inline-block px-2 py-0.5 rounded-md bg-gray-50 text-gray-500 text-xs border border-gray-100">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Bottom row - Location, Author, Date */}
+                        <div className="flex items-center gap-6 pt-4 border-t border-gray-50 text-sm text-slate-500">
+                          {locationString && (
+                            <div className="flex items-center gap-2">
+                              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              <span>{locationString}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            <span>{(listing as any).authorDisplayName || (listing as any).authorHandle || 'Unknown'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span>{postedDate}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Button - separate column, centered */}
+                      <div className="hidden sm:flex flex-col justify-center items-center px-8 border-l border-gray-50 bg-gray-50/30 min-w-[160px]">
+                        <Link
+                          href={`/listing/${encodeURIComponent(listing.uri || listing.title)}`}
+                          className="flex items-center gap-2 bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md shadow-sky-200 group-hover:bg-sky-700 group-hover:shadow-sky-300 transition-all whitespace-nowrap"
+                        >
+                          View Details
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {filters.viewMode === 'map' && (
+              <div className="bg-neutral-light rounded-lg p-4 min-h-[400px] flex items-center justify-center">
+                <p className="text-text-secondary">
+                  Map view is coming soon! Listings will be displayed on an interactive map.
+                </p>
+              </div>
             )}
           </div>
-
-          <p className="mb-4 text-text-secondary">
-            Showing {filteredListings.length} of {allListings.length} listings
-            {filters.location && filters.location.locationName && (
-              <> near <span className="font-medium">{filters.location.locationName}</span>
-                {filters.location.radius && <> (within <span className="font-medium">{filters.location.radius} mi</span>)</>}
-              </>
-            )}
-            {filters.postedWithin && (
-              <>
-                {filters.postedWithin === 'day' && <> from <span className="font-medium">the last 24 hours</span></>}
-                {filters.postedWithin === 'week' && <> from <span className="font-medium">the last week</span></>}
-                {filters.postedWithin === 'month' && <> from <span className="font-medium">the last month</span></>}
-                {filters.postedWithin === 'quarter' && <> from <span className="font-medium">the last 3 months</span></>}
-                {filters.postedWithin === 'older' && <> that are <span className="font-medium">older than 3 months</span></>}
-              </>
-            )}
-            {/* Commute route display commented out for now
-            {filters.commuteRoute && (
-              <> along commute from <span className="font-medium">{filters.commuteRoute.startLocation}</span> to <span className="font-medium">{filters.commuteRoute.endLocation}</span> ({filters.commuteRoute.maxTime} min)</>
-            )}
-            */}
-          </p>
-
-          {/* Render listings based on view mode */}
-          {filters.viewMode === 'grid' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-              {filteredListings.map((listing, index) => (
-                <div key={index} onClick={() => listing.uri ? recordListingView(listing.uri) : null}>
-                  <ListingCard
-                    listing={{
-                      ...listing,
-                      // For demo listings, we need to provide authorDid for image handling
-                      authorDid: listing.authorDid || auth.user?.did || 'did:plc:oyhgprn7edb3dpdaq4mlgfkv'
-                    }}
-                    showDebug={debugMode}
-                  />
-                </div>
-              ))}
+        ) : showDemoListings && filteredListings.length > 0 ? (
+          <div>
+            <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6" role="alert">
+              <p className="font-bold">Demo Mode</p>
+              <p>{auth.isLoggedIn ? 'No real listings found.' : 'You need to log in to see real listings.'} Showing demo content for illustration purposes.</p>
+              {!auth.isLoggedIn && (
+                <Link
+                  href="/login"
+                  className="inline-block mt-2 py-1 px-3 bg-primary-color hover:bg-primary-light text-white text-sm font-medium rounded">
+                  Log In
+                </Link>
+              )}
             </div>
-          )}
 
-          {filters.viewMode === 'list' && (
-            <div className="space-y-4">
-              {filteredListings.map((listing, index) => {
-                // Get clean description without subcategory text
-                const { cleanDescription } = extractSubcategoryFromDescription(listing.description);
+            {/* Render listings based on view mode */}
+            {filters.viewMode === 'grid' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                {filteredListings.map((listing, index) => (
+                  <div key={index} onClick={() => listing.uri ? recordListingView(listing.uri) : null}>
+                    <ListingCard
+                      listing={{
+                        ...listing,
+                        // For demo listings, we need to provide authorDid for image handling
+                        authorDid: listing.authorDid || auth.user?.did || 'did:plc:oyhgprn7edb3dpdaq4mlgfkv'
+                      }}
+                      showDebug={debugMode}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
 
-                // Set character limit for description
-                const charLimit = 150;
-                // Check if description is longer than the limit
-                const isTruncated = cleanDescription.length > charLimit;
-                // Get the description to display (truncated or full)
-                const displayDescription = isTruncated
-                  ? `${cleanDescription.substring(0, charLimit)}...`
-                  : cleanDescription;
+            {filters.viewMode === 'list' && (
+              <div className="space-y-3">
+                {filteredListings.map((listing, index) => {
+                  // Get clean description without subcategory text
+                  const { cleanDescription, subcategory } = extractSubcategoryFromDescription(listing.description);
 
-                return (
-                  <div
-                    key={index}
-                    onClick={() => listing.uri ? recordListingView(listing.uri) : null}
-                    className="bg-white rounded-lg shadow-md overflow-hidden flex"
-                  >
-                    <div className="w-48 h-48 bg-neutral-light flex-shrink-0">
-                      <ListingImageDisplay
-                        listing={listing}
-                        size="thumbnail"
-                        height="100%"
-                        fallbackText="No image"
-                      />
-                    </div>
-                    <div className="p-4 flex-grow">
-                      <h2 className="text-xl font-semibold mb-2 text-text-primary">{listing.title}</h2>
-                      <p className="text-text-secondary mb-2">{displayDescription}</p>
-                      <div className="flex justify-between items-end">
-                        <div>
-                          <div className="text-text-secondary text-sm">
-                            {listing.location.locality}, {listing.location.state}
-                          </div>
-                          <div className="flex space-x-2 mt-2">
-                            <span className="badge">{formatCategoryDisplay(listing.category, listing)}</span>
-                            <span className="badge">{formatConditionForDisplay(listing.condition)}</span>
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-xl font-bold text-primary-color mb-2">{formatPrice(listing.price)}</div>
-                          <Link
-                            href={`/listing/${encodeURIComponent(listing.uri || listing.title)}`}
-                            className="btn-primary"
-                          >
-                            View Details
-                          </Link>
+                  // Set character limit for description
+                  const charLimit = 120;
+                  const displayDescription = cleanDescription.length > charLimit
+                    ? `${cleanDescription.substring(0, charLimit)}...`
+                    : cleanDescription;
+
+                  // Get tags - show category and subcategory
+                  const tags: string[] = [];
+                  if (listing.category) {
+                    tags.push(getCategoryName(listing.category));
+                  }
+                  if (subcategory && !tags.includes(subcategory)) {
+                    tags.push(subcategory);
+                  }
+
+                  // Format date
+                  const postedDate = new Date(listing.createdAt).toLocaleDateString();
+
+                  // Format location - handle missing values
+                  const locationParts = [listing.location.locality, listing.location.state].filter(Boolean);
+                  const locationString = locationParts.length > 0 ? locationParts.join(', ') : '';
+
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => listing.uri ? recordListingView(listing.uri) : null}
+                      className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex hover:shadow-xl hover:border-sky-200 transition-all duration-300 group cursor-pointer"
+                    >
+                      {/* Image with condition badge */}
+                      <div className="w-72 flex-shrink-0 relative bg-gray-100 overflow-hidden">
+                        <ListingImageDisplay
+                          listing={listing}
+                          size="thumbnail"
+                          height="100%"
+                          className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                          fallbackText="No image"
+                        />
+                        {/* Condition Badge */}
+                        <div className="absolute top-3 left-3">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-white/95 backdrop-blur-sm text-slate-800 shadow-sm">
+                            {formatConditionForDisplay(listing.condition)}
+                          </span>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
 
-          {filters.viewMode === 'map' && (
-            <div className="bg-neutral-light rounded-lg p-4 min-h-[400px] flex items-center justify-center">
-              <p className="text-text-secondary">
-                Map view is coming soon! Listings will be displayed on an interactive map.
-              </p>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow-md p-8 text-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-neutral-medium mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <h2 className="text-xl font-semibold mb-2 text-text-primary">No Matching Listings</h2>
-          <p className="text-text-secondary mb-6">
-            We couldn&apos;t find any listings matching your current filters. Try adjusting your search criteria.
-          </p>
-          <button
-            onClick={() => setFilters({
-              viewMode: 'grid',
-              resultsPerPage: 12,
-              sortBy: 'recency'
-            })}
-            className="btn-primary"
-          >
-            Reset Filters
-          </button>
-        </div>
-      )}
+                      {/* Content */}
+                      <div className="flex-1 p-6 flex flex-col justify-between">
+                        <div>
+                          {/* Category and Title/Price row */}
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <span className="text-xs font-bold text-sky-600 uppercase tracking-wide mb-1 block">
+                                {getCategoryName(listing.category)}
+                              </span>
+                              <h2 className="text-xl font-bold text-slate-900 group-hover:text-sky-600 transition-colors line-clamp-1">
+                                {listing.title}
+                              </h2>
+                            </div>
+                            <span className="text-2xl font-bold text-slate-900 flex-shrink-0 ml-4">
+                              {formatPrice(listing.price)}
+                            </span>
+                          </div>
+
+                          {/* Description */}
+                          <p className="text-slate-500 text-sm line-clamp-2 mb-4 leading-relaxed">
+                            {displayDescription}
+                          </p>
+
+                          {/* Tags */}
+                          {tags.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-4">
+                              {tags.map((tag, i) => (
+                                <span key={i} className="inline-block px-2 py-0.5 rounded-md bg-gray-50 text-gray-500 text-xs border border-gray-100">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Bottom row - Location, Author, Date */}
+                        <div className="flex items-center gap-6 pt-4 border-t border-gray-50 text-sm text-slate-500">
+                          {locationString && (
+                            <div className="flex items-center gap-2">
+                              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              <span>{locationString}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            <span>{(listing as any).authorDisplayName || (listing as any).authorHandle || 'Unknown'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span>{postedDate}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Button - separate column, centered */}
+                      <div className="hidden sm:flex flex-col justify-center items-center px-8 border-l border-gray-50 bg-gray-50/30 min-w-[160px]">
+                        <Link
+                          href={`/listing/${encodeURIComponent(listing.uri || listing.title)}`}
+                          className="flex items-center gap-2 bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md shadow-sky-200 group-hover:bg-sky-700 group-hover:shadow-sky-300 transition-all whitespace-nowrap"
+                        >
+                          View Details
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {filters.viewMode === 'map' && (
+              <div className="bg-neutral-light rounded-lg p-4 min-h-[400px] flex items-center justify-center">
+                <p className="text-text-secondary">
+                  Map view is coming soon! Listings will be displayed on an interactive map.
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-md p-8 text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-neutral-medium mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h2 className="text-xl font-semibold mb-2 text-text-primary">No Matching Listings</h2>
+            <p className="text-text-secondary mb-6">
+              We couldn&apos;t find any listings matching your current filters. Try adjusting your search criteria.
+            </p>
+            <button
+              onClick={() => setFilters({
+                viewMode: 'grid',
+                resultsPerPage: 12,
+                sortBy: 'recency'
+              })}
+              className="btn-primary"
+            >
+              Reset Filters
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
