@@ -1,5 +1,4 @@
-// src/lib/chat-utils.ts
-
+import { BskyAgent } from '@atproto/api';
 import type { MarketplaceListing } from './marketplace-client';
 
 /**
@@ -7,7 +6,7 @@ import type { MarketplaceListing } from './marketplace-client';
  */
 export function generateSellerMessage(listing: MarketplaceListing): string {
   const listingUrl = typeof window !== 'undefined' ? window.location.href : '';
-  
+
   return `Hi! I'm interested in your listing: "${listing.title}" - ${listing.price}. Is this still available?
 
 Listing: ${listingUrl}`;
@@ -55,6 +54,136 @@ export function contactSellerViaBluesky(
 }
 
 /**
+ * Send a message to a seller using the Bluesky Chat API
+ */
+export async function sendMessageToSeller(
+  agent: BskyAgent,
+  sellerDid: string,
+  message: string
+): Promise<{ success: boolean; error?: string; errorCode?: 'REQUIRES_FOLLOW' | 'UNKNOWN' }> {
+  try {
+    if (!agent.session) {
+      return { success: false, error: 'User is not logged in' };
+    }
+
+    // 1. Get a service auth token for getConvoForMembers
+    console.log('Requesting service auth token for getConvoForMembers...');
+    const convoAuth = await agent.api.com.atproto.server.getServiceAuth({
+      aud: 'did:web:api.bsky.chat',
+      lxm: 'chat.bsky.convo.getConvoForMembers',
+    });
+
+    if (!convoAuth.success) {
+      console.error('Failed to get service auth token for convo', convoAuth);
+      return { success: false, error: 'Could not authenticate with chat service' };
+    }
+
+    const convoToken = convoAuth.data.token;
+
+    // 2. Create a specialized agent for the chat service
+    const chatAgent = new BskyAgent({
+      service: 'https://api.bsky.chat'
+    });
+
+    console.log(`Getting conversation with ${sellerDid} via Chat Service directly...`);
+
+    let convoId: string;
+
+    // 3. Get or create conversation
+    try {
+      const convoResponse = await chatAgent.api.chat.bsky.convo.getConvoForMembers(
+        { members: [sellerDid] },
+        { headers: { Authorization: `Bearer ${convoToken}` } }
+      );
+
+      if (!convoResponse.success) {
+        console.error('Failed to get conversation', convoResponse);
+        return { success: false, error: 'Could not connect to chat service' };
+      }
+
+      convoId = convoResponse.data.convo.id;
+      console.log(`Found conversation ID: ${convoId}`);
+    } catch (apiError: any) {
+      // Check for specific error message regarding followers
+      const errorMessage = apiError.message || apiError.error || '';
+      if (
+        errorMessage.includes('recipient requires incoming messages to come from someone they follow') ||
+        (apiError.error === 'AuthRequired' && errorMessage.includes('follow'))
+      ) {
+        return {
+          success: false,
+          error: 'This seller only accepts messages from users they follow.',
+          errorCode: 'REQUIRES_FOLLOW'
+        };
+      }
+      throw apiError;
+    }
+
+    // 4. Get a NEW service auth token specifically for sendMessage
+    console.log('Requesting service auth token for sendMessage...');
+    const messageAuth = await agent.api.com.atproto.server.getServiceAuth({
+      aud: 'did:web:api.bsky.chat',
+      lxm: 'chat.bsky.convo.sendMessage',
+    });
+
+    if (!messageAuth.success) {
+      console.error('Failed to get service auth token for message', messageAuth);
+      return { success: false, error: 'Could not authenticate with chat service for sending' };
+    }
+
+    const messageToken = messageAuth.data.token;
+
+    // 5. Send the message with the new token
+    try {
+      const sendResponse = await chatAgent.api.chat.bsky.convo.sendMessage(
+        {
+          convoId: convoId,
+          message: {
+            text: message
+          }
+        },
+        { headers: { Authorization: `Bearer ${messageToken}` }, encoding: 'application/json' }
+      );
+
+      if (!sendResponse.success) {
+        console.error('Failed to send message', sendResponse);
+        return { success: false, error: 'Failed to send message' };
+      }
+
+      console.log('Message sent successfully!');
+      return { success: true };
+
+    } catch (apiError: any) {
+      console.error('API Error details:', apiError);
+
+      // Check for specific error message regarding followers (just in case it happens at send time too)
+      const errorMessage = apiError.message || apiError.error || '';
+
+      if (
+        errorMessage.includes('recipient requires incoming messages to come from someone they follow') ||
+        (apiError.error === 'AuthRequired' && errorMessage.includes('follow'))
+      ) {
+        return {
+          success: false,
+          error: 'This seller only accepts messages from users they follow.',
+          errorCode: 'REQUIRES_FOLLOW'
+        };
+      }
+
+      throw apiError;
+    }
+
+  } catch (error) {
+    console.error('Error sending message to seller:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      errorCode: 'UNKNOWN'
+    };
+  }
+}
+
+/**
  * Check if we can contact this seller (has valid handle)
  */
 export function canContactSeller(listing: MarketplaceListing & { authorHandle?: string }): boolean {
@@ -87,12 +216,12 @@ export function getSellerDisplayName(listing: MarketplaceListing & { authorHandl
  * Use this if direct Bluesky integration doesn't work as expected
  */
 export function showContactInfo(
-  sellerHandle: string, 
+  sellerHandle: string,
   listing: MarketplaceListing
 ): void {
   const message = generateSellerMessage(listing);
   const formattedHandle = formatSellerHandle(sellerHandle);
-  
+
   alert(`To contact the seller:
 
 1. Open Bluesky app or visit bsky.app
