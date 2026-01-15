@@ -1,10 +1,8 @@
 'use client';
 
-import React from 'react';
-import { Filter, ChevronDown, LayoutGrid, List } from 'lucide-react';
+import React, { useState } from 'react';
+import { Filter, ChevronDown, LayoutGrid, List, X } from 'lucide-react';
 import { CATEGORIES } from '@/lib/category-data';
-import SortingOptions from './SortingOptions';
-import ViewOptions from './ViewOptions';
 
 interface HorizontalFilterBarProps {
     selectedCategory: string | undefined;
@@ -21,6 +19,23 @@ interface HorizontalFilterBarProps {
     hasActiveFilters: boolean;
 }
 
+// Simplified category list for the main pills - show only most common categories
+const FEATURED_CATEGORIES = [
+    { id: 'electronics', name: 'Electronics' },
+    { id: 'garden', name: 'Garden & Outdoor' },
+    { id: 'home', name: 'Home' },
+    { id: 'apparel', name: 'Clothing' },
+    { id: 'vehicles', name: 'Vehicles' },
+    { id: 'other', name: 'Other' },
+];
+
+const SORT_OPTIONS = [
+    { value: 'recency', label: 'Recently Listed' },
+    { value: 'price_asc', label: 'Price: Low to High' },
+    { value: 'price_desc', label: 'Price: High to Low' },
+    { value: 'distance', label: 'Distance' },
+];
+
 const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
     selectedCategory,
     onSelectCategory,
@@ -35,85 +50,188 @@ const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
     onResetFilters,
     hasActiveFilters
 }) => {
+    const [showSortDropdown, setShowSortDropdown] = useState(false);
+    const [showAllCategories, setShowAllCategories] = useState(false);
+
+    const currentSortLabel = SORT_OPTIONS.find(opt => opt.value === sortBy)?.label || 'Sort';
+
+    // Check if selected category is in featured list
+    const isSelectedInFeatured = !selectedCategory || FEATURED_CATEGORIES.some(c => c.id === selectedCategory);
+
     return (
-        <div className="sticky top-16 z-30 bg-white border-b border-gray-100 shadow-sm">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                {/* Two rows layout */}
-                <div className="flex flex-col gap-3 py-3">
+        <div className="bg-white border-b border-gray-100">
+            {/* Category Pills Row */}
+            <div className="flex items-center justify-between gap-4 py-3">
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                    {/* All Button */}
+                    <button
+                        onClick={() => onSelectCategory(undefined)}
+                        className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex-shrink-0 ${
+                            !selectedCategory
+                                ? 'bg-gray-900 text-white'
+                                : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300'
+                        }`}
+                    >
+                        All
+                    </button>
 
-                    {/* Row 1: Categories - Scrollable */}
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 scroll-smooth">
+                    {/* Featured Categories */}
+                    {FEATURED_CATEGORIES.map((cat) => (
                         <button
-                            onClick={() => onSelectCategory(undefined)}
-                            className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex-shrink-0 ${!selectedCategory
-                                ? 'bg-slate-900 text-white shadow-md transform scale-105'
-                                : 'bg-white text-slate-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                }`}
+                            key={cat.id}
+                            onClick={() => onSelectCategory(cat.id)}
+                            className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex-shrink-0 ${
+                                selectedCategory === cat.id
+                                    ? 'bg-gray-900 text-white'
+                                    : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300'
+                            }`}
                         >
-                            All
+                            {cat.name}
                         </button>
-                        {CATEGORIES.map((cat) => (
-                            <button
-                                key={cat.id}
-                                onClick={() => onSelectCategory(cat.id)}
-                                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex-shrink-0 ${selectedCategory === cat.id
-                                    ? 'bg-slate-900 text-white shadow-md transform scale-105'
-                                    : 'bg-white text-slate-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                    }`}
-                            >
-                                {cat.name}
-                            </button>
-                        ))}
+                    ))}
+
+                    {/* More Categories Dropdown */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowAllCategories(!showAllCategories)}
+                            className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex-shrink-0 flex items-center gap-1 ${
+                                !isSelectedInFeatured
+                                    ? 'bg-gray-900 text-white'
+                                    : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300'
+                            }`}
+                        >
+                            {!isSelectedInFeatured
+                                ? CATEGORIES.find(c => c.id === selectedCategory)?.name || 'More'
+                                : 'More'
+                            }
+                            <ChevronDown size={14} className={`transition-transform ${showAllCategories ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {showAllCategories && (
+                            <>
+                                <div
+                                    className="fixed inset-0 z-40"
+                                    onClick={() => setShowAllCategories(false)}
+                                />
+                                <div className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 min-w-[200px] max-h-[300px] overflow-y-auto">
+                                    {CATEGORIES.filter(cat => !FEATURED_CATEGORIES.some(fc => fc.id === cat.id)).map((cat) => (
+                                        <button
+                                            key={cat.id}
+                                            onClick={() => {
+                                                onSelectCategory(cat.id);
+                                                setShowAllCategories(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                                                selectedCategory === cat.id ? 'text-blue-600 font-medium' : 'text-gray-700'
+                                            }`}
+                                        >
+                                            {cat.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right side - Item count and controls */}
+                <div className="flex items-center gap-3 flex-shrink-0">
+                    <span className="text-gray-500 text-sm hidden sm:inline-block">
+                        Showing <span className="font-medium text-gray-900">{itemCount}</span> items
+                    </span>
+
+                    {/* Filters Button */}
+                    <button
+                        onClick={onToggleFilters}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                            showFilters || hasActiveFilters
+                                ? 'bg-blue-50 text-blue-600'
+                                : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                    >
+                        <Filter size={16} />
+                        Filters
+                        {hasActiveFilters && (
+                            <span className="w-2 h-2 bg-blue-600 rounded-full" />
+                        )}
+                    </button>
+
+                    {/* Sort Dropdown */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowSortDropdown(!showSortDropdown)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                        >
+                            Sort
+                            <ChevronDown size={14} className={`transition-transform ${showSortDropdown ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {showSortDropdown && (
+                            <>
+                                <div
+                                    className="fixed inset-0 z-40"
+                                    onClick={() => setShowSortDropdown(false)}
+                                />
+                                <div className="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 min-w-[180px]">
+                                    {SORT_OPTIONS.map((option) => (
+                                        <button
+                                            key={option.value}
+                                            onClick={() => {
+                                                onSortChange(option.value as typeof sortBy);
+                                                setShowSortDropdown(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                                                sortBy === option.value ? 'text-blue-600 font-medium' : 'text-gray-700'
+                                            }`}
+                                        >
+                                            {option.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
+                        )}
                     </div>
 
-                    {/* Row 2: Utilities */}
-                    <div className="flex items-center justify-between text-sm border-t border-gray-100 pt-3">
-                        <div className="flex items-center gap-4">
-                            <span className="text-gray-500 text-sm hidden sm:inline-block">
-                                Showing <span className="font-medium text-slate-900">{itemCount}</span> items
-                            </span>
-
-                            {hasActiveFilters && (
-                                <button
-                                    onClick={onResetFilters}
-                                    className="text-primary-color hover:text-primary-dark font-medium text-sm flex items-center gap-1 transition-colors"
-                                >
-                                    <span className="text-xs bg-primary-light/10 p-1 rounded-full">✕</span>
-                                    Reset Filters
-                                </button>
-                            )}
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={onToggleFilters}
-                                className={`flex items-center gap-1 font-medium transition-colors ${showFilters ? 'text-primary-color' : 'text-slate-700 hover:text-primary-color'
-                                    }`}
-                            >
-                                Filters <Filter size={16} />
-                            </button>
-
-                            <div className="relative">
-                                <SortingOptions
-                                    sortBy={sortBy}
-                                    onChange={(sort) => {
-                                        if (sort) onSortChange(sort);
-                                    }}
-                                />
-                            </div>
-
-                            <div className="flex items-center">
-                                <ViewOptions
-                                    viewMode={viewMode}
-                                    resultsPerPage={resultsPerPage}
-                                    onChange={(mode, count) => onViewOptionsChange(mode || 'grid', count || 12)}
-                                />
-                            </div>
-                        </div>
+                    {/* View Toggle */}
+                    <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                        <button
+                            onClick={() => onViewOptionsChange('grid', resultsPerPage)}
+                            className={`p-1.5 rounded transition-colors ${
+                                viewMode === 'grid'
+                                    ? 'bg-white text-gray-900 shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                            aria-label="Grid view"
+                        >
+                            <LayoutGrid size={18} />
+                        </button>
+                        <button
+                            onClick={() => onViewOptionsChange('list', resultsPerPage)}
+                            className={`p-1.5 rounded transition-colors ${
+                                viewMode === 'list'
+                                    ? 'bg-white text-gray-900 shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                            aria-label="List view"
+                        >
+                            <List size={18} />
+                        </button>
                     </div>
-
                 </div>
             </div>
+
+            {/* Active Filters / Reset */}
+            {hasActiveFilters && (
+                <div className="pb-3">
+                    <button
+                        onClick={onResetFilters}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm rounded-full transition-colors"
+                    >
+                        <X size={14} />
+                        Clear filters
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

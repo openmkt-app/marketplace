@@ -40,8 +40,8 @@ const ListingCard = React.memo(({ listing, showDebug = false }: ListingCardProps
   const postedDate = new Date(listing.createdAt).toLocaleDateString();
 
   return (
-    <div className="group bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full relative">
-      {/* Make the whole card clickable via a stretched link approach or wrapping content */}
+    <div className="group bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl hover:border-primary-light/50 transition-all duration-300 cursor-pointer flex flex-col sm:flex-row h-auto relative">
+      {/* Make the whole card clickable */}
       <Link href={linkHref} className="absolute inset-0 z-10">
         <span className="sr-only">View {listing.title}</span>
       </Link>
@@ -51,8 +51,8 @@ const ListingCard = React.memo(({ listing, showDebug = false }: ListingCardProps
         <ListingImageDebug listing={listing} show={showDebug} />
       </div>
 
-      {/* Image Container - Using square aspect ratio for cleaner look */}
-      <div className="relative aspect-square overflow-hidden bg-gray-100">
+      {/* Image Container */}
+      <div className="relative w-full sm:w-72 aspect-video sm:aspect-auto overflow-hidden bg-gray-100 shrink-0">
         <ListingImageDisplay
           listing={listing}
           size="thumbnail"
@@ -62,67 +62,93 @@ const ListingCard = React.memo(({ listing, showDebug = false }: ListingCardProps
         />
 
         {/* Condition Badge */}
-        <div className="absolute top-3 right-3 z-20 pointer-events-none">
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-white/95 backdrop-blur-sm text-gray-700 shadow-sm">
+        <div className="absolute top-3 left-3 z-20 pointer-events-none">
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-white/95 backdrop-blur-sm text-gray-800 shadow-sm">
             {formatConditionForDisplay(listing.condition)}
           </span>
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-4 flex flex-col flex-grow relative z-20 pointer-events-none">
-        {listing.category && (
-          <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">
-            {getCategoryName(listing.category)}
-          </span>
-        )}
-        <h3 className="font-semibold text-gray-900 line-clamp-1 mb-1 group-hover:text-blue-600 transition-colors">
-          {listing.title}
-        </h3>
+      <div className="flex-1 p-6 flex flex-col justify-between pointer-events-none">
+        <div>
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              {listing.category && (
+                <span className="text-xs font-bold text-primary-color uppercase tracking-wide mb-1 block">
+                  {getCategoryName(listing.category)}
+                </span>
+              )}
+              <h3 className="text-xl font-bold text-gray-900 group-hover:text-primary-color transition-colors mb-1">
+                {listing.title}
+              </h3>
+            </div>
+            <div className="text-2xl font-bold text-gray-900">
+              {formatPrice(listing.price)}
+            </div>
+          </div>
 
-        <p className="text-lg font-bold text-gray-900 mb-2">
-          {formatPrice(listing.price)}
-        </p>
+          <p className="text-gray-500 text-sm line-clamp-2 mb-4 leading-relaxed">
+            {cleanDescription}
+          </p>
 
-        <p className="text-sm text-gray-500 line-clamp-2 mb-3 flex-grow">
-          {cleanDescription}
-        </p>
-
-        {/* Location */}
-        <div className="flex items-center text-xs text-gray-400 mb-3">
-          <MapPin size={12} className="mr-1 flex-shrink-0" />
-          <span className="truncate">
-            {listing.location.locality}, {listing.location.state}
-          </span>
+          {/* Tags/Badges - Using Subcategories or other meta if available, else just a placeholder layout matching the mock if needed. 
+              The mock shows specific tags. We can just skip or add if we had them. 
+              Let's keep it simple for now or use Condition again? No, Condition is on image.
+          */}
         </div>
 
-        {/* Footer - Author and Date */}
-        <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0">
-            {/* Avatar - shows profile image or fallback to initials */}
+        {/* Footer Meta */}
+        <div className="flex items-center gap-6 pt-4 border-t border-gray-50 text-sm text-gray-500">
+          <div className="flex items-center gap-2">
+            <MapPin size={16} className="text-gray-400" />
+            <span className="truncate max-w-[120px]">
+              {listing.location.locality}, {listing.location.state}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Simple User Icon since we are in a tight list row, but we can reuse the avatar if we want. 
+                The mock uses a simple User icon. Let's stick to the mock's clean look or use our avatar.
+                The mock uses <lucide-user>. Let's try that for "Google AI" look.
+            */}
             {listing.authorDid && listing.authorAvatarCid ? (
-              <div className="w-6 h-6 rounded-full overflow-hidden relative flex-shrink-0 ring-1 ring-gray-200">
+              <div className="w-4 h-4 rounded-full overflow-hidden relative">
                 <Image
                   src={generateAvatarUrl(listing.authorDid, listing.authorAvatarCid) || ''}
-                  alt={listing.authorDisplayName || listing.authorHandle || 'Seller'}
+                  alt="User"
                   fill
                   className="object-cover"
-                  unoptimized
                 />
               </div>
             ) : (
-              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs text-blue-600 font-semibold flex-shrink-0">
-                {listing.authorDisplayName ? listing.authorDisplayName.charAt(0).toUpperCase() : (listing.authorHandle?.charAt(0).toUpperCase() || '?')}
-              </div>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user text-gray-400">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
             )}
-            <span className="text-sm text-gray-600 truncate">
+            <span className="truncate max-w-[100px]">
               {listing.authorDisplayName || listing.authorHandle || 'Unknown'}
             </span>
           </div>
-          <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
-            {postedDate}
-          </span>
+
+          <div className="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar text-gray-400">
+              <path d="M8 2v4"></path>
+              <path d="M16 2v4"></path>
+              <rect width="18" height="18" x="3" y="4" rx="2"></rect>
+              <path d="M3 10h18"></path>
+            </svg>
+            <span>{postedDate}</span>
+          </div>
         </div>
+      </div>
+
+      {/* Button Column */}
+      <div className="hidden sm:flex flex-col justify-center items-center px-8 border-l border-gray-50 bg-gray-50/30 min-w-[160px]">
+        <button className="flex items-center gap-2 bg-primary-color text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md shadow-primary-light/30 group-hover:bg-primary-light group-hover:shadow-primary-light/50 transition-all pointer-events-none">
+          View Details
+        </button>
       </div>
     </div>
   );
