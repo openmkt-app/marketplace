@@ -405,7 +405,8 @@ export class MarketplaceClient {
         };
       });
 
-      return processedListings;
+      // Filter out listings that should be hidden from friends
+      return await this.filterHiddenListings(processedListings);
     } catch (error) {
       logger.error('Failed to retrieve all listings', error as Error);
       throw error;
@@ -669,20 +670,64 @@ export class MarketplaceClient {
       });
 
       // Filter out listings that should be hidden from friends
-      // const authenticatedUserDid = this.agent.session.did;
-
       const filteredListings = await Promise.all(
         processedListings.map(async listing => {
           // If hideFromFriends is true, check if the current user follows the author
           if (listing.hideFromFriends) {
+            // Don't filter out my own listings
+            if (listing.authorDid === this.agent.session?.did) {
+              return listing;
+            }
+
             try {
-              const isFollowing = await this.isUserFollowingMe(listing.authorDid);
-              if (isFollowing) {
-                logger.info(`Filtering out listing ${listing.uri} as it's hidden from friends`);
-                return null;
+              const followDetails = await this.getFollowDetails(listing.authorDid);
+
+              logger.info(`[Privacy Check] Listing ${listing.uri} by ${listing.authorDid}`, {
+                meta: {
+                  hideFromFriends: true,
+                  viewerIsFollowing: followDetails.isFollowing,
+                  followedAt: followDetails.followedAt,
+                  listingCreatedAt: listing.createdAt
+                }
+              });
+
+              // If not following at all, they can see it
+              if (!followDetails.isFollowing) {
+                logger.info(`[Privacy Check] Allowed: Viewer does not follow author.`);
+                return listing;
               }
-            } catch {
-              // If we can't check follow status, include the listing
+
+              // If specific timestamp availability is an issue, we default to hiding (conservative)
+              // But if we have the timestamp, we check if they were friends BEFORE the listing
+              if (followDetails.followedAt) {
+                const followTime = new Date(followDetails.followedAt).getTime();
+                const listingTime = new Date(listing.createdAt).getTime();
+
+                logger.info(`[Privacy Check] Time comparison`, {
+                  meta: {
+                    followTimeISO: followDetails.followedAt,
+                    listingTimeISO: listing.createdAt,
+                    isFollowNewer: followTime > listingTime,
+                    diffSeconds: (followTime - listingTime) / 1000
+                  }
+                });
+
+                // If they followed AFTER the listing was created (e.g. for chat), let them see it
+                // We add a small buffer (e.g. 1 hour) just in case
+                if (followTime > listingTime) {
+                  logger.info(`[Privacy Check] Allowed: Follow is newer than listing (Buyer Scenario).`);
+                  return listing;
+                }
+              }
+
+              // Otherwise (followed before listing), hide it
+              logger.info(`[Privacy Check] HIDDEN: Viewer is an existing friend (followed at ${followDetails.followedAt}).`);
+              return null;
+
+            } catch (err) {
+              logger.error(`[Privacy Check] Error checking privacy, allowing listing safe-fail.`, err as Error);
+              // If we can't check follow status, include the listing to be safe
+              return listing;
             }
           }
 
@@ -866,6 +911,61 @@ export class MarketplaceClient {
   }
 
   /**
+   * Get details about the follow relationship with a target user
+   * Returns whether we follow them, and when we started following
+   */
+  async getFollowDetails(targetDid: string): Promise<{ isFollowing: boolean; followedAt?: string }> {
+    if (!this.isLoggedIn || !this.agent.session) {
+      return { isFollowing: false };
+    }
+
+    try {
+      // 1. Get profile to find the Follow URI
+      const profile = await this.agent.getProfile({ actor: targetDid });
+      const followUri = profile.data.viewer?.following;
+
+      if (!followUri) {
+        return { isFollowing: false };
+      }
+
+      // 2. Fetch the actual Follow record to get the timestamp
+      // URI format: at://did:plc:xxx/app.bsky.graph.follow/rkey
+      const uriParts = followUri.replace('at://', '').split('/');
+      if (uriParts.length === 3) {
+        const [repo, collection, rkey] = uriParts;
+
+        try {
+          // We use the agent to fetch the record from our own repo
+          const result = await this.agent.api.com.atproto.repo.getRecord({
+            repo: this.agent.session.did, // The follow is in OUR repo
+            collection: 'app.bsky.graph.follow',
+            rkey
+          });
+
+          if (result.success && result.data.value) {
+            const record = result.data.value as { createdAt: string };
+            return {
+              isFollowing: true,
+              followedAt: record.createdAt
+            };
+          }
+        } catch (e) {
+          logger.warn(`Failed to fetch follow record details for ${targetDid}`, e as Error);
+        }
+      }
+
+      // Fallback: we know we follow them, but couldn't get the date
+      return { isFollowing: true };
+
+    } catch (error) {
+      logger.warn(`Error checking follow details for ${targetDid}`, error as Error);
+      return { isFollowing: false };
+    }
+  }
+
+
+
+  /**
    * Subscribe to real-time listing updates via Jetstream
    * @param callback Function to be called when a new listing is detected
    * @param onHistoricalReplayComplete Optional callback when historical replay is complete
@@ -1010,6 +1110,83 @@ export class MarketplaceClient {
       }
       ws.close();
     };
+  }
+
+
+  /**
+   * Helper method to filter listings based on privacy settings
+   */
+  private async filterHiddenListings(listings: (MarketplaceListing & { authorDid: string; authorHandle: string; uri: string; cid: string })[]) {
+    logger.info(`[Privacy Check] filtering ${listings.length} listings for privacy rules...`);
+
+    const filteredListings = await Promise.all(
+      listings.map(async listing => {
+        // If hideFromFriends is true, check if the current user follows the author
+        if (listing.hideFromFriends) {
+          // Don't filter out my own listings
+          if (listing.authorDid === this.agent.session?.did) {
+            return listing;
+          }
+
+          try {
+            const followDetails = await this.getFollowDetails(listing.authorDid);
+
+            logger.info(`[Privacy Check] Listing ${listing.uri} by ${listing.authorDid}`, {
+              meta: {
+                hideFromFriends: true,
+                viewerIsFollowing: followDetails.isFollowing,
+                followedAt: followDetails.followedAt,
+                listingCreatedAt: listing.createdAt
+              }
+            });
+
+            // If not following at all, they can see it
+            if (!followDetails.isFollowing) {
+              logger.info(`[Privacy Check] Allowed: Viewer does not follow author.`);
+              return listing;
+            }
+
+            // check if they were friends BEFORE the listing
+            if (followDetails.followedAt) {
+              const followTime = new Date(followDetails.followedAt).getTime();
+              const listingTime = new Date(listing.createdAt).getTime();
+
+              logger.info(`[Privacy Check] Time comparison`, {
+                meta: {
+                  followTimeISO: followDetails.followedAt,
+                  listingTimeISO: listing.createdAt,
+                  isFollowNewer: followTime > listingTime,
+                  diffSeconds: (followTime - listingTime) / 1000
+                }
+              });
+
+              // If they followed AFTER the listing was created (e.g. for chat), let them see it
+              if (followTime > listingTime) {
+                logger.info(`[Privacy Check] Allowed: Follow is newer than listing (Buyer Scenario).`);
+                return listing;
+              }
+            }
+
+            // Otherwise (followed before listing), hide it
+            logger.info(`[Privacy Check] HIDDEN: Viewer is an existing friend (followed at ${followDetails.followedAt}).`);
+            return null;
+
+          } catch (err) {
+            logger.error(`[Privacy Check] Error checking privacy, allowing listing safe-fail.`, err as Error);
+            return listing;
+          }
+        }
+
+        return listing;
+      })
+    );
+
+    return filteredListings.filter(listing => listing !== null) as (MarketplaceListing & {
+      authorDid: string;
+      authorHandle: string;
+      uri: string;
+      cid: string;
+    })[];
   }
 }
 
