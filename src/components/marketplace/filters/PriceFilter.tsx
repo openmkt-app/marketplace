@@ -24,6 +24,39 @@ export default function PriceFilter({ initialValue, onChange }: PriceFilterProps
   const [deals, setDeals] = useState<boolean>(initialValue?.deals || false);
   const isFirstRender = useRef(true);
 
+  // Track the last prop values to detect external changes
+  const lastPropValues = useRef({
+    min: initialValue?.min,
+    max: initialValue?.max,
+    bracket: initialValue?.bracket,
+    deals: initialValue?.deals
+  });
+
+  // Sync local state when initialValue changes externally (e.g., from SmartFilterSummary clear)
+  // Only run when initialValue prop reference changes
+  useEffect(() => {
+    const prevMin = lastPropValues.current.min;
+    const prevMax = lastPropValues.current.max;
+    const prevBracket = lastPropValues.current.bracket;
+    const prevDeals = lastPropValues.current.deals;
+
+    const newMin = initialValue?.min;
+    const newMax = initialValue?.max;
+    const newBracket = initialValue?.bracket;
+    const newDeals = initialValue?.deals;
+
+    // Update ref to current prop values
+    lastPropValues.current = { min: newMin, max: newMax, bracket: newBracket, deals: newDeals };
+
+    // Only sync if the prop actually changed (comparing with previous prop, not current state)
+    if (prevMin !== newMin || prevMax !== newMax || prevBracket !== newBracket || prevDeals !== newDeals) {
+      setMin(newMin?.toString() || '');
+      setMax(newMax?.toString() || '');
+      setBracket(newBracket || '');
+      setDeals(newDeals || false);
+    }
+  }, [initialValue]);
+
   useEffect(() => {
     // Skip on first render to avoid triggering filter on mount
     if (isFirstRender.current) {
@@ -38,7 +71,7 @@ export default function PriceFilter({ initialValue, onChange }: PriceFilterProps
     const filterValue = {
       min: minVal,
       max: maxVal,
-      bracket,
+      bracket: bracket || undefined,
       deals
     };
 

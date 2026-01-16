@@ -23,7 +23,6 @@ export default function LocationFilter({
   const [geoSuccess, setGeoSuccess] = useState<boolean | null>(null);
   const [geoError, setGeoError] = useState<string | null>(null);
   const isFirstRender = useRef(true);
-
   const hasRestored = useRef(false);
 
   // Radius options in miles
@@ -32,7 +31,14 @@ export default function LocationFilter({
   // Track initial latitude to avoid re-running mount effect
   const initialLatitudeRef = useRef(initialValue?.latitude);
 
-  // Load saved location on mount ONLY
+  // Track the last prop values to detect external changes (like clear filter)
+  const lastPropValues = useRef({
+    latitude: initialValue?.latitude,
+    longitude: initialValue?.longitude,
+    radius: initialValue?.radius
+  });
+
+  // Load saved location on mount ONLY (without radius) and notify parent
   useEffect(() => {
     if (hasRestored.current) return;
 
@@ -42,39 +48,57 @@ export default function LocationFilter({
       try {
         const savedLocation = JSON.parse(savedLocationJson);
         if (savedLocation.latitude && savedLocation.longitude) {
-          setFilter({
+          // Restore location but NOT the radius - radius resets on page refresh
+          const restoredFilter = {
             latitude: savedLocation.latitude,
             longitude: savedLocation.longitude,
-            radius: savedLocation.radius, // Can be undefined now
+            radius: undefined, // Always reset radius on page refresh
             locationName: savedLocation.locationName
-          });
-          // Mark as restored so we don't override explicit resets later
+          };
+          setFilter(restoredFilter);
+          // Notify parent - but since radius is undefined, no distance filtering will occur
+          onFilterChange(restoredFilter);
           hasRestored.current = true;
         }
       } catch (e) {
         console.error('Error parsing saved location:', e);
       }
-    } else {
-      // If we didn't restore (e.g. had initial value or no saved data), still mark as 'checked'
-      hasRestored.current = true;
     }
-  }, []); // Run only on mount
+    // Mark as checked regardless
+    hasRestored.current = true;
+  }, [onFilterChange]);
 
-  // Sync with parent changes (e.g. Reset toggle)
+  // Sync with parent changes (e.g. Reset toggle or clear filter)
   useEffect(() => {
-    // If initialValue changes (and we've already handled mount restoration), sync local state
+    // Skip the initial sync since we handle localStorage restore separately
     if (!hasRestored.current) return;
 
-    // Simple comparison to avoid loops - if initialValue is undefined/empty, reset local
-    if (!initialValue?.latitude && filter.latitude) {
-      setFilter({ radius: undefined });
+    const prevLatitude = lastPropValues.current.latitude;
+    const prevLongitude = lastPropValues.current.longitude;
+    const prevRadius = lastPropValues.current.radius;
+
+    const newLatitude = initialValue?.latitude;
+    const newLongitude = initialValue?.longitude;
+    const newRadius = initialValue?.radius;
+
+    // Update ref to current prop values
+    lastPropValues.current = { latitude: newLatitude, longitude: newLongitude, radius: newRadius };
+
+    // Only sync if the prop actually changed (comparing with previous prop, not current state)
+    if (prevLatitude !== newLatitude || prevLongitude !== newLongitude || prevRadius !== newRadius) {
+      if (!newLatitude) {
+        // Clear filter if props cleared
+        setFilter({ radius: undefined });
+      } else {
+        setFilter({
+          latitude: newLatitude,
+          longitude: newLongitude,
+          radius: newRadius,
+          locationName: initialValue?.locationName
+        });
+      }
     }
-    // If parent passes a specific value (e.g. from URL or saved filter load), update local
-    else if (initialValue?.latitude && (initialValue.latitude !== filter.latitude || initialValue.longitude !== filter.longitude)) {
-      setFilter(initialValue);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialValue?.latitude, initialValue?.longitude]);
+  }, [initialValue]);
 
   // Get user's current location using browser geolocation API
   const getCurrentLocation = () => {

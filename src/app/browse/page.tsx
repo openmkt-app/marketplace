@@ -5,10 +5,10 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import MarketplaceClient, { MarketplaceListing, ListingLocation } from '@/lib/marketplace-client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavbarFilter } from '@/contexts/NavbarFilterContext';
 import ListingCard from '@/components/marketplace/ListingCard';
 import ListingImageDisplay from '@/components/marketplace/ListingImageDisplay';
 import FilterPanel, { FilterValues } from '@/components/marketplace/filters/FilterPanel';
+import SmartFilterSummary from '@/components/marketplace/SmartFilterSummary';
 import { LocationFilterValue } from '@/components/marketplace/filters/LocationFilter';
 import {
   filterListingsByCommuteRoute,
@@ -353,11 +353,37 @@ const BrowsePageContent = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filtering state
-  const [filters, setFilters] = useState<FilterValues>({
-    viewMode: 'grid',
-    resultsPerPage: 12,
-    sortBy: 'recency'
+  // Filtering state - initialize with location from localStorage if available
+  const [filters, setFilters] = useState<FilterValues>(() => {
+    // Try to restore location from localStorage on initial render
+    if (typeof window !== 'undefined') {
+      try {
+        const savedLocationJson = localStorage.getItem('last-used-location');
+        if (savedLocationJson) {
+          const savedLocation = JSON.parse(savedLocationJson);
+          if (savedLocation.latitude && savedLocation.longitude) {
+            return {
+              viewMode: 'grid',
+              resultsPerPage: 12,
+              sortBy: 'recency',
+              location: {
+                latitude: savedLocation.latitude,
+                longitude: savedLocation.longitude,
+                radius: undefined, // Don't restore radius on page refresh
+                locationName: savedLocation.locationName
+              }
+            };
+          }
+        }
+      } catch (e) {
+        console.error('Error restoring location from localStorage:', e);
+      }
+    }
+    return {
+      viewMode: 'grid',
+      resultsPerPage: 12,
+      sortBy: 'recency'
+    };
   });
 
   // Track if we've made the initial determination of what to show
@@ -371,9 +397,6 @@ const BrowsePageContent = () => {
 
   // Get auth context to use existing client if available
   const auth = useAuth();
-
-  // Get navbar filter context to inject filter controls into navbar
-  const { setFilterProps } = useNavbarFilter();
 
   // Advanced filters visibility state
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -422,6 +445,50 @@ const BrowsePageContent = () => {
     }));
   }, []);
 
+  // Individual filter clear handlers for SmartFilterSummary chips
+  const handleClearSearch = useCallback(() => {
+    setFilters(prev => ({ ...prev, searchQuery: undefined }));
+  }, []);
+
+  const handleClearCategory = useCallback(() => {
+    setFilters(prev => ({ ...prev, category: undefined, subcategory: undefined }));
+  }, []);
+
+  const handleClearLocation = useCallback(() => {
+    // Clear the radius but keep the location coordinates/name
+    setFilters(prev => ({
+      ...prev,
+      location: prev.location ? { ...prev.location, radius: undefined } : undefined
+    }));
+  }, []);
+
+  const handleClearPrice = useCallback(() => {
+    setFilters(prev => ({ ...prev, price: undefined }));
+  }, []);
+
+  const handleClearCondition = useCallback((conditionId: string) => {
+    setFilters(prev => ({
+      ...prev,
+      condition: prev.condition?.filter(c => c !== conditionId) || []
+    }));
+  }, []);
+
+  const handleClearPostedWithin = useCallback(() => {
+    setFilters(prev => ({ ...prev, postedWithin: undefined }));
+  }, []);
+
+  const handleClearAllFilterChips = useCallback(() => {
+    setFilters(prev => ({
+      ...prev,
+      category: undefined,
+      subcategory: undefined,
+      location: prev.location ? { ...prev.location, radius: undefined } : undefined,
+      price: undefined,
+      condition: [],
+      postedWithin: undefined
+    }));
+  }, []);
+
   // Check if there are any active filters
   const hasActiveFilters = Boolean(
     filters.searchQuery ||
@@ -432,6 +499,15 @@ const BrowsePageContent = () => {
     (filters.location && filters.location.radius) ||
     filters.postedWithin ||
     filters.recentlyViewed
+  );
+
+  // Check if there are filter chips to show (for the clear all button)
+  const hasFilterChips = Boolean(
+    filters.category ||
+    (filters.location && filters.location.radius) ||
+    filters.price ||
+    (filters.condition && filters.condition.length > 0) ||
+    filters.postedWithin
   );
 
   // Compute active categories from actual listings (for dynamic filter chips)
@@ -447,42 +523,13 @@ const BrowsePageContent = () => {
     return Array.from(categorySet);
   }, [allListings]);
 
-  // Update navbar filter props when filter state changes
-  useEffect(() => {
-    setFilterProps({
-      selectedCategory: filters.category,
-      onSelectCategory: handleSelectCategory,
-      itemCount: filteredListings.length,
-      onToggleFilters: toggleAdvancedFilters,
-      showFilters: showAdvancedFilters,
-      sortBy: filters.sortBy || 'recency',
-      onSortChange: handleSortChange,
-      viewMode: filters.viewMode || 'grid',
-      resultsPerPage: filters.resultsPerPage || 12,
-      onViewOptionsChange: handleViewOptionsChange,
-      hasActiveFilters,
-      activeCategories
-    });
-
-    // Clean up when component unmounts (leaving browse page)
-    return () => {
-      setFilterProps(null);
-    };
-  }, [
-    filters.category,
-    filters.sortBy,
-    filters.viewMode,
-    filters.resultsPerPage,
-    filteredListings.length,
-    showAdvancedFilters,
-    hasActiveFilters,
-    activeCategories,
-    handleSelectCategory,
-    handleSortChange,
-    handleViewOptionsChange,
-    toggleAdvancedFilters,
-    setFilterProps
-  ]);
+  // Get location name for display
+  const locationDisplayName = useMemo(() => {
+    if (filters.location?.locationName) {
+      return filters.location.locationName;
+    }
+    return undefined;
+  }, [filters.location]);
 
   // Fetch profile information for a listing
   const fetchAuthorProfile = useCallback(async (did: string, client: MarketplaceClient) => {
@@ -824,6 +871,39 @@ const BrowsePageContent = () => {
           </div>
         )}
 
+        {/* Page Header */}
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold text-gray-900">Browse Listings</h1>
+          <p className="text-sm text-gray-500 mt-1">Discover what the community is selling.</p>
+        </div>
+
+        {/* Smart Filter Summary with controls */}
+        <SmartFilterSummary
+          itemCount={filteredListings.length}
+          searchQuery={filters.searchQuery}
+          selectedCategory={filters.category}
+          locationName={locationDisplayName}
+          locationRadius={filters.location?.radius}
+          priceRange={filters.price}
+          conditions={filters.condition}
+          postedWithin={filters.postedWithin}
+          onClearSearch={handleClearSearch}
+          onClearCategory={handleClearCategory}
+          onClearLocation={handleClearLocation}
+          onClearPrice={handleClearPrice}
+          onClearCondition={handleClearCondition}
+          onClearPostedWithin={handleClearPostedWithin}
+          onClearAllFilters={hasFilterChips ? handleClearAllFilterChips : undefined}
+          onToggleFilters={toggleAdvancedFilters}
+          showFilters={showAdvancedFilters}
+          hasActiveFilters={hasActiveFilters}
+          sortBy={filters.sortBy || 'recency'}
+          onSortChange={handleSortChange}
+          viewMode={filters.viewMode || 'grid'}
+          resultsPerPage={filters.resultsPerPage || 12}
+          onViewOptionsChange={handleViewOptionsChange}
+        />
+
         {showAdvancedFilters && (
           <div className="mb-6">
             <FilterPanel
@@ -834,12 +914,6 @@ const BrowsePageContent = () => {
             />
           </div>
         )}
-
-        {/* Page Header */}
-        <div className="mb-5">
-          <h1 className="text-2xl font-bold text-gray-900">Browse Listings</h1>
-          <p className="text-sm text-gray-500 mt-1">Discover what the community is selling.</p>
-        </div>
 
         <NewListingsToast
           count={newRealTimeListings.length}

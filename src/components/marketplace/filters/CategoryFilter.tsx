@@ -18,6 +18,29 @@ export default function CategoryFilter({
   const [subcategory, setSubcategory] = useState<string | undefined>(selectedSubcategory);
   const isFirstRender = useRef(true);
 
+  // Track the last prop values to detect external changes
+  const lastPropValues = useRef({
+    selectedCategory,
+    selectedSubcategory
+  });
+
+  // Sync local state when props change externally (e.g., from SmartFilterSummary clear)
+  useEffect(() => {
+    const prevCategory = lastPropValues.current.selectedCategory;
+    const prevSubcategory = lastPropValues.current.selectedSubcategory;
+
+    // Update ref to current prop values
+    lastPropValues.current = { selectedCategory, selectedSubcategory };
+
+    // Only sync if the prop actually changed (comparing with previous prop, not current state)
+    if (prevCategory !== selectedCategory) {
+      setCategory(selectedCategory);
+    }
+    if (prevSubcategory !== selectedSubcategory) {
+      setSubcategory(selectedSubcategory);
+    }
+  }, [selectedCategory, selectedSubcategory]);
+
   // Get selected category object
   const selectedCategoryObj = CATEGORIES.find(c => c.id === category);
 

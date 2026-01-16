@@ -26,6 +26,29 @@ export default function RecencyFilter({
   const [showRecentlyViewed, setShowRecentlyViewed] = useState<boolean>(recentlyViewed);
   const isFirstRender = useRef(true);
 
+  // Track the last prop values to detect external changes
+  const lastPropValues = useRef({
+    postedWithin,
+    recentlyViewed
+  });
+
+  // Sync local state when props change externally (e.g., from SmartFilterSummary clear)
+  useEffect(() => {
+    const prevPostedWithin = lastPropValues.current.postedWithin;
+    const prevRecentlyViewed = lastPropValues.current.recentlyViewed;
+
+    // Update ref to current prop values
+    lastPropValues.current = { postedWithin, recentlyViewed };
+
+    // Only sync if the prop actually changed (comparing with previous prop, not current state)
+    if (prevPostedWithin !== postedWithin) {
+      setSelectedTimeFrame(postedWithin);
+    }
+    if (prevRecentlyViewed !== recentlyViewed) {
+      setShowRecentlyViewed(recentlyViewed);
+    }
+  }, [postedWithin, recentlyViewed]);
+
   // Handle time frame selection
   const handleTimeFrameChange = (timeFrame: string) => {
     // Toggle selection if the same time frame is clicked again
