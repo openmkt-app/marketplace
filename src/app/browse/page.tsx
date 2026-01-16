@@ -18,8 +18,7 @@ import {
 } from '@/lib/location-utils';
 import { formatConditionForDisplay } from '@/lib/condition-utils';
 import { formatPrice, formatDate, formatLocation } from '@/lib/price-utils';
-import { formatCategoryDisplay, getCategoryName } from '@/lib/category-utils';
-import { extractSubcategoryFromDescription } from '@/lib/category-utils';
+import { formatCategoryDisplay, getCategoryName, getSubcategoryName, getListingSubcategory, extractSubcategoryFromDescription } from '@/lib/category-utils';
 import { demoListingsData } from './demo-data';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 
@@ -167,10 +166,17 @@ function filterListingsByCategory(
     if (listing.category !== category) return false;
 
     // If subcategory is specified, check it
-    // Note: This is a simplified example since our current data model doesn&apos;t include subcategories
     if (subcategory) {
-      // This would be a more sophisticated check in a real application
-      return true; // Placeholder for subcategory filtering
+      // Get the subcategory name from the ID (e.g., "vintage" -> "Vintage Items")
+      const subcategoryName = getSubcategoryName(category, subcategory);
+      if (!subcategoryName) return true; // If subcategory name not found, don't filter
+
+      // Get the listing's subcategory (from metadata or description)
+      const listingSubcategory = getListingSubcategory(listing);
+      if (!listingSubcategory) return false; // Listing has no subcategory, exclude it
+
+      // Compare subcategory names (case-insensitive)
+      return listingSubcategory.toLowerCase() === subcategoryName.toLowerCase();
     }
 
     return true;
