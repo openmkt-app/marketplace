@@ -20,7 +20,10 @@ import {
   Calendar,
   Share2,
   ShieldCheck,
-  Tag
+  Tag,
+  UserPlus,
+  CheckCircle,
+  Info
 } from 'lucide-react';
 
 interface ListingDetailProps {
@@ -57,29 +60,59 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
   // Contact/Bot state
   const { isLoggedIn, client, user } = useAuth();
   const [isFollowingBotState, setIsFollowingBotState] = useState(false);
-  const [isLoadingFollow, setIsLoadingFollow] = useState(false);
+  const [isFollowingSellerState, setIsFollowingSellerState] = useState(false);
+  const [isLoadingFollowBot, setIsLoadingFollowBot] = useState(false);
+  const [isLoadingFollowSeller, setIsLoadingFollowSeller] = useState(false);
   const [isSendingInterest, setIsSendingInterest] = useState(false);
   const [interestSent, setInterestSent] = useState(false);
+  const [isCheckingFollowStatus, setIsCheckingFollowStatus] = useState(true);
 
-  // Check if user follows bot on mount
+  // Check if this is the user's own listing
+  const isOwnListing = user?.did && listing.authorDid && user.did === listing.authorDid;
+
+  // Storage key for persisting interest sent state
+  const interestStorageKey = listing.uri ? `interest-sent-${listing.uri}` : null;
+
+  // Check if user follows bot and seller on mount
   React.useEffect(() => {
-    async function checkFollow() {
+    async function checkFollowStatus() {
       if (isLoggedIn && client?.agent && user?.did) {
+        setIsCheckingFollowStatus(true);
         try {
-          const { isFollowingBot } = await import('@/lib/bot-utils');
-          const isFollowing = await isFollowingBot(client.agent, user.did);
-          setIsFollowingBotState(isFollowing);
+          const { isFollowingBot, isFollowingUser } = await import('@/lib/bot-utils');
+
+          // Check if interest was already sent (from localStorage)
+          if (interestStorageKey) {
+            const alreadySent = localStorage.getItem(interestStorageKey) === 'true';
+            if (alreadySent) {
+              setInterestSent(true);
+            }
+          }
+
+          // Check if user follows the bot
+          const followsBot = await isFollowingBot(client.agent, user.did);
+          setIsFollowingBotState(followsBot);
+
+          // Check if user follows the seller (only if seller DID exists and not own listing)
+          if (listing.authorDid && !isOwnListing) {
+            const followsSeller = await isFollowingUser(client.agent, listing.authorDid);
+            setIsFollowingSellerState(followsSeller);
+          }
         } catch (e) {
-          console.error('Error checking bot follow:', e);
+          console.error('Error checking follow status:', e);
+        } finally {
+          setIsCheckingFollowStatus(false);
         }
+      } else {
+        setIsCheckingFollowStatus(false);
       }
     }
-    checkFollow();
-  }, [isLoggedIn, client, user]);
+    checkFollowStatus();
+  }, [isLoggedIn, client, user, listing.authorDid, isOwnListing, interestStorageKey]);
 
   const handleFollowBot = async () => {
     if (!client?.agent) return;
-    setIsLoadingFollow(true);
+    setIsLoadingFollowBot(true);
     try {
       const { followBot } = await import('@/lib/bot-utils');
       const success = await followBot(client.agent);
@@ -92,14 +125,37 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
       console.error('Follow bot error:', e);
       alert('Error following bot');
     } finally {
-      setIsLoadingFollow(false);
+      setIsLoadingFollowBot(false);
     }
   };
 
-  const handleInterestedClick = async () => {
-    if (!listing.authorDid || !user?.handle) return;
+  const handleFollowSeller = async () => {
+    if (!client?.agent || !listing.authorDid) return;
+    setIsLoadingFollowSeller(true);
+    try {
+      const { followUser } = await import('@/lib/bot-utils');
+      const success = await followUser(client.agent, listing.authorDid);
+      if (success) {
+        setIsFollowingSellerState(true);
+      } else {
+        alert('Failed to follow the seller. Please try again.');
+      }
+    } catch (e) {
+      console.error('Follow seller error:', e);
+      alert('Error following seller');
+    } finally {
+      setIsLoadingFollowSeller(false);
+    }
+  };
+
+  // State for rate limit error
+  const [rateLimitError, setRateLimitError] = useState<string | null>(null);
+
+  const handleShowInterest = async () => {
+    if (!listing.authorDid || !user?.handle || !user?.did) return;
 
     setIsSendingInterest(true);
+    setRateLimitError(null);
     try {
       const response = await fetch('/api/bot/notify', {
         method: 'POST',
@@ -108,7 +164,8 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
           sellerDid: listing.authorDid,
           listingTitle: listing.title,
           listingPath: window.location.href,
-          buyerHandle: user.handle
+          buyerHandle: user.handle,
+          buyerDid: user.did
         })
       });
 
@@ -116,6 +173,13 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
 
       if (response.ok) {
         setInterestSent(true);
+        // Persist to localStorage to prevent re-sending
+        if (interestStorageKey) {
+          localStorage.setItem(interestStorageKey, 'true');
+        }
+      } else if (response.status === 429) {
+        // Rate limit exceeded
+        setRateLimitError(data.message || `Rate limit exceeded. Please wait ${data.resetInMinutes || 60} minutes before trying again.`);
       } else {
         alert(`Failed to notify seller: ${data.error || 'Unknown error'}`);
       }
@@ -126,6 +190,18 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
       setIsSendingInterest(false);
     }
   };
+
+  // Determine the current step in the interest flow
+  const getInterestFlowStep = (): 'loading' | 'follow-bot' | 'follow-seller' | 'ready' | 'sent' | 'own-listing' => {
+    if (isOwnListing) return 'own-listing';
+    if (isCheckingFollowStatus) return 'loading';
+    if (interestSent) return 'sent';
+    if (!isFollowingBotState) return 'follow-bot';
+    if (!isFollowingSellerState) return 'follow-seller';
+    return 'ready';
+  };
+
+  const flowStep = getInterestFlowStep();
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -300,72 +376,188 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
             </div>
           </div>
 
-          {/* Contact Button */}
+          {/* Show Interest Section */}
           <div className="space-y-3">
             {isLoggedIn ? (
               <>
-                {!isFollowingBotState ? (
+                {/* Step indicator for multi-step flow */}
+                {flowStep !== 'sent' && flowStep !== 'own-listing' && flowStep !== 'loading' && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+                      isFollowingBotState ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'
+                    }`}>
+                      {isFollowingBotState ? <CheckCircle size={14} /> : '1'}
+                    </div>
+                    <div className={`h-0.5 flex-1 ${isFollowingBotState ? 'bg-green-200' : 'bg-gray-200'}`} />
+                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+                      isFollowingSellerState ? 'bg-green-100 text-green-600' : isFollowingBotState ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'
+                    }`}>
+                      {isFollowingSellerState ? <CheckCircle size={14} /> : '2'}
+                    </div>
+                    <div className={`h-0.5 flex-1 ${isFollowingSellerState ? 'bg-green-200' : 'bg-gray-200'}`} />
+                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+                      flowStep === 'ready' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'
+                    }`}>
+                      3
+                    </div>
+                  </div>
+                )}
+
+                {/* Loading state */}
+                {flowStep === 'loading' && (
                   <button
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={handleFollowBot}
-                    disabled={isLoadingFollow}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-gray-100 text-gray-500 font-medium rounded-xl"
+                    disabled
                   >
-                    {isLoadingFollow ? (
-                      <>
-                        <Loader2 size={20} className="animate-spin" />
-                        Following...
-                      </>
-                    ) : (
-                      <>
-                        <MessageCircle size={20} />
-                        Enable Messaging
-                      </>
-                    )}
-                  </button>
-                ) : (
-                  <button
-                    className={`w-full flex items-center justify-center gap-2 px-6 py-3.5 font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                      interestSent
-                        ? 'bg-green-600 text-white'
-                        : 'bg-blue-600 hover:bg-blue-700 text-white'
-                    }`}
-                    onClick={handleInterestedClick}
-                    disabled={isSendingInterest || interestSent}
-                  >
-                    {isSendingInterest ? (
-                      <>
-                        <Loader2 size={20} className="animate-spin" />
-                        Contacting Seller...
-                      </>
-                    ) : interestSent ? (
-                      <>
-                        <Send size={20} />
-                        Interest Sent!
-                      </>
-                    ) : (
-                      <>
-                        <MessageCircle size={20} />
-                        Contact Seller
-                      </>
-                    )}
+                    <Loader2 size={20} className="animate-spin" />
+                    Checking status...
                   </button>
                 )}
 
-                {interestSent && (
-                  <p className="text-xs text-gray-500 text-center">
-                    To protect privacy, our bot introduces you to the seller.
-                    Please wait for them to accept your request.
-                  </p>
+                {/* Own listing - can't show interest in your own listing */}
+                {flowStep === 'own-listing' && (
+                  <div className="p-4 bg-gray-50 rounded-xl text-center">
+                    <p className="text-sm text-gray-600">This is your listing</p>
+                  </div>
+                )}
+
+                {/* Step 1: Follow the bot */}
+                {flowStep === 'follow-bot' && (
+                  <>
+                    <button
+                      className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleFollowBot}
+                      disabled={isLoadingFollowBot}
+                    >
+                      {isLoadingFollowBot ? (
+                        <>
+                          <Loader2 size={20} className="animate-spin" />
+                          Following...
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus size={20} />
+                          Step 1: Follow Our Bot
+                        </>
+                      )}
+                    </button>
+                    <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
+                      <Info size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-blue-700">
+                        Bluesky requires mutual follows to chat. Follow our bot to enable the introduction system.
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {/* Step 2: Follow the seller */}
+                {flowStep === 'follow-seller' && (
+                  <>
+                    <button
+                      className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleFollowSeller}
+                      disabled={isLoadingFollowSeller}
+                    >
+                      {isLoadingFollowSeller ? (
+                        <>
+                          <Loader2 size={20} className="animate-spin" />
+                          Following...
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus size={20} />
+                          Step 2: Follow the Seller
+                        </>
+                      )}
+                    </button>
+                    <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
+                      <Info size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-blue-700">
+                        Follow the seller so they can message you back after seeing your interest.
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {/* Step 3: Show interest (ready to send) */}
+                {flowStep === 'ready' && (
+                  <>
+                    {rateLimitError ? (
+                      <>
+                        <div className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-amber-100 text-amber-700 font-medium rounded-xl">
+                          <Info size={20} />
+                          Limit Reached
+                        </div>
+                        <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg">
+                          <Info size={16} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                          <p className="text-xs text-amber-700">
+                            {rateLimitError}
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={handleShowInterest}
+                          disabled={isSendingInterest}
+                        >
+                          {isSendingInterest ? (
+                            <>
+                              <Loader2 size={20} className="animate-spin" />
+                              Sending...
+                            </>
+                          ) : (
+                            <>
+                              <Send size={20} />
+                              Show Interest
+                            </>
+                          )}
+                        </button>
+                        <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
+                          <Info size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                          <p className="text-xs text-blue-700">
+                            Our bot will introduce you to the seller via Bluesky DM. They can then message you directly.
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+
+                {/* Interest sent - success state */}
+                {flowStep === 'sent' && (
+                  <>
+                    <div className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-green-100 text-green-700 font-medium rounded-xl">
+                      <CheckCircle size={20} />
+                      Interest Sent!
+                    </div>
+                    <div className="flex items-start gap-2 p-3 bg-green-50 rounded-lg">
+                      <Info size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-green-700">
+                        The seller has been notified of your interest. They will reach out to you via Bluesky DM if interested.
+                        Please wait for them to respond.
+                      </p>
+                    </div>
+                  </>
                 )}
               </>
             ) : (
-              <button
-                className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
-                onClick={() => alert('Please log in to contact the seller')}
-              >
-                <MessageCircle size={20} />
-                Log in to Contact Seller
-              </button>
+              <>
+                <Link
+                  href="/login"
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
+                >
+                  <MessageCircle size={20} />
+                  Log in to Show Interest
+                </Link>
+                <div className="flex items-start gap-2 p-3 bg-gray-50 rounded-lg">
+                  <Info size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-gray-600">
+                    Log in with your Bluesky account to contact the seller.
+                  </p>
+                </div>
+              </>
             )}
           </div>
         </div>

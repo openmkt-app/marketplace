@@ -84,3 +84,33 @@ export async function followBot(agent: BskyAgent): Promise<boolean> {
 export function getBotProfileUrl(): string {
     return `https://bsky.app/profile/${BOT_HANDLE}`;
 }
+
+/**
+ * Check if the current user is following a specific user (e.g., seller)
+ */
+export async function isFollowingUser(
+    agent: BskyAgent,
+    targetDid: string
+): Promise<boolean> {
+    try {
+        // Get the target user's profile - the viewer.following field tells us if we follow them
+        const profile = await agent.getProfile({ actor: targetDid });
+        return !!profile.data.viewer?.following;
+    } catch (error) {
+        console.error('Error checking if following user:', error);
+        return false;
+    }
+}
+
+/**
+ * Follow a specific user
+ */
+export async function followUser(agent: BskyAgent, targetDid: string): Promise<boolean> {
+    try {
+        await agent.follow(targetDid);
+        return true;
+    } catch (error) {
+        console.error('Error following user:', error);
+        return false;
+    }
+}

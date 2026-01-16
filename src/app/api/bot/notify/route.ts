@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getBotAgent } from '@/lib/bot-client';
 import { BskyAgent } from '@atproto/api';
+import { checkRateLimit } from '@/lib/rate-limiter';
 
 // Helper to get direct chat service agent
 async function getChatAgent(mainAgent: BskyAgent) {
@@ -29,23 +30,38 @@ async function getChatAgent(mainAgent: BskyAgent) {
 
 export async function POST(request: Request) {
     try {
-        const { sellerDid, listingTitle, listingPath, buyerHandle } = await request.json();
+        const { sellerDid, listingTitle, listingPath, buyerHandle, buyerDid } = await request.json();
 
-        if (!sellerDid || !listingTitle || !buyerHandle) {
+        if (!sellerDid || !listingTitle || !buyerHandle || !buyerDid) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        }
+
+        // Check rate limit for the buyer
+        const rateLimitResult = checkRateLimit(buyerDid);
+        if (rateLimitResult.isLimited) {
+            return NextResponse.json({
+                error: 'Rate limit exceeded',
+                message: rateLimitResult.message,
+                remainingRequests: 0,
+                resetInMinutes: rateLimitResult.resetInMinutes
+            }, { status: 429 });
         }
 
         // 1. Login Bot
         const botAgent = await getBotAgent();
 
         // 2. Prepare Message
-        const message = `Hi! User @${buyerHandle} is interested in your listing: "${listingTitle}".
-    
-They cannot message you directly due to your privacy settings.
-    
-Please follow them back to enable direct chat: https://bsky.app/profile/${buyerHandle}
-    
-Listing: ${listingPath}`;
+        const message = `Someone is interested in your "${listingTitle}" 👋
+
+Hi! @${buyerHandle} saw your listing and is interested in buying it!
+
+Since you don't follow each other yet, they are unable to message you first. You will need to start the conversation.
+
+To connect:
+• Go to their profile: https://bsky.app/profile/${buyerHandle}
+• Send them a message (or follow back) to arrange the details.
+
+📦 View Listing: ${listingPath}`;
 
         // 3. Send Message via Chat Service
         // We reuse the logic found to be stable: Direct Connection + Service Auth
@@ -79,7 +95,11 @@ Listing: ${listingPath}`;
             return NextResponse.json({ error: 'Failed to send message to seller' }, { status: 500 });
         }
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({
+            success: true,
+            remainingRequests: rateLimitResult.remainingRequests,
+            resetInMinutes: rateLimitResult.resetInMinutes
+        });
 
     } catch (error) {
         console.error('Error in bot notify API:', error);

@@ -71,8 +71,8 @@ const ListingCard = React.memo(({ listing, showDebug = false }: ListingCardProps
           </span>
         </div>
 
-        {/* Quick View Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex justify-center z-10">
+        {/* Quick View Overlay - pointer-events-none so clicks pass through to the card link */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex justify-center z-20 pointer-events-none">
           <span className="px-4 py-2 bg-white text-slate-900 rounded-lg font-medium text-sm shadow-lg">
             Quick View
           </span>

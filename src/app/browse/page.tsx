@@ -977,11 +977,14 @@ const BrowsePageContent = () => {
                   // Format location - clean up prefixes and abbreviate state
                   const locationString = formatLocation(listing.location.locality, listing.location.state);
 
+                  const listingHref = `/listing/${encodeURIComponent(listing.uri || listing.title)}`;
+
                   return (
-                    <div
+                    <Link
                       key={index}
+                      href={listingHref}
                       onClick={() => listing.uri ? recordListingView(listing.uri) : null}
-                      className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex hover:shadow-xl hover:border-sky-200 transition-all duration-300 group cursor-pointer"
+                      className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex hover:shadow-xl hover:border-sky-200 transition-all duration-300 group"
                     >
                       {/* Image with condition badge */}
                       <div className="w-72 flex-shrink-0 relative bg-gray-100 overflow-hidden">
@@ -1063,14 +1066,11 @@ const BrowsePageContent = () => {
 
                       {/* Action Button - separate column, centered */}
                       <div className="hidden sm:flex flex-col justify-center items-center px-8 border-l border-gray-50 bg-gray-50/30 min-w-[160px]">
-                        <Link
-                          href={`/listing/${encodeURIComponent(listing.uri || listing.title)}`}
-                          className="flex items-center gap-2 bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md shadow-sky-200 group-hover:bg-sky-700 group-hover:shadow-sky-300 transition-all whitespace-nowrap"
-                        >
+                        <span className="flex items-center gap-2 bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md shadow-sky-200 group-hover:bg-sky-700 group-hover:shadow-sky-300 transition-all whitespace-nowrap">
                           View Details
-                        </Link>
+                        </span>
                       </div>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>
@@ -1143,11 +1143,14 @@ const BrowsePageContent = () => {
                   // Format location - clean up prefixes and abbreviate state
                   const locationString = formatLocation(listing.location.locality, listing.location.state);
 
+                  const listingHref = `/listing/${encodeURIComponent(listing.uri || listing.title)}`;
+
                   return (
-                    <div
+                    <Link
                       key={index}
+                      href={listingHref}
                       onClick={() => listing.uri ? recordListingView(listing.uri) : null}
-                      className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex hover:shadow-xl hover:border-sky-200 transition-all duration-300 group cursor-pointer"
+                      className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex hover:shadow-xl hover:border-sky-200 transition-all duration-300 group"
                     >
                       {/* Image with condition badge */}
                       <div className="w-72 flex-shrink-0 relative bg-gray-100 overflow-hidden">
@@ -1229,14 +1232,11 @@ const BrowsePageContent = () => {
 
                       {/* Action Button - separate column, centered */}
                       <div className="hidden sm:flex flex-col justify-center items-center px-8 border-l border-gray-50 bg-gray-50/30 min-w-[160px]">
-                        <Link
-                          href={`/listing/${encodeURIComponent(listing.uri || listing.title)}`}
-                          className="flex items-center gap-2 bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md shadow-sky-200 group-hover:bg-sky-700 group-hover:shadow-sky-300 transition-all whitespace-nowrap"
-                        >
+                        <span className="flex items-center gap-2 bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md shadow-sky-200 group-hover:bg-sky-700 group-hover:shadow-sky-300 transition-all whitespace-nowrap">
                           View Details
-                        </Link>
+                        </span>
                       </div>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>
