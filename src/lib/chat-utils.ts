@@ -188,32 +188,13 @@ export async function sendMessageToSeller(
  * This uses chat.bsky.convo.listConvos proxied through the user's PDS
  */
 export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
-  try {
-    const session = agent.session;
-    if (!session || !session.accessJwt) return 0;
+  const session = agent.session;
+  if (!session || !session.accessJwt) return 0;
 
-    // User requested to try `agent.withProxy`
-    // We cast to any because this method might not be in the public types definitions of our version
-    if (typeof (agent as any).withProxy === 'function') {
-      console.log('getUnreadChatCount: Using agent.withProxy...');
-      const proxyAgent = (agent as any).withProxy('bsky_chat', 'did:web:api.bsky.chat');
-
-      const response = await proxyAgent.api.chat.bsky.convo.listConvos({ limit: 50 });
-
-      if (response.success) {
-        const convos = response.data.convos;
-        const unreadCount = convos.reduce((total: number, convo: any) => {
-          return total + (convo.unreadCount || 0);
-        }, 0);
-        console.log(`getUnreadChatCount: withProxy success! Found ${unreadCount} unread messages.`);
-        return unreadCount;
-      } else {
-        console.warn('getUnreadChatCount: withProxy failed', response);
-      }
-    } else {
-      console.warn('getUnreadChatCount: agent.withProxy is not available, falling back to server proxy.');
-
-      // Fallback to Server-Side Proxy (which we know works for headers)
+  // Helper to run the server-side proxy fallback
+  const runServerFallback = async () => {
+    // console.log('getUnreadChatCount: Running server-side proxy fallback...');
+    try {
       // Determine PDS endpoint from DID Doc if available (most reliable)
       let pdsEndpoint = '';
       const sessionAny = session as any;
@@ -256,14 +237,39 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
         const unreadCount = convos.reduce((total: number, convo: any) => {
           return total + (convo.unreadCount || 0);
         }, 0);
+        // console.log(`getUnreadChatCount: Server proxy success! Found ${unreadCount} unread messages.`);
         return unreadCount;
       }
+    } catch (err) {
+      console.warn('getUnreadChatCount: Server fallback failed', err);
     }
-  } catch (error: any) {
-    console.warn('getUnreadChatCount: Error', error);
+    return 0;
+  };
+
+  // Attempt 1: Try `agent.withProxy` if available (User Request)
+  try {
+    if (typeof (agent as any).withProxy === 'function') {
+      // console.log('getUnreadChatCount: Attempting agent.withProxy...');
+      const proxyAgent = (agent as any).withProxy('bsky_chat', 'did:web:api.bsky.chat');
+      const response = await proxyAgent.api.chat.bsky.convo.listConvos({ limit: 50 });
+
+      if (response.success) {
+        const convos = response.data.convos;
+        const unreadCount = convos.reduce((total: number, convo: any) => {
+          return total + (convo.unreadCount || 0);
+        }, 0);
+        // console.log(`getUnreadChatCount: withProxy success! Found ${unreadCount} unread messages.`);
+        return unreadCount;
+      }
+    } else {
+      // console.log('getUnreadChatCount: agent.withProxy not available.');
+    }
+  } catch (error) {
+    console.warn('getUnreadChatCount: agent.withProxy failed, switching to fallback...', error);
   }
 
-  return 0;
+  // Attempt 2: Fallback to Server Proxy (if withProxy didn't exist OR failed/threw error)
+  return await runServerFallback();
 }
 
 /**
