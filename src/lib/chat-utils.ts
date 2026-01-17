@@ -191,6 +191,31 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
   const session = agent.session;
   if (!session || !session.accessJwt) return 0;
 
+  const sumUnread = (convos: any[]) =>
+    convos.reduce((total: number, convo: any) => total + (convo.unreadCount || 0), 0);
+
+  // Attempt 1: Use service auth directly with api.bsky.chat (most reliable)
+  try {
+    const chatAgent = new BskyAgent({ service: 'https://api.bsky.chat' });
+    const boundAuth = await agent.api.com.atproto.server.getServiceAuth({
+      aud: 'did:web:api.bsky.chat',
+      lxm: 'chat.bsky.convo.listConvos',
+    });
+
+    if (boundAuth.success) {
+      const response = await chatAgent.api.chat.bsky.convo.listConvos(
+        { limit: 50 },
+        { headers: { Authorization: `Bearer ${boundAuth.data.token}` } }
+      );
+
+      if (response.success) {
+        return sumUnread(response.data.convos);
+      }
+    }
+  } catch (error) {
+    console.warn('getUnreadChatCount: service auth failed, trying proxy...', error);
+  }
+
   // Helper to run the server-side proxy fallback
   const runServerFallback = async () => {
     // console.log('getUnreadChatCount: Running server-side proxy fallback...');
@@ -234,9 +259,7 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
       if (response.ok) {
         const data = await response.json();
         const convos = data.convos as any[];
-        const unreadCount = convos.reduce((total: number, convo: any) => {
-          return total + (convo.unreadCount || 0);
-        }, 0);
+        const unreadCount = sumUnread(convos);
         // console.log(`getUnreadChatCount: Server proxy success! Found ${unreadCount} unread messages.`);
         return unreadCount;
       }
@@ -246,7 +269,7 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
     return 0;
   };
 
-  // Attempt 1: Try `agent.withProxy` if available (User Request)
+  // Attempt 2: Try `agent.withProxy` if available (User Request)
   try {
     if (typeof (agent as any).withProxy === 'function') {
       // console.log('getUnreadChatCount: Attempting agent.withProxy...');
@@ -255,9 +278,7 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
 
       if (response.success) {
         const convos = response.data.convos;
-        const unreadCount = convos.reduce((total: number, convo: any) => {
-          return total + (convo.unreadCount || 0);
-        }, 0);
+        const unreadCount = sumUnread(convos);
         // console.log(`getUnreadChatCount: withProxy success! Found ${unreadCount} unread messages.`);
         return unreadCount;
       }
@@ -268,7 +289,7 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
     console.warn('getUnreadChatCount: agent.withProxy failed, switching to fallback...', error);
   }
 
-  // Attempt 2: Fallback to Server Proxy (if withProxy didn't exist OR failed/threw error)
+  // Attempt 3: Fallback to Server Proxy (if withProxy didn't exist OR failed/threw error)
   return await runServerFallback();
 }
 

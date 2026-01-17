@@ -381,7 +381,7 @@ const HeroSection = ({ listingCount, locationName }: { listingCount: number; loc
             <img
               className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-700"
               alt="Product"
-              src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=1000&auto=format&fit=crop"
+              src="/images/headphone-hero.jpg"
             />
             <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-3 flex justify-end">
               <span className="bg-yellow-400 text-slate-900 text-xs font-bold px-2 py-1 rounded shadow-sm">$120.00</span>

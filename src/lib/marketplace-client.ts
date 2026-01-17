@@ -107,8 +107,36 @@ export class MarketplaceClient {
     this.rateLimitInterval = 30 * 1000; // 30 seconds between API calls
   }
 
+  private async resolvePdsEndpoint(handle: string): Promise<string | null> {
+    const cleanHandle = handle.startsWith('@') ? handle.slice(1) : handle;
+
+    try {
+      const resolved = await this.agent.resolveHandle({ handle: cleanHandle });
+      const did = resolved.data.did;
+      const didDocResponse = await this.agent.com.atproto.identity.resolveDid({ did });
+      const didDoc = (didDocResponse.data as any).didDoc;
+      const services = Array.isArray(didDoc?.service) ? didDoc.service : [];
+      const pdsService = services.find(
+        (service: any) => service.id === '#atproto_pds' || service.type === 'AtprotoPersonalDataServer'
+      );
+
+      if (pdsService?.serviceEndpoint) {
+        return pdsService.serviceEndpoint as string;
+      }
+    } catch (error) {
+      logger.warn('Failed to resolve PDS endpoint for handle', error as Error);
+    }
+
+    return null;
+  }
+
   async login(username: string, password: string): Promise<SessionData> {
     try {
+      const resolvedPds = await this.resolvePdsEndpoint(username);
+      if (resolvedPds && this.agent.serviceUrl.toString() !== resolvedPds) {
+        this.agent = new BskyAgent({ service: resolvedPds });
+      }
+
       logger.info(`Attempting to login user: ${username}`);
       logger.logApiRequest('POST', 'com.atproto.server.createSession', { identifier: username });
       const response = await this.agent.login({

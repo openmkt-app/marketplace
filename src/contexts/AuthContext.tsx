@@ -209,6 +209,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
         }
 
+        // Start a server-side chat session for unread counts (no storage on client)
+        try {
+          await fetch('/api/chat/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ handle: username, password }),
+          });
+        } catch (error) {
+          console.warn('Failed to initialize chat session', error);
+        }
+
         // Track successful login
         trackLogin('bluesky');
 

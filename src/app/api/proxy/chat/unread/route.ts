@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getChatSession, updateChatSession } from '@/lib/chat-session-store';
 
 export async function GET(request: NextRequest) {
     try {
@@ -14,21 +15,67 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Missing pdsEndpoint parameter' }, { status: 400 });
         }
 
-        // Construct the PDS URL - ensure no trailing slash
         const cleanEndpoint = pdsEndpoint.replace(/\/$/, '');
+        const sessionUrl = `${cleanEndpoint}/xrpc/com.atproto.server.getSession`;
+
+        let did: string | null = null;
+        try {
+            const sessionResp = await fetch(sessionUrl, {
+                method: 'GET',
+                headers: {
+                    Authorization: authHeader,
+                },
+            });
+            if (sessionResp.ok) {
+                const sessionData = await sessionResp.json();
+                did = sessionData.did;
+            }
+        } catch {
+            // Best-effort lookup only
+        }
+
+        let tokenToUse = authHeader;
+        if (did) {
+            const stored = getChatSession(did);
+            if (stored?.accessJwt) {
+                tokenToUse = `Bearer ${stored.accessJwt}`;
+            }
+        }
+
         const upstreamUrl = `${cleanEndpoint}/xrpc/chat.bsky.convo.listConvos?limit=50`;
 
+        const runChatFetch = async (authorization: string) => {
+            return fetch(upstreamUrl, {
+                method: 'GET',
+                headers: {
+                    Authorization: authorization,
+                    'Atproto-Proxy': 'did:web:api.bsky.chat#bsky_chat',
+                }
+            });
+        };
+
         // Perform the server-to-server request (mimicking the Python script)
-        const response = await fetch(upstreamUrl, {
-            method: 'GET',
-            headers: {
-                // Forward the Bearer token
-                'Authorization': authHeader,
-                // Critical proxy header
-                'Atproto-Proxy': 'did:web:api.bsky.chat#bsky_chat',
-                // Ensure no cookies or browser artifacts are sent (default in node-fetch/Next server)
+        let response = await runChatFetch(tokenToUse);
+
+        if (!response.ok && did) {
+            const stored = getChatSession(did);
+            if (stored?.refreshJwt) {
+                const refreshResp = await fetch(`${cleanEndpoint}/xrpc/com.atproto.server.refreshSession`, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${stored.refreshJwt}`,
+                    },
+                });
+
+                if (refreshResp.ok) {
+                    const refreshed = await refreshResp.json();
+                    if (refreshed.accessJwt) {
+                        updateChatSession(did, { accessJwt: refreshed.accessJwt, refreshJwt: refreshed.refreshJwt });
+                        response = await runChatFetch(`Bearer ${refreshed.accessJwt}`);
+                    }
+                }
             }
-        });
+        }
 
         if (!response.ok) {
             const errorText = await response.text();
