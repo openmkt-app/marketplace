@@ -188,68 +188,79 @@ export async function sendMessageToSeller(
  * This uses chat.bsky.convo.listConvos proxied through the user's PDS
  */
 export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
-  // Fallback: Try calling the chat API directly via raw fetch (bypassing agent wrapping)
-  // This allows us to control the headers exactly as the successful Python script did.
   try {
     const session = agent.session;
     if (!session || !session.accessJwt) return 0;
 
-    // Determine PDS endpoint from DID Doc if available (most reliable)
-    // Cast to any because didDoc is not typed in AtpSessionData but exists at runtime
-    let pdsEndpoint = '';
-    const sessionAny = session as any;
+    // User requested to try `agent.withProxy`
+    // We cast to any because this method might not be in the public types definitions of our version
+    if (typeof (agent as any).withProxy === 'function') {
+      console.log('getUnreadChatCount: Using agent.withProxy...');
+      const proxyAgent = (agent as any).withProxy('bsky_chat', 'did:web:api.bsky.chat');
 
-    if (sessionAny.didDoc && sessionAny.didDoc.service) {
-      const pdsService = sessionAny.didDoc.service.find(
-        (s: any) => s.id === '#atproto_pds' || s.type === 'AtprotoPersonalDataServer'
-      );
-      if (pdsService && pdsService.serviceEndpoint) {
-        pdsEndpoint = pdsService.serviceEndpoint;
-      }
-    }
+      const response = await proxyAgent.api.chat.bsky.convo.listConvos({ limit: 50 });
 
-    // Fallback to agent properties if DID Doc lookup failed
-    if (!pdsEndpoint) {
-      if (agent.pdsUrl) {
-        pdsEndpoint = agent.pdsUrl.toString();
-      } else if (agent.service) {
-        pdsEndpoint = agent.service.toString();
+      if (response.success) {
+        const convos = response.data.convos;
+        const unreadCount = convos.reduce((total: number, convo: any) => {
+          return total + (convo.unreadCount || 0);
+        }, 0);
+        console.log(`getUnreadChatCount: withProxy success! Found ${unreadCount} unread messages.`);
+        return unreadCount;
       } else {
-        pdsEndpoint = 'https://bsky.social';
+        console.warn('getUnreadChatCount: withProxy failed', response);
       }
-    }
-
-    // Ensure no trailing slash
-    pdsEndpoint = pdsEndpoint.replace(/\/$/, '');
-
-    // console.log(`getUnreadChatCount: Targeting PDS at ${pdsEndpoint}`);
-
-    // Call our own Next.js API route to proxy the request
-    // This avoids CORS issues and cookie conflicts completely by doing the fetch server-side
-    const proxyUrl = `/api/proxy/chat/unread?pdsEndpoint=${encodeURIComponent(pdsEndpoint)}`;
-
-    const response = await fetch(proxyUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${session.accessJwt}`,
-        // No Need for Atproto-Proxy header here, the server route adds it
-      }
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      const convos = data.convos as any[];
-      const unreadCount = convos.reduce((total, convo) => {
-        return total + (convo.unreadCount || 0);
-      }, 0);
-      // console.log(`getUnreadChatCount: Proxy success! Found ${unreadCount} unread messages.`);
-      return unreadCount;
     } else {
-      // Fail silently on error
-      // console.warn(`getUnreadChatCount: Proxy failed with status ${response.status}`);
+      console.warn('getUnreadChatCount: agent.withProxy is not available, falling back to server proxy.');
+
+      // Fallback to Server-Side Proxy (which we know works for headers)
+      // Determine PDS endpoint from DID Doc if available (most reliable)
+      let pdsEndpoint = '';
+      const sessionAny = session as any;
+
+      if (sessionAny.didDoc && sessionAny.didDoc.service) {
+        const pdsService = sessionAny.didDoc.service.find(
+          (s: any) => s.id === '#atproto_pds' || s.type === 'AtprotoPersonalDataServer'
+        );
+        if (pdsService && pdsService.serviceEndpoint) {
+          pdsEndpoint = pdsService.serviceEndpoint;
+        }
+      }
+
+      // Fallback to agent properties if DID Doc lookup failed
+      if (!pdsEndpoint) {
+        if (agent.pdsUrl) {
+          pdsEndpoint = agent.pdsUrl.toString();
+        } else if (agent.service) {
+          pdsEndpoint = agent.service.toString();
+        } else {
+          pdsEndpoint = 'https://bsky.social';
+        }
+      }
+
+      // Ensure no trailing slash
+      pdsEndpoint = pdsEndpoint.replace(/\/$/, '');
+
+      const proxyUrl = `/api/proxy/chat/unread?pdsEndpoint=${encodeURIComponent(pdsEndpoint)}`;
+
+      const response = await fetch(proxyUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.accessJwt}`,
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const convos = data.convos as any[];
+        const unreadCount = convos.reduce((total: number, convo: any) => {
+          return total + (convo.unreadCount || 0);
+        }, 0);
+        return unreadCount;
+      }
     }
-  } catch (fallbackError: any) {
-    // console.warn('getUnreadChatCount: Raw fetch fallback failed:', fallbackError);
+  } catch (error: any) {
+    console.warn('getUnreadChatCount: Error', error);
   }
 
   return 0;
