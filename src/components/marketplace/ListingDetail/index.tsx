@@ -25,6 +25,7 @@ import {
   CheckCircle,
   Info
 } from 'lucide-react';
+import { trackListingView, trackInterest } from '@/lib/analytics';
 
 interface ListingDetailProps {
   listing: MarketplaceListing & {
@@ -117,6 +118,17 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
     checkFollowStatus();
   }, [isLoggedIn, client, user, listing.authorDid, isOwnListing, interestStorageKey]);
 
+  // Track listing view on mount
+  React.useEffect(() => {
+    trackListingView({
+      uri: listing.uri,
+      title: listing.title,
+      category: listing.category,
+      price: listing.price,
+      authorDid: listing.authorDid
+    });
+  }, [listing]);
+
   const handleFollowBot = async () => {
     if (!client?.agent) return;
     setIsLoadingFollowBot(true);
@@ -184,6 +196,15 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
         if (interestStorageKey) {
           localStorage.setItem(interestStorageKey, 'true');
         }
+
+        // Track interest (lead generation)
+        trackInterest({
+          uri: listing.uri,
+          title: listing.title,
+          category: listing.category,
+          price: listing.price,
+          sellerDid: listing.authorDid
+        });
       } else if (response.status === 429) {
         // Rate limit exceeded
         setRateLimitError(data.message || `Rate limit exceeded. Please wait ${data.resetInMinutes || 60} minutes before trying again.`);

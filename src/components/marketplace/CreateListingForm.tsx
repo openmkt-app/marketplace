@@ -9,6 +9,7 @@ import { CATEGORIES, CONDITIONS, SubcategoryOption } from '@/lib/category-data';
 import { isFollowingBot, followBot } from '@/lib/bot-utils';
 import LiveListingPreview from './LiveListingPreview';
 import { createBlueskyCdnImageUrls } from '@/lib/image-utils';
+import { trackCreateListing } from '@/lib/analytics';
 
 // Define the SavedLocation type
 interface SavedLocation {
@@ -699,6 +700,13 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
       // Pass the listing URI to the onSuccess callback
       if (onSuccess) onSuccess(listingUri);
+
+      // Track listing creation
+      trackCreateListing({
+        title: listingDataRaw.title,
+        category: listingDataRaw.category,
+        price: listingDataRaw.price
+      });
     } catch (err) {
       setError(`Failed to ${mode === 'edit' ? 'update' : 'create'} listing: ${err instanceof Error ? err.message : String(err)}`);
     } finally {

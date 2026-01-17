@@ -5,6 +5,7 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { NavbarFilterProvider } from '@/contexts/NavbarFilterContext'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
+import { GoogleAnalytics } from '@next/third-parties/google'
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' })
 
@@ -32,6 +33,9 @@ export default function RootLayout({
             <Footer />
           </NavbarFilterProvider>
         </AuthProvider>
+        {process.env.NEXT_PUBLIC_GA_ID && (
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+        )}
       </body>
     </html>
   )

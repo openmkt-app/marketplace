@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import MarketplaceClient, { SessionData } from '@/lib/marketplace-client';
 import { addMarketplaceDID } from '@/lib/marketplace-dids';
+import { trackLogin } from '@/lib/analytics';
 
 // Define the Auth user type
 type User = {
@@ -207,6 +208,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (typeof window !== 'undefined') {
           localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
         }
+
+        // Track successful login
+        trackLogin('bluesky');
 
         return true;
       }
