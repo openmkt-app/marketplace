@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import MarketplaceClient, { MarketplaceListing, ListingLocation } from '@/lib/marketplace-client';
+import MarketplaceClient, { MarketplaceListing, ListingLocation, fetchPublicListings } from '@/lib/marketplace-client';
 import { useAuth } from '@/contexts/AuthContext';
 import ListingCard from '@/components/marketplace/ListingCard';
 import ListingImageDisplay from '@/components/marketplace/ListingImageDisplay';
@@ -19,7 +19,6 @@ import {
 import { formatConditionForDisplay } from '@/lib/condition-utils';
 import { formatPrice, formatDate, formatLocation } from '@/lib/price-utils';
 import { formatCategoryDisplay, getCategoryName, getSubcategoryName, getListingSubcategory, extractSubcategoryFromDescription } from '@/lib/category-utils';
-import { demoListingsData } from './demo-data';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 // Fix the location filter utility functions types to match MarketplaceListing
@@ -323,10 +322,97 @@ function sortListings(
   }
 }
 
-const BrowsePageContent = () => {
-  // Memoize demo data to have a stable reference
-  const memoDemoListings = useMemo(() => demoListingsData, []);
+// Hero section component for when we have few listings
+const HeroSection = ({ listingCount, locationName }: { listingCount: number; locationName?: string }) => {
+  return (
+    <div className="relative z-10 px-8 py-16 sm:px-12 sm:py-20 flex flex-col lg:flex-row items-center justify-between gap-12 bg-slate-900 rounded-3xl overflow-hidden mb-12">
+      {/* Background Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-blue-500/20 rounded-full filter blur-3xl -z-10"></div>
 
+      <div className="max-w-xl text-center lg:text-left space-y-6">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 backdrop-blur-md text-xs font-semibold tracking-wider uppercase text-sky-100 mx-auto lg:mx-0">
+          <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
+          Live on AT Protocol
+        </div>
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight text-white">
+          The <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-200 to-yellow-200">Open Market</span> <br />
+          is Finally Here.
+        </h1>
+        <p className="text-lg text-slate-300 leading-relaxed font-light">
+          Buy, sell, and connect directly with your community. No middlemen, no hidden fees, just pure decentralized commerce.
+        </p>
+        <div className="flex flex-col sm:flex-row items-center gap-4 pt-4 justify-center lg:justify-start">
+          <Link
+            href="/create-listing"
+            className="w-full sm:w-auto px-8 py-4 bg-yellow-400 text-slate-900 rounded-full font-bold text-sm shadow-lg hover:shadow-yellow-400/20 hover:bg-yellow-300 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-2"
+          >
+            Start Selling
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-right" aria-hidden="true">
+              <path d="M5 12h14"></path>
+              <path d="m12 5 7 7-7 7"></path>
+            </svg>
+          </Link>
+          <Link
+            href="/login"
+            className="w-full sm:w-auto px-8 py-4 bg-transparent border border-white/20 text-white rounded-full font-bold text-sm hover:bg-white/10 transition-all backdrop-blur-sm flex items-center justify-center gap-2"
+          >
+            Sign In with Bluesky
+          </Link>
+        </div>
+      </div>
+
+      {/* 3D Card Effect */}
+      <div className="relative w-full max-w-sm lg:max-w-md perspective-1000 hidden sm:block">
+        <div className="relative bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 shadow-2xl transform rotate-[-2deg] hover:rotate-0 transition-all duration-500">
+          <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-400"></div>
+              <div className="text-xs font-medium text-white">@alice.bsky.social</div>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shopping-bag text-sky-200" aria-hidden="true">
+              <path d="M16 10a4 4 0 0 1-8 0"></path>
+              <path d="M3.103 6.034h17.794"></path>
+              <path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z"></path>
+            </svg>
+          </div>
+          <div className="aspect-[4/3] rounded-lg bg-gray-800 mb-4 overflow-hidden relative group">
+            {/* Using a placeholder or the unsplash image from prompt */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-700"
+              alt="Product"
+              src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=1000&auto=format&fit=crop"
+            />
+            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-3 flex justify-end">
+              <span className="bg-yellow-400 text-slate-900 text-xs font-bold px-2 py-1 rounded shadow-sm">$120.00</span>
+            </div>
+          </div>
+          <div className="space-y-1 mb-4">
+            <div className="h-4 bg-white/20 rounded w-3/4"></div>
+            <div className="h-4 bg-white/10 rounded w-1/2"></div>
+          </div>
+          <div className="w-full py-3 bg-sky-600 text-white rounded-lg font-semibold text-sm shadow-lg shadow-sky-900/20 text-center cursor-default">
+            Buy Now
+          </div>
+        </div>
+
+        <div className="absolute -right-4 top-12 bg-white text-slate-900 p-3 rounded-xl shadow-xl flex items-center gap-3 animate-bounce">
+          <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-zap" aria-hidden="true">
+              <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"></path>
+            </svg>
+          </div>
+          <div>
+            <div className="text-xs font-bold">New Offer!</div>
+            <div className="text-[10px] text-gray-500">Just now</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const BrowsePageContent = () => {
   // Get search params for debug mode and listing status
   const searchParams = useSearchParams();
   const debugMode = searchParams.get('debug') === 'true';
@@ -348,13 +434,9 @@ const BrowsePageContent = () => {
       return () => clearTimeout(timer);
     }
   }, [listingCreated]);
-
-  // Start with empty listings and set auth state first
-  const [showDemoListings, setShowDemoListings] = useState(false);
-  const [realListingsCount, setRealListingsCount] = useState(0);
+  // State for listings
   const [allListings, setAllListings] = useState<MarketplaceListing[]>([]);
   const [newRealTimeListings, setNewRealTimeListings] = useState<MarketplaceListing[]>([]);
-  const [showNewListings, setShowNewListings] = useState(false);
   const [filteredListings, setFilteredListings] = useState<MarketplaceListing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -606,83 +688,81 @@ const BrowsePageContent = () => {
     return null;
   }, []);
 
-  // Fetch listings directly from known DIDs (simplified approach)
+  // Fetch listings - works for both logged in and logged out users
+  // AT Protocol data is public, so we can always fetch real listings
   useEffect(() => {
     // Don't fetch until auth state is settled
     if (initialized || auth.isLoading) return;
 
-    // Check for auth status first
-    if (!auth.isLoggedIn || !auth.client) {
-      setRealListingsCount(0);
-      setShowDemoListings(true);
-      setAllListings(memoDemoListings);
-      setFilteredListings(memoDemoListings);
-      setIsLoading(false);
-      setInitialized(true);
-      return;
-    }
-
-    // Fetch directly from known DIDs - much faster and more reliable
     const fetchListings = async () => {
       try {
-        console.log('Fetching listings from known DIDs...');
-        const listings = await auth.client!.getAllListings();
+        console.log('Fetching listings...');
+        let listings: MarketplaceListing[] = [];
+
+        if (auth.isLoggedIn && auth.client) {
+          // Logged in - use authenticated client (allows privacy filtering etc.)
+          console.log('User is logged in, using authenticated fetch');
+          listings = await auth.client.getAllListings();
+        } else {
+          // Logged out - use public fetch (no auth required)
+          console.log('User is logged out, using public fetch');
+          listings = await fetchPublicListings();
+        }
 
         if (listings && listings.length > 0) {
-          // Extract unique author DIDs
-          const uniqueDids = Array.from(new Set(listings.map(l => l.authorDid).filter(Boolean) as string[]));
+          // If logged in, enhance with profile info
+          if (auth.isLoggedIn && auth.client) {
+            // Extract unique author DIDs
+            const uniqueDids = Array.from(new Set(listings.map(l => (l as any).authorDid).filter(Boolean) as string[]));
 
-          // Map to store profiles
-          const profilesMap = new Map<string, { handle: string; displayName?: string; avatarCid?: string }>();
+            // Map to store profiles
+            const profilesMap = new Map<string, { handle: string; displayName?: string; avatarCid?: string }>();
 
-          // Fetch profiles in parallel
-          await Promise.all(
-            uniqueDids.map(async (did) => {
-              if (did && auth.client) {
-                const profile = await fetchAuthorProfile(did, auth.client);
-                if (profile) {
-                  profilesMap.set(did, {
-                    handle: profile.handle,
-                    displayName: profile.displayName,
-                    avatarCid: profile.avatarCid
-                  });
+            // Fetch profiles in parallel
+            await Promise.all(
+              uniqueDids.map(async (did) => {
+                if (did && auth.client) {
+                  const profile = await fetchAuthorProfile(did, auth.client);
+                  if (profile) {
+                    profilesMap.set(did, {
+                      handle: profile.handle,
+                      displayName: profile.displayName,
+                      avatarCid: profile.avatarCid
+                    });
+                  }
                 }
+              })
+            );
+
+            // Enhance listings with cached profile information
+            listings = listings.map((listing) => {
+              const authorDid = (listing as any).authorDid;
+              if (authorDid && profilesMap.has(authorDid)) {
+                const profile = profilesMap.get(authorDid)!;
+                return {
+                  ...listing,
+                  authorHandle: profile.handle,
+                  authorDisplayName: profile.displayName,
+                  authorAvatarCid: profile.avatarCid
+                };
               }
-            })
-          );
+              return listing;
+            });
+          }
 
-          // Enhance listings with cached profile information
-          const enhancedListings = listings.map((listing) => {
-            if (listing.authorDid && profilesMap.has(listing.authorDid)) {
-              const profile = profilesMap.get(listing.authorDid)!;
-              return {
-                ...listing,
-                authorHandle: profile.handle,
-                authorDisplayName: profile.displayName,
-                authorAvatarCid: profile.avatarCid
-              };
-            }
-            return listing;
-          });
-
-          console.log(`Successfully loaded ${enhancedListings.length} listings`);
-          setRealListingsCount(enhancedListings.length);
-          setAllListings(enhancedListings as MarketplaceListing[]);
-          setFilteredListings(enhancedListings as MarketplaceListing[]);
-          setShowDemoListings(false);
+          console.log(`Successfully loaded ${listings.length} listings`);
+          setAllListings(listings as MarketplaceListing[]);
+          setFilteredListings(listings as MarketplaceListing[]);
         } else {
-          console.log('No real listings found, showing demo listings');
-          setRealListingsCount(0);
-          setAllListings(memoDemoListings);
-          setFilteredListings(memoDemoListings);
-          setShowDemoListings(true);
+          console.log('No listings found');
+          setAllListings([]);
+          setFilteredListings([]);
         }
       } catch (err) {
         console.error('Failed to fetch listings:', err);
-        setRealListingsCount(0);
-        setAllListings(memoDemoListings);
-        setFilteredListings(memoDemoListings);
-        setShowDemoListings(true);
+        setError('Failed to load listings. Please try again.');
+        setAllListings([]);
+        setFilteredListings([]);
       } finally {
         setIsLoading(false);
         setInitialized(true);
@@ -690,7 +770,7 @@ const BrowsePageContent = () => {
     };
 
     fetchListings();
-  }, [auth.client, auth.isLoggedIn, auth.isLoading, initialized, memoDemoListings, fetchAuthorProfile]);
+  }, [auth.client, auth.isLoggedIn, auth.isLoading, initialized, fetchAuthorProfile]);
 
   // Prefetch locations in background to warm up cache
   // This makes filtering instant when user decides to filter
@@ -871,6 +951,11 @@ const BrowsePageContent = () => {
           </div>
         )}
 
+        {/* Hero Section for low inventory / onboarding - Logged out users only */}
+        {!auth.isLoggedIn && allListings.length < 10 && (
+          <HeroSection listingCount={allListings.length} locationName={locationDisplayName} />
+        )}
+
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
             {error}
@@ -931,8 +1016,20 @@ const BrowsePageContent = () => {
             <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-color border-r-transparent"></div>
             <p className="mt-2 text-text-primary">Loading listings...</p>
           </div>
-        ) : realListingsCount > 0 && filteredListings.length > 0 ? (
+        ) : filteredListings.length > 0 ? (
           <div>
+            {/* Show hero section when we have few items and user is not logged in - MOVED TO TOP */}
+            {/* Removed duplicate HeroSection */}
+
+            {/* Section title for featured listings when showing hero */}
+            {!auth.isLoggedIn && allListings.length < 10 && allListings.length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-xl font-bold text-gray-900">
+                  {locationDisplayName ? `Just Listed in ${locationDisplayName}` : 'Just Listed'}
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">Check out these items from our community</p>
+              </div>
+            )}
             {filters.viewMode === 'grid' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 {filteredListings.map((listing: any, index) => (
@@ -1084,173 +1181,30 @@ const BrowsePageContent = () => {
               </div>
             )}
           </div>
-        ) : showDemoListings && filteredListings.length > 0 ? (
+        ) : allListings.length === 0 ? (
+          /* No listings at all - show empty state */
           <div>
-            <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6" role="alert">
-              <p className="font-bold">Demo Mode</p>
-              <p>{auth.isLoggedIn ? 'No real listings found.' : 'You need to log in to see real listings.'} Showing demo content for illustration purposes.</p>
-              {!auth.isLoggedIn && (
-                <Link
-                  href="/login"
-                  className="inline-block mt-2 py-1 px-3 bg-primary-color hover:bg-primary-light text-white text-sm font-medium rounded">
-                  Log In
-                </Link>
-              )}
+            <div className="bg-white rounded-lg shadow-md p-8 text-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-neutral-medium mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+              </svg>
+              <h2 className="text-xl font-semibold mb-2 text-text-primary">No Listings Yet</h2>
+              <p className="text-text-secondary mb-6">
+                Be the first to list an item on the decentralized marketplace!
+              </p>
+              <Link
+                href="/create-listing"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-sky-600 text-white font-semibold rounded-xl hover:bg-sky-700 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                List Your First Item
+              </Link>
             </div>
-
-            {/* Render listings based on view mode */}
-            {filters.viewMode === 'grid' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {filteredListings.map((listing, index) => (
-                  <div key={index} onClick={() => listing.uri ? recordListingView(listing.uri) : null}>
-                    <ListingCard
-                      listing={{
-                        ...listing,
-                        // For demo listings, we need to provide authorDid for image handling
-                        authorDid: listing.authorDid || auth.user?.did || 'did:plc:oyhgprn7edb3dpdaq4mlgfkv'
-                      }}
-                      showDebug={debugMode}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {filters.viewMode === 'list' && (
-              <div className="space-y-3">
-                {filteredListings.map((listing, index) => {
-                  // Get clean description without subcategory text
-                  const { cleanDescription, subcategory } = extractSubcategoryFromDescription(listing.description);
-
-                  // Set character limit for description
-                  const charLimit = 120;
-                  const displayDescription = cleanDescription.length > charLimit
-                    ? `${cleanDescription.substring(0, charLimit)}...`
-                    : cleanDescription;
-
-                  // Get tags - show category and subcategory
-                  const tags: string[] = [];
-                  if (listing.category) {
-                    tags.push(getCategoryName(listing.category));
-                  }
-                  if (subcategory && !tags.includes(subcategory)) {
-                    tags.push(subcategory);
-                  }
-
-                  // Format date
-                  const postedDate = formatDate(listing.createdAt);
-
-                  // Format location - clean up prefixes and abbreviate state
-                  const locationString = formatLocation(listing.location.locality, listing.location.state);
-
-                  const listingHref = `/listing/${encodeURIComponent(listing.uri || listing.title)}`;
-
-                  return (
-                    <Link
-                      key={index}
-                      href={listingHref}
-                      onClick={() => listing.uri ? recordListingView(listing.uri) : null}
-                      className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex hover:shadow-xl hover:border-sky-200 transition-all duration-300 group"
-                    >
-                      {/* Image with condition badge */}
-                      <div className="w-72 flex-shrink-0 relative bg-gray-100 overflow-hidden">
-                        <ListingImageDisplay
-                          listing={listing}
-                          size="thumbnail"
-                          height="100%"
-                          className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
-                          fallbackText="No image"
-                        />
-                        {/* Condition Badge */}
-                        <div className="absolute top-3 left-3">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-white/95 backdrop-blur-sm text-slate-800 shadow-sm">
-                            {formatConditionForDisplay(listing.condition)}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 p-6 flex flex-col justify-between">
-                        <div>
-                          {/* Category and Title/Price row */}
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <span className="text-xs font-bold text-sky-600 uppercase tracking-wide mb-1 block">
-                                {getCategoryName(listing.category)}
-                              </span>
-                              <h2 className="text-xl font-bold text-slate-900 group-hover:text-sky-600 transition-colors line-clamp-1">
-                                {listing.title}
-                              </h2>
-                            </div>
-                            <span className="text-2xl font-bold text-slate-900 flex-shrink-0 ml-4">
-                              {formatPrice(listing.price)}
-                            </span>
-                          </div>
-
-                          {/* Description */}
-                          <p className="text-slate-500 text-sm line-clamp-2 mb-4 leading-relaxed">
-                            {displayDescription}
-                          </p>
-
-                          {/* Tags */}
-                          {tags.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mb-4">
-                              {tags.map((tag, i) => (
-                                <span key={i} className="inline-block px-2 py-0.5 rounded-md bg-gray-50 text-gray-500 text-xs border border-gray-100">
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Bottom row - Location, Author, Date */}
-                        <div className="flex items-center gap-6 pt-4 border-t border-gray-50 text-sm text-slate-500">
-                          {locationString && (
-                            <div className="flex items-center gap-2">
-                              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                              </svg>
-                              <span>{locationString}</span>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2">
-                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                            <span>{(listing as any).authorDisplayName || (listing as any).authorHandle || 'Unknown'}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            <span>{postedDate}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Action Button - separate column, centered */}
-                      <div className="hidden sm:flex flex-col justify-center items-center px-8 border-l border-gray-50 bg-gray-50/30 min-w-[160px]">
-                        <span className="flex items-center gap-2 bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md shadow-sky-200 group-hover:bg-sky-700 group-hover:shadow-sky-300 transition-all whitespace-nowrap">
-                          View Details
-                        </span>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-
-            {filters.viewMode === 'map' && (
-              <div className="bg-neutral-light rounded-lg p-4 min-h-[400px] flex items-center justify-center">
-                <p className="text-text-secondary">
-                  Map view is coming soon! Listings will be displayed on an interactive map.
-                </p>
-              </div>
-            )}
           </div>
         ) : (
+          /* Listings exist but filters returned no results */
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-neutral-medium mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

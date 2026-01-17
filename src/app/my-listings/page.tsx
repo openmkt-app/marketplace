@@ -1,120 +1,212 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import Navbar from '@/components/layout/Navbar';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import AuthGuard from '@/components/auth/AuthGuard';
-import ListingCard from '@/components/marketplace/ListingCard';
-import { type MarketplaceListing } from '@/lib/marketplace-client';
+import { useAuth } from '@/contexts/AuthContext';
+import { MarketplaceListing } from '@/lib/marketplace-client';
+import ListingImageDisplay from '@/components/marketplace/ListingImageDisplay';
+import { Trash2, ExternalLink, AlertCircle } from 'lucide-react';
+import { formatPrice } from '@/lib/price-utils';
+import ConfirmationModal from '@/components/common/ConfirmationModal';
 
 export default function MyListingsPage() {
-  const { client, user } = useAuth();
-  const [listings, setListings] = useState<MarketplaceListing[]>([]);
+  const { user, client, isLoggedIn, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+  const [listings, setListings] = useState<(MarketplaceListing & { uri: string; cid: string })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [listingToDelete, setListingToDelete] = useState<{ uri: string; title: string } | null>(null);
+
   useEffect(() => {
-    const fetchUserListings = async () => {
-      setLoading(true);
-      setError(null);
-      
+    // Redirect if not logged in
+    if (!authLoading && !isLoggedIn) {
+      router.push('/login?redirect=/my-listings');
+    }
+  }, [authLoading, isLoggedIn, router]);
+
+  useEffect(() => {
+    const fetchListings = async () => {
+      if (!user?.did || !client) return;
+
       try {
-        // In a real app, you would fetch the user's listings from their AT Protocol repo
-        // For this example, we&apos;re just using sample data
-        
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Sample data - in a real app, this would come from the AT Protocol
-        const mockListings: MarketplaceListing[] = []; // Empty for now
-        
-        setListings(mockListings);
+        setLoading(true);
+        // Fetch only current user's listings
+        const userListings = await client.getUserListings(user.did);
+        setListings(userListings);
       } catch (err) {
         console.error('Failed to fetch user listings:', err);
-        setError('Failed to load your listings. Please try again later.');
+        setError('Failed to load your listings. Please try again.');
       } finally {
         setLoading(false);
       }
     };
-    
-    fetchUserListings();
-  }, [client, user]);
+
+    if (isLoggedIn && user) {
+      fetchListings();
+    }
+  }, [isLoggedIn, user, client]);
+
+  const initiateDelete = (uri: string, title: string) => {
+    setListingToDelete({ uri, title });
+    setIsModalOpen(true);
+  };
+
+  const cancelDelete = () => {
+    setIsModalOpen(false);
+    setListingToDelete(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!client || !listingToDelete) return;
+
+    try {
+      setDeletingId(listingToDelete.uri);
+
+      await client.deleteListing(listingToDelete.uri);
+
+      // Remove from local state
+      setListings(prev => prev.filter(l => l.uri !== listingToDelete.uri));
+      setIsModalOpen(false);
+      setListingToDelete(null);
+    } catch (err) {
+      console.error('Failed to delete listing:', err);
+      // Close modal and show error alert or toast
+      setIsModalOpen(false);
+      alert('Failed to delete listing. Please try again.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  if (authLoading || (isLoggedIn && loading)) {
+    return (
+      <div className="flex justify-center items-center h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-color"></div>
+      </div>
+    );
+  }
 
   return (
-    <AuthGuard>
-      <Navbar />
-      <main className="max-w-4xl mx-auto p-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">My Listings</h1>
-          
-          <Link 
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">My Listings</h1>
+          <p className="text-gray-500 mt-1">Manage your items for sale</p>
+        </div>
+        <Link
+          href="/create-listing"
+          className="bg-primary-color text-white px-6 py-2.5 rounded-xl font-medium hover:bg-primary-light transition-colors shadow-sm"
+        >
+          Create New Listing
+        </Link>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 text-red-700 p-4 rounded-xl border border-red-100 flex items-center gap-2 mb-6">
+          <AlertCircle size={20} />
+          {error}
+        </div>
+      )}
+
+      {listings.length === 0 ? (
+        <div className="text-center py-20 bg-gray-50 rounded-2xl border border-gray-100">
+          <div className="mx-auto h-24 w-24 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-1">No listings yet</h3>
+          <p className="text-gray-500 mb-6 max-w-md mx-auto">
+            You haven't listed any items for sale. Start selling today to reach buyers across the AT Protocol network.
+          </p>
+          <Link
             href="/create-listing"
-            className="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md"
+            className="text-primary-color font-medium hover:text-primary-light hover:underline"
           >
-            Create New Listing
+            Create your first listing &rarr;
           </Link>
         </div>
-        
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-        
-        {loading ? (
-          <div className="text-center py-8">
-            <div className="spinner animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading your listings...</p>
-          </div>
-        ) : listings.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-md p-8 text-center">
-            <h2 className="text-xl font-semibold mb-2">No listings yet</h2>
-            <p className="text-gray-600 mb-4">
-              You haven&apos;t created any listings yet. Start selling your items by creating your first listing.
-            </p>
-            <Link 
-              href="/create-listing"
-              className="inline-block py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md"
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {listings.map((listing) => (
+            <div
+              key={listing.uri}
+              className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col group hover:shadow-md transition-shadow"
             >
-              Create First Listing
-            </Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {listings.map((listing, index) => (
-              <div key={index} className="relative">
-                <ListingCard listing={listing} />
-                <div className="absolute top-2 right-2 flex space-x-2">
+              {/* Image Area */}
+              <div className="relative aspect-video bg-gray-100 overflow-hidden">
+                <ListingImageDisplay
+                  listing={listing}
+                  size="thumbnail"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+
+                {listing.hideFromFriends && (
+                  <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-md font-medium flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-400"></span>
+                    Hidden from Friends
+                  </div>
+                )}
+              </div>
+
+              {/* Content Area */}
+              <div className="p-5 flex-1 flex flex-col">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-bold text-lg text-gray-900 line-clamp-1" title={listing.title}>
+                    {listing.title}
+                  </h3>
+                  <span className="font-bold text-gray-900 bg-gray-50 px-2 py-1 rounded-lg text-sm whitespace-nowrap">
+                    {formatPrice(listing.price)}
+                  </span>
+                </div>
+
+                <p className="text-gray-500 text-sm line-clamp-2 mb-4 flex-1">
+                  {listing.description}
+                </p>
+
+                <div className="pt-4 border-t border-gray-50 flex items-center gap-3">
                   <Link
-                    href={`/edit-listing/${listing.title.replace(/\s+/g, '-').toLowerCase()}`}
-                    className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100"
-                    title="Edit listing"
+                    href={`/listing/${encodeURIComponent(listing.uri || '')}`}
+                    className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-gray-50 text-gray-700 font-medium text-sm hover:bg-gray-100 transition-colors"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                    </svg>
+                    <ExternalLink size={16} />
+                    View
                   </Link>
                   <button
-                    className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100"
-                    title="Delete listing"
-                    onClick={() => {
-                      // In a real app, this would delete the listing
-                      if (window.confirm('Are you sure you want to delete this listing?')) {
-                        // Delete listing logic would go here
-                      }
-                    }}
+                    onClick={() => initiateDelete(listing.uri, listing.title)}
+                    disabled={deletingId === listing.uri}
+                    className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg border border-red-100 text-red-600 font-medium text-sm hover:bg-red-50 hover:border-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
+                    {deletingId === listing.uri ? (
+                      <span className="inline-block h-4 w-4 border-2 border-current border-r-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Trash2 size={16} />
+                    )}
+                    {deletingId === listing.uri ? 'Deleting...' : 'Delete'}
                   </button>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </main>
-    </AuthGuard>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={isModalOpen}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Delete Listing"
+        message={`Are you sure you want to delete "${listingToDelete?.title}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        isDestructive={true}
+        isLoading={!!deletingId}
+      />
+    </div>
   );
 }

@@ -9,6 +9,8 @@ import SearchBar from '../marketplace/filters/SearchBar';
 import { generateAvatarUrl } from '@/lib/image-utils';
 import { Bell } from 'lucide-react';
 
+import NavbarUserMenu from './NavbarUserMenu';
+
 // Wrapper for search param usage
 const NavbarContent = () => {
   const { isLoggedIn, user, logout } = useAuth();
@@ -115,29 +117,9 @@ const NavbarContent = () => {
               <span className="text-sm font-medium">Sell Item</span>
             </Link>
 
-            {isLoggedIn ? (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={logout}
-                  className="text-sm text-gray-500 hover:text-gray-700 hidden md:block"
-                >
-                  Log Out
-                </button>
-                {user?.did && user?.avatarCid ? (
-                  <div className="h-9 w-9 rounded-full border-2 border-gray-100 overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary-color transition-all relative">
-                    <Image
-                      src={generateAvatarUrl(user.did, user.avatarCid) || ''}
-                      alt={user.displayName || user.handle || 'User'}
-                      fill
-                      className="object-cover"
-                      unoptimized
-                    />
-                  </div>
-                ) : (
-                  <div className="h-9 w-9 rounded-full bg-blue-100 border-2 border-gray-100 overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary-color transition-all flex items-center justify-center text-blue-600 font-semibold">
-                    {user?.handle ? user.handle.charAt(0).toUpperCase() : 'U'}
-                  </div>
-                )}
+            {isLoggedIn && user ? (
+              <div className="flex items-center ml-2">
+                <NavbarUserMenu user={user} onLogout={logout} />
               </div>
             ) : (
               <Link
@@ -205,6 +187,13 @@ const NavbarContent = () => {
 
             {isLoggedIn ? (
               <>
+                <Link
+                  href="/my-listings"
+                  className={`block px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive('/my-listings') ? 'bg-primary-color/10 text-primary-color' : 'text-slate-600 hover:bg-gray-50'}`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  My Listings
+                </Link>
                 <div className="px-4 py-3 mt-2 border-t border-gray-100">
                   <button
                     onClick={() => {

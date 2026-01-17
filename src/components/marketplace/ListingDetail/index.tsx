@@ -383,21 +383,18 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                 {/* Step indicator for multi-step flow */}
                 {flowStep !== 'sent' && flowStep !== 'own-listing' && flowStep !== 'loading' && (
                   <div className="flex items-center gap-2 mb-2">
-                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
-                      isFollowingBotState ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'
-                    }`}>
+                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${isFollowingBotState ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'
+                      }`}>
                       {isFollowingBotState ? <CheckCircle size={14} /> : '1'}
                     </div>
                     <div className={`h-0.5 flex-1 ${isFollowingBotState ? 'bg-green-200' : 'bg-gray-200'}`} />
-                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
-                      isFollowingSellerState ? 'bg-green-100 text-green-600' : isFollowingBotState ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'
-                    }`}>
+                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${isFollowingSellerState ? 'bg-green-100 text-green-600' : isFollowingBotState ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'
+                      }`}>
                       {isFollowingSellerState ? <CheckCircle size={14} /> : '2'}
                     </div>
                     <div className={`h-0.5 flex-1 ${isFollowingSellerState ? 'bg-green-200' : 'bg-gray-200'}`} />
-                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
-                      flowStep === 'ready' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'
-                    }`}>
+                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${flowStep === 'ready' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'
+                      }`}>
                       3
                     </div>
                   </div>
@@ -414,10 +411,20 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                   </button>
                 )}
 
-                {/* Own listing - can't show interest in your own listing */}
+                {/* Own listing - show management link */}
                 {flowStep === 'own-listing' && (
-                  <div className="p-4 bg-gray-50 rounded-xl text-center">
-                    <p className="text-sm text-gray-600">This is your listing</p>
+                  <div className="p-5 bg-blue-50 border border-blue-100 rounded-xl text-center space-y-3">
+                    <p className="font-medium text-blue-800">This is your listing.</p>
+                    <Link
+                      href="/my-listings"
+                      className="inline-flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                    >
+                      Click here to manage your listings
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-right">
+                        <path d="M5 12h14" />
+                        <path d="m12 5 7 7-7 7" />
+                      </svg>
+                    </Link>
                   </div>
                 )}
 

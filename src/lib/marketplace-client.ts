@@ -242,6 +242,55 @@ export class MarketplaceClient {
     }
   }
 
+  /**
+   * Delete a listing from the marketplace
+   */
+  async deleteListing(uri: string): Promise<void> {
+    if (!this.isLoggedIn || !this.agent.session) {
+      throw new Error('User must be logged in to delete a listing');
+    }
+
+    try {
+      logger.info(`Attempting to delete listing: ${uri}`);
+
+      // Parse URI to get repo, collection, and rkey
+      // URI format: at://did:plc:xxx/app.atprotomkt.marketplace.listing/rkey
+      const uriParts = uri.replace('at://', '').split('/');
+
+      if (uriParts.length !== 3) {
+        throw new Error(`Invalid URI format: ${uri}`);
+      }
+
+      const [repo, collection, rkey] = uriParts;
+
+      // Verify ownership (repo must match session DID)
+      if (repo !== this.agent.session.did) {
+        throw new Error('You can only delete your own listings');
+      }
+
+      logger.logApiRequest('POST', 'com.atproto.repo.deleteRecord', {
+        repo,
+        collection,
+        rkey
+      });
+
+      await this.agent.api.com.atproto.repo.deleteRecord({
+        repo,
+        collection,
+        rkey
+      });
+
+      logger.info(`Successfully deleted listing: ${uri}`);
+
+      // Invalidate cache
+      this.listingsCache = null;
+
+    } catch (error) {
+      logger.error('Failed to delete listing', error as Error);
+      throw error;
+    }
+  }
+
   private async processImages(imageFiles?: File[]): Promise<ListingImage[] | undefined> {
     if (!imageFiles || imageFiles.length === 0) {
       return undefined;
@@ -1188,6 +1237,127 @@ export class MarketplaceClient {
       cid: string;
     })[];
   }
+}
+
+/**
+ * Fetch public marketplace listings without requiring authentication.
+ * The AT Protocol data is public, so we can read listings from known DIDs
+ * without logging in.
+ */
+export async function fetchPublicListings(): Promise<(MarketplaceListing & {
+  authorDid: string;
+  authorHandle: string;
+  uri: string;
+  cid: string;
+})[]> {
+  const listings: (MarketplaceListing & {
+    authorDid: string;
+    authorHandle: string;
+    uri: string;
+    cid: string;
+  })[] = [];
+
+  // Get known DIDs from registry
+  const knownMarketplaceDIDs = getKnownMarketplaceDIDs();
+  logger.info(`[Public] Fetching from ${knownMarketplaceDIDs.length} known marketplace DIDs`);
+
+  // Helper to resolve PDS for a DID
+  const resolvePDS = async (did: string): Promise<string | null> => {
+    try {
+      const response = await fetch(`https://plc.directory/${did}`);
+      if (!response.ok) return null;
+
+      const didDoc = await response.json();
+      const pdsService = didDoc.service?.find((s: any) =>
+        s.type === 'AtprotoPersonalDataServer'
+      );
+
+      return pdsService?.serviceEndpoint || null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Helper to get handle from DID
+  const getHandleFromDid = async (did: string): Promise<string> => {
+    try {
+      const response = await fetch(`https://plc.directory/${did}`);
+      if (!response.ok) return did;
+
+      const didDoc = await response.json();
+      // The handle is usually in alsoKnownAs as "at://handle"
+      const aka = didDoc.alsoKnownAs?.[0];
+      if (aka && aka.startsWith('at://')) {
+        return aka.replace('at://', '');
+      }
+      return did;
+    } catch {
+      return did;
+    }
+  };
+
+  // Fetch from all known DIDs in parallel
+  const fetchPromises = knownMarketplaceDIDs.map(async (did) => {
+    try {
+      // Resolve the PDS for this DID
+      const pdsUrl = await resolvePDS(did);
+      if (!pdsUrl) {
+        logger.warn(`[Public] Could not resolve PDS for ${did}`);
+        return [];
+      }
+
+      // Create a temporary unauthenticated agent for this PDS
+      const agent = new BskyAgent({ service: pdsUrl });
+
+      // Get the handle
+      const handle = await getHandleFromDid(did);
+
+      // Fetch listings from the marketplace collection
+      const result = await agent.api.com.atproto.repo.listRecords({
+        repo: did,
+        collection: 'app.atprotomkt.marketplace.listing',
+        limit: 50
+      });
+
+      if (!result.success || !result.data.records.length) {
+        return [];
+      }
+
+      // Process the listings
+      return result.data.records.map(record => {
+        const listingData = record.value as MarketplaceListing;
+        const formattedImages = generateImageUrls(did, listingData.images);
+
+        return {
+          ...listingData,
+          authorDid: did,
+          authorHandle: handle,
+          uri: record.uri,
+          cid: record.cid,
+          formattedImages
+        };
+      });
+    } catch (error) {
+      logger.warn(`[Public] Failed to fetch listings from DID ${did}`, error as Error);
+      return [];
+    }
+  });
+
+  // Wait for all fetches to complete
+  const allListingsArrays = await Promise.all(fetchPromises);
+
+  // Flatten and deduplicate
+  allListingsArrays.forEach(didListings => {
+    didListings.forEach(listing => {
+      if (!listings.some(existing => existing.uri === listing.uri)) {
+        listings.push(listing);
+      }
+    });
+  });
+
+  logger.info(`[Public] Total marketplace listings found: ${listings.length}`);
+
+  return listings;
 }
 
 export default MarketplaceClient;
