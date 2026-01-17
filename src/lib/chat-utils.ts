@@ -224,14 +224,15 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
 
     // console.log(`getUnreadChatCount: Targeting PDS at ${pdsEndpoint}`);
 
-    const url = `${pdsEndpoint}/xrpc/chat.bsky.convo.listConvos?limit=50`;
+    // Call our own Next.js API route to proxy the request
+    // This avoids CORS issues and cookie conflicts completely by doing the fetch server-side
+    const proxyUrl = `/api/proxy/chat/unread?pdsEndpoint=${encodeURIComponent(pdsEndpoint)}`;
 
-    const response = await fetch(url, {
+    const response = await fetch(proxyUrl, {
       method: 'GET',
-      credentials: 'omit', // Important: Do not send cookies, they might conflict with Bearer token
       headers: {
         'Authorization': `Bearer ${session.accessJwt}`,
-        'Atproto-Proxy': 'did:web:api.bsky.chat#bsky_chat'
+        // No Need for Atproto-Proxy header here, the server route adds it
       }
     });
 
@@ -241,11 +242,11 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
       const unreadCount = convos.reduce((total, convo) => {
         return total + (convo.unreadCount || 0);
       }, 0);
-      // console.log(`getUnreadChatCount: Raw fetch success! Found ${unreadCount} unread messages.`);
+      // console.log(`getUnreadChatCount: Proxy success! Found ${unreadCount} unread messages.`);
       return unreadCount;
     } else {
       // Fail silently on error
-      // console.warn(`getUnreadChatCount: Raw fetch failed with status ${response.status}`);
+      // console.warn(`getUnreadChatCount: Proxy failed with status ${response.status}`);
     }
   } catch (fallbackError: any) {
     // console.warn('getUnreadChatCount: Raw fetch fallback failed:', fallbackError);
