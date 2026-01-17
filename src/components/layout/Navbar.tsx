@@ -7,15 +7,17 @@ import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import SearchBar from '../marketplace/filters/SearchBar';
 import { generateAvatarUrl } from '@/lib/image-utils';
+import { getUnreadChatCount } from '@/lib/chat-utils';
 import { Bell } from 'lucide-react';
 
 import NavbarUserMenu from './NavbarUserMenu';
 
 // Wrapper for search param usage
 const NavbarContent = () => {
-  const { isLoggedIn, user, logout } = useAuth();
+  const { isLoggedIn, user, logout, client } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -66,6 +68,28 @@ const NavbarContent = () => {
     };
   }, []);
 
+  // Check for unread messages
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    const checkMessages = async () => {
+      if (isLoggedIn && client && client.agent) {
+        const count = await getUnreadChatCount(client.agent);
+        setHasUnreadMessages(count > 0);
+      }
+    };
+
+    if (isLoggedIn) {
+      checkMessages();
+      // Poll every 60 seconds
+      intervalId = setInterval(checkMessages, 60000);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isLoggedIn, client]);
+
   const isActive = (path: string) => {
     return pathname === path;
   };
@@ -100,14 +124,18 @@ const NavbarContent = () => {
           {/* Right Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
             {isLoggedIn && (
-              <button
+              <a
+                href="https://bsky.app/messages"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors relative"
                 aria-label="Notifications"
               >
                 <Bell size={20} />
-                {/* Notification dot - uncomment when needed */}
-                {/* <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" /> */}
-              </button>
+                {hasUnreadMessages && (
+                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+                )}
+              </a>
             )}
 
             <Link

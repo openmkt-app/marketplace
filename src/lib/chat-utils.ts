@@ -184,6 +184,60 @@ export async function sendMessageToSeller(
 }
 
 /**
+ * Check for unread messages using the Bluesky Chat API
+ */
+export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
+  try {
+    if (!agent.session) {
+      return 0;
+    }
+
+    // 1. Get a service auth token for listConvos
+    const convoAuth = await agent.api.com.atproto.server.getServiceAuth({
+      aud: 'did:web:api.bsky.chat',
+      lxm: 'chat.bsky.convo.listConvos',
+    });
+
+    if (!convoAuth.success) {
+      console.error('Failed to get service auth token for listing convos', convoAuth);
+      return 0;
+    }
+
+    const convoToken = convoAuth.data.token;
+
+    // 2. Create a specialized agent for the chat service
+    const chatAgent = new BskyAgent({
+      service: 'https://api.bsky.chat'
+    });
+
+    // 3. List conversations to check unread count
+    const response = await chatAgent.api.chat.bsky.convo.listConvos(
+      { limit: 50 }, // Check last 50 convos
+      { headers: { Authorization: `Bearer ${convoToken}` } }
+    );
+
+    if (!response.success) {
+      console.error('Failed to list conversations', response);
+      return 0;
+    }
+
+    // 4. Sum up unread counts
+    const convos = response.data.convos;
+    const unreadCount = convos.reduce((total, convo) => {
+      // unreadCount is available on the conversation object
+      return total + (convo.unreadCount || 0);
+    }, 0);
+
+    return unreadCount;
+
+  } catch (error) {
+    // Fail silently for UI polish, but log for debugging
+    console.error('Error checking unread messages:', error);
+    return 0;
+  }
+}
+
+/**
  * Check if we can contact this seller (has valid handle)
  */
 export function canContactSeller(listing: MarketplaceListing & { authorHandle?: string }): boolean {
