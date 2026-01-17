@@ -199,26 +199,8 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
     });
 
     if (!convoAuth.success) {
-      console.warn('getUnreadChatCount: Failed to get service auth token', convoAuth);
-
-      // Fallback: Try calling the chat API directly via the main agent (PDS proxy)
-      try {
-        console.log('getUnreadChatCount: Attempting fallback PDS proxy call...');
-        const response = await agent.api.chat.bsky.convo.listConvos({ limit: 50 });
-
-        if (response.success) {
-          const convos = response.data.convos;
-          const unreadCount = convos.reduce((total, convo) => {
-            return total + (convo.unreadCount || 0);
-          }, 0);
-          console.log(`getUnreadChatCount: Fallback success! Found ${unreadCount} unread messages.`);
-          return unreadCount;
-        }
-      } catch (fallbackError) {
-        console.warn('getUnreadChatCount: Fallback proxy call failed:', fallbackError);
-      }
-
-      return 0;
+      console.warn('getUnreadChatCount: Failed to get service auth token (success=false)', convoAuth);
+      throw new Error('AuthTokenFailed'); // Throw to trigger catch block fallback
     }
 
     const convoToken = convoAuth.data.token;
@@ -250,7 +232,30 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
     return unreadCount;
 
   } catch (error: any) {
-    console.error('getUnreadChatCount: Error checking unread messages:', error);
+    console.warn('getUnreadChatCount: Primary method failed, attempting fallback...', error.message || error);
+
+    // Fallback: Try calling the chat API directly via the main agent (PDS proxy)
+    // This works if the PDS proxies the request or if we have a session that works differently
+    try {
+      console.log('getUnreadChatCount: Attempting fallback PDS proxy call...');
+      const response = await agent.api.chat.bsky.convo.listConvos({ limit: 50 });
+
+      if (response.success) {
+        const convos = response.data.convos;
+        const unreadCount = convos.reduce((total, convo) => {
+          return total + (convo.unreadCount || 0);
+        }, 0);
+        console.log(`getUnreadChatCount: Fallback success! Found ${unreadCount} unread messages.`);
+        return unreadCount;
+      }
+    } catch (fallbackError: any) {
+      // Suppress "insufficient access" error which is expected for App Passwords
+      const errorMessage = fallbackError.message || fallbackError.error || '';
+      if (!errorMessage.includes('insufficient access')) {
+        console.warn('getUnreadChatCount: Fallback proxy call failed:', fallbackError);
+      }
+    }
+
     return 0;
   }
 }
