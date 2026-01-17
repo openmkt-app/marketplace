@@ -14,25 +14,33 @@ export const KNOWN_MARKETPLACE_DIDS: string[] = [
 
 // Cache for verified sellers to avoid refetching too often
 let verifiedSellers: string[] = [];
+let lastFetched: number = 0;
+const CACHE_TTL = 60 * 1000; // 1 minute
 let fetchPromise: Promise<string[]> | null = null;
 
 /**
  * Fetch verified sellers from the Bot Registry API
  */
-export function fetchVerifiedSellers(): Promise<string[]> {
+export function fetchVerifiedSellers(force = false): Promise<string[]> {
   if (typeof window === 'undefined') return Promise.resolve([]);
 
   // If a fetch is already in progress, return the existing promise
   if (fetchPromise) return fetchPromise;
 
+  // Check cache validity if not forced
+  if (!force && verifiedSellers.length > 0 && (Date.now() - lastFetched < CACHE_TTL)) {
+    return Promise.resolve(verifiedSellers);
+  }
+
   // Otherwise start a new fetch
   fetchPromise = (async () => {
     try {
-      const response = await fetch('/api/marketplace/sellers');
+      const response = await fetch('/api/marketplace/sellers?t=' + Date.now());
       if (response.ok) {
         const data = await response.json();
         if (data.sellers && Array.isArray(data.sellers)) {
           verifiedSellers = data.sellers.map((s: any) => s.did);
+          lastFetched = Date.now();
           console.log(`[Registry] Fetched ${verifiedSellers.length} verified sellers`);
         }
       }
@@ -54,9 +62,14 @@ export function fetchVerifiedSellers(): Promise<string[]> {
  * Use this when you need to be sure the registry is populated.
  */
 export async function ensureVerifiedSellersLoaded(): Promise<string[]> {
-  if (verifiedSellers.length > 0) return verifiedSellers;
+  // Check if we have data and it's fresh
+  if (verifiedSellers.length > 0 && (Date.now() - lastFetched < CACHE_TTL)) {
+    return verifiedSellers;
+  }
+
   // If we have a pending fetch, wait for it
   if (fetchPromise) return fetchPromise;
+
   // Otherwise start one
   return fetchVerifiedSellers();
 }

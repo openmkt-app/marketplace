@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getBotAgent } from '@/lib/bot-client';
 
 export const dynamic = 'force-dynamic'; // No caching for now to ensure freshness
-export const revalidate = 60; // Revalidate every 60 seconds
+// export const revalidate = 0; // Disable caching
 
 export async function GET() {
     try {
