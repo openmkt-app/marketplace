@@ -1,6 +1,6 @@
 // src/components/marketplace/CreateListingForm.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import MarketplaceClient from '@/lib/marketplace-client';
+import MarketplaceClient, { ListingImage, MarketplaceListing } from '@/lib/marketplace-client';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { LocationFilterValue } from './filters/LocationFilter';
 import { formatZipPrefix } from '@/lib/location-utils';
@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { CATEGORIES, CONDITIONS, SubcategoryOption } from '@/lib/category-data';
 import { isFollowingBot, followBot } from '@/lib/bot-utils';
 import LiveListingPreview from './LiveListingPreview';
+import { createBlueskyCdnImageUrls } from '@/lib/image-utils';
 
 // Define the SavedLocation type
 interface SavedLocation {
@@ -21,12 +22,14 @@ interface SavedLocation {
 interface CreateListingFormProps {
   client: MarketplaceClient;
   onSuccess?: (listingUri?: string) => void;
+  initialData?: MarketplaceListing;
+  mode?: 'create' | 'edit';
 }
 
-export default function CreateListingForm({ client, onSuccess }: CreateListingFormProps) {
+export default function CreateListingForm({ client, onSuccess, initialData, mode = 'create' }: CreateListingFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [images, setImages] = useState<File[]>([]);
+  const [images, setImages] = useState<(File | ListingImage)[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [hideFromFriends, setHideFromFriends] = useState(false);
@@ -37,6 +40,7 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
 
   // Add state for category and subcategory
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
   const [subcategories, setSubcategories] = useState<SubcategoryOption[]>([]);
 
   // Get saved locations for quick selection
@@ -170,6 +174,69 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
     }
   };
 
+  // Populate form for Edit Mode
+  useEffect(() => {
+    if (mode === 'edit' && initialData) {
+      setTitle(initialData.title);
+      setDescription(initialData.description);
+      setPriceInput(formatPrice(initialData.price));
+      setCondition(initialData.condition);
+      setSelectedCategory(initialData.category);
+      setHideFromFriends(initialData.hideFromFriends || false);
+
+      // Handle Location
+      if (initialData.location) {
+        const loc = initialData.location;
+        setLocationState(loc.state);
+        setLocationCounty(loc.county);
+        setLocationLocality(loc.locality);
+        setLocationZip(loc.zipPrefix || '');
+
+        const locObj: SavedLocation = {
+          name: `${loc.locality}, ${loc.state}`,
+          state: loc.state,
+          county: loc.county,
+          locality: loc.locality,
+          zipPrefix: loc.zipPrefix
+        };
+        setSelectedLocation(locObj);
+        setIsLocationExpanded(false);
+      }
+
+      // Handle Images
+      if (initialData.images) {
+        // We accept ListingImage objects here as they are compatible with our new type definition
+        setImages(initialData.images);
+      }
+
+      if (initialData.formattedImages && initialData.formattedImages.length > 0) {
+        setPreviewUrls(initialData.formattedImages.map(img => img.fullsize));
+      } else if (initialData.images && initialData.authorDid) {
+        // Fallback: Generate URLs from raw images if formattedImages is missing
+        const generatedUrls = initialData.images.map(img =>
+          createBlueskyCdnImageUrls(img, initialData.authorDid!).fullsize
+        );
+        setPreviewUrls(generatedUrls);
+      }
+
+      // Handle Subcategory
+      if (initialData.metadata && initialData.metadata.subcategory && initialData.category) {
+        // Find the category to get its subcategories
+        const categoryFn = CATEGORIES.find(c => c.id === initialData.category);
+        if (categoryFn) {
+          // Update the options state immediately so we can select the value
+          setSubcategories(categoryFn.subcategories);
+
+          // Find the ID matching the stored name
+          const subObj = categoryFn.subcategories.find(s => s.name === initialData.metadata!.subcategory);
+          if (subObj) {
+            setSelectedSubcategory(subObj.id);
+          }
+        }
+      }
+    }
+  }, [mode, initialData]);
+
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
@@ -195,8 +262,11 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
   };
 
   const removeImage = (index: number) => {
-    // Revoke the URL to prevent memory leaks
-    URL.revokeObjectURL(previewUrls[index]);
+    // Revoke the URL to prevent memory leaks ONLY if it was created by createObjectURL (starts with blob:)
+    const url = previewUrls[index];
+    if (url && url.startsWith('blob:')) {
+      URL.revokeObjectURL(url);
+    }
 
     // Remove the image and preview
     setImages(prev => prev.filter((_, i) => i !== index));
@@ -455,6 +525,8 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
     } else {
       // Set the category directly for other categories
       setSelectedCategory(categoryId);
+      // Reset subcategory when category changes
+      setSelectedSubcategory('');
 
       // If "Free Stuff" category is selected, automatically set price to 0
       if (categoryId === 'free') {
@@ -578,20 +650,29 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
       };
 
       // Prepare listing data with metadata embedded as JSON
-      const listingData = {
+      const listingDataRaw = {
         title: formData.get('title') as string,
         description: description,
         price: formattedPrice,
         location: locationData,
         category: categoryId,
         condition: formData.get('condition') as string,
-        images: images as any, // Type conversion for the API
+        images: images as any, // The client handles mixed types now
         hideFromFriends: hideFromFriends,
-        metadata: metadata // Include metadata here - client will need to be updated to process this
+        metadata: metadata
       };
 
-      console.log('Creating listing with location:', locationData);
-      const result = await client.createListing(listingData);
+      console.log('Submitting listing with data:', listingDataRaw);
+
+      let result;
+      if (mode === 'edit' && initialData && initialData.uri) {
+        // Update existing listing
+        await client.updateListing(initialData.uri, listingDataRaw);
+        result = { uri: initialData.uri };
+      } else {
+        // Create new listing
+        result = await client.createListing(listingDataRaw);
+      }
 
       // Save the location for future use
       saveCurrentLocation(locationData);
@@ -602,11 +683,13 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
       // Pass the listing URI to the onSuccess callback
       if (onSuccess) onSuccess(listingUri);
     } catch (err) {
-      setError(`Failed to create listing: ${err instanceof Error ? err.message : String(err)}`);
+      setError(`Failed to ${mode === 'edit' ? 'update' : 'create'} listing: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setIsSubmitting(false);
     }
   };
+
+
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:px-6 lg:px-8">
@@ -701,6 +784,7 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
                         width={96}
                         height={96}
                         className="object-cover w-full h-full"
+                        unoptimized
                       />
                       <button
                         type="button"
@@ -818,6 +902,8 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
                     <select
                       id="subcategory"
                       name="subcategory"
+                      value={selectedSubcategory}
+                      onChange={(e) => setSelectedSubcategory(e.target.value)}
                       className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
                     >
                       <option value="">Select subcategory (optional)</option>
@@ -1079,7 +1165,9 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
                   disabled={isSubmitting}
                   className="w-full py-3 px-4 bg-primary-color hover:bg-primary-light text-white font-medium rounded-md focus:outline-none focus:ring-4 focus:ring-primary-light disabled:opacity-70"
                 >
-                  {isSubmitting ? 'Creating listing...' : 'Create Listing'}
+                  {isSubmitting
+                    ? (mode === 'edit' ? 'Updating listing...' : 'Creating listing...')
+                    : (mode === 'edit' ? 'Update Listing' : 'Create Listing')}
                 </button>
               </div>
             </form>
@@ -1102,6 +1190,8 @@ export default function CreateListingForm({ client, onSuccess }: CreateListingFo
           />
         </div>
       </div>
+
+
     </div>
   );
 }

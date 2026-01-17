@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { MarketplaceListing } from '@/lib/marketplace-client';
 import ListingImageDisplay from '@/components/marketplace/ListingImageDisplay';
-import { Trash2, ExternalLink, AlertCircle } from 'lucide-react';
+import { Trash2, ExternalLink, AlertCircle, Edit } from 'lucide-react';
 import { formatPrice } from '@/lib/price-utils';
 import ConfirmationModal from '@/components/common/ConfirmationModal';
 
@@ -169,25 +169,32 @@ export default function MyListingsPage() {
                   {listing.description}
                 </p>
 
-                <div className="pt-4 border-t border-gray-50 flex items-center gap-3">
+                <div className="pt-4 border-t border-gray-50 flex items-center gap-2">
                   <Link
                     href={`/listing/${encodeURIComponent(listing.uri || '')}`}
-                    className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-gray-50 text-gray-700 font-medium text-sm hover:bg-gray-100 transition-colors"
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-gray-50 text-gray-700 font-medium text-sm hover:bg-gray-100 transition-colors"
                   >
-                    <ExternalLink size={16} />
+                    <ExternalLink size={14} />
                     View
+                  </Link>
+                  <Link
+                    href={`/edit-listing?uri=${encodeURIComponent(listing.uri || '')}`}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border border-gray-200 text-gray-700 font-medium text-sm hover:bg-gray-50 transition-colors"
+                  >
+                    <Edit size={14} />
+                    Edit
                   </Link>
                   <button
                     onClick={() => initiateDelete(listing.uri, listing.title)}
                     disabled={deletingId === listing.uri}
-                    className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg border border-red-100 text-red-600 font-medium text-sm hover:bg-red-50 hover:border-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border border-red-100 text-red-600 font-medium text-sm hover:bg-red-50 hover:border-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {deletingId === listing.uri ? (
                       <span className="inline-block h-4 w-4 border-2 border-current border-r-transparent rounded-full animate-spin" />
                     ) : (
-                      <Trash2 size={16} />
+                      <Trash2 size={14} />
                     )}
-                    {deletingId === listing.uri ? 'Deleting...' : 'Delete'}
+                    {deletingId === listing.uri ? 'Del...' : 'Delete'}
                   </button>
                 </div>
               </div>
