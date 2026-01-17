@@ -34,6 +34,8 @@ const LiveListingPreview = ({
         const numberVal = parseFloat(cleanPrice);
         if (isNaN(numberVal)) return '$0.00';
 
+        if (numberVal === 0) return 'Free';
+
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'USD',

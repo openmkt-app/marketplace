@@ -345,10 +345,25 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   };
 
   // Get user's current location using browser geolocation API
-  const getCurrentLocation = () => {
+  const getCurrentLocation = async () => {
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser");
       return;
+    }
+
+    // Check permissions first to give a better error message if already denied
+    try {
+      if (navigator.permissions && navigator.permissions.query) {
+        // Cast to any to avoid TypeScript issues if PermissionName doesn't include 'geolocation' in some envs
+        const result = await navigator.permissions.query({ name: 'geolocation' as any });
+        if (result.state === 'denied') {
+          setError("Location access is blocked. Please check your browser settings (usually the lock icon in the address bar) to allow location access for this site.");
+          return;
+        }
+      }
+    } catch (e) {
+      // Ignore errors if permission API is not supported or behaves unexpectedly
+      console.error("Error checking permissions:", e);
     }
 
     setIsGeolocating(true);
@@ -436,7 +451,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         // Provide user-friendly error messages
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            setError("Geolocation access was denied. Please enter your location manually or allow location access in your browser settings.");
+            setError("Location access was denied. Please check your browser settings (lock icon in address bar) to allow location access.");
             break;
           case error.POSITION_UNAVAILABLE:
             setError("Location information is unavailable. Please try again or enter your location manually.");
@@ -565,7 +580,9 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       }
 
       // Get selected category
-      const categoryId = formData.get('category') as string;
+      // We use the state variable because the select element might be disabled (for Free Stuff),
+      // in which case it's not included in the formData
+      const categoryId = selectedCategory;
 
       // Get the subcategory value
       const subcategory = formData.get('subcategory') as string;

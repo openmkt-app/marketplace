@@ -22,6 +22,11 @@ export function formatPrice(price: string): string {
     return price.startsWith('$') ? price : `$${price}`;
   }
 
+  // Check for zero price (Free)
+  if (numericValue === 0) {
+    return 'Free';
+  }
+
   return currencyFormatter.format(numericValue);
 }
 
