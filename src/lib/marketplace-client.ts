@@ -3,7 +3,7 @@ import { BskyAgent } from '@atproto/api';
 import type { AtpSessionData } from '@atproto/api';
 import { generateImageUrls } from './image-utils';
 import logger from './logger';
-import { getKnownMarketplaceDIDs, addMarketplaceDID } from './marketplace-dids';
+import { getKnownMarketplaceDIDs, addMarketplaceDID, ensureVerifiedSellersLoaded } from './marketplace-dids';
 
 // Define types for our marketplace listings
 export type ListingLocation = {
@@ -518,7 +518,8 @@ export class MarketplaceClient {
         return [];
       }
 
-      // Get known DIDs from registry
+      // Get known DIDs from registry, ensuring verified sellers are loaded
+      await ensureVerifiedSellersLoaded();
       const knownMarketplaceDIDs = getKnownMarketplaceDIDs();
       logger.info(`Fetching from ${knownMarketplaceDIDs.length} known marketplace DIDs`);
 
@@ -1354,6 +1355,11 @@ export async function fetchPublicListings(): Promise<(MarketplaceListing & {
   uri: string;
   cid: string;
 })[]> {
+  logger.info('[Public] Fetching public listings');
+
+  // Ensure verified sellers are loaded
+  await ensureVerifiedSellersLoaded();
+  const knownMarketplaceDIDs = getKnownMarketplaceDIDs();
   const listings: (MarketplaceListing & {
     authorDid: string;
     authorHandle: string;
@@ -1362,7 +1368,6 @@ export async function fetchPublicListings(): Promise<(MarketplaceListing & {
   })[] = [];
 
   // Get known DIDs from registry
-  const knownMarketplaceDIDs = getKnownMarketplaceDIDs();
   logger.info(`[Public] Fetching from ${knownMarketplaceDIDs.length} known marketplace DIDs`);
 
   // Helper to resolve PDS for a DID

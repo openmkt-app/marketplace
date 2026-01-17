@@ -952,7 +952,7 @@ const BrowsePageContent = () => {
         )}
 
         {/* Hero Section for low inventory / onboarding - Logged out users only */}
-        {!auth.isLoggedIn && allListings.length < 10 && (
+        {!auth.isLoggedIn && (
           <HeroSection listingCount={allListings.length} locationName={locationDisplayName} />
         )}
 

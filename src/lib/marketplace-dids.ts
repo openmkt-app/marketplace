@@ -2,38 +2,89 @@
  * Registry of known marketplace participant DIDs
  *
  * This file maintains a list of DIDs that are known to have marketplace listings.
- * This is a temporary solution until proper discovery mechanisms (like Jetstream or AppView) are working.
- *
- * You can add DIDs here manually or programmatically discover them.
+ * It combines:
+ * 1. Hardcoded seeds
+ * 2. LocalStorage (custom added by user)
+ * 3. Verified Sellers (fetched from Bot Registry API)
  */
 
 export const KNOWN_MARKETPLACE_DIDS: string[] = [
-  'did:plc:oyhgprn7edb3dpdaq4mlgfkv', // Your personal profile
-  // Add more DIDs here as you discover marketplace participants
+  'did:plc:oyhgprn7edb3dpdaq4mlgfkv', // Seed profile
 ];
 
+// Cache for verified sellers to avoid refetching too often
+let verifiedSellers: string[] = [];
+let fetchPromise: Promise<string[]> | null = null;
+
 /**
- * Add a DID to the known marketplace participants list
- * This can be called when you discover a new user has created listings
+ * Fetch verified sellers from the Bot Registry API
+ */
+export function fetchVerifiedSellers(): Promise<string[]> {
+  if (typeof window === 'undefined') return Promise.resolve([]);
+
+  // If a fetch is already in progress, return the existing promise
+  if (fetchPromise) return fetchPromise;
+
+  // Otherwise start a new fetch
+  fetchPromise = (async () => {
+    try {
+      const response = await fetch('/api/marketplace/sellers');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.sellers && Array.isArray(data.sellers)) {
+          verifiedSellers = data.sellers.map((s: any) => s.did);
+          console.log(`[Registry] Fetched ${verifiedSellers.length} verified sellers`);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch verified sellers:', e);
+    } finally {
+      // Clear promise so we can fetch again later if needed
+      // but keep the data
+      fetchPromise = null;
+    }
+    return verifiedSellers;
+  })();
+
+  return fetchPromise;
+}
+
+/**
+ * Ensure verified sellers are loaded before proceeding.
+ * Use this when you need to be sure the registry is populated.
+ */
+export async function ensureVerifiedSellersLoaded(): Promise<string[]> {
+  if (verifiedSellers.length > 0) return verifiedSellers;
+  // If we have a pending fetch, wait for it
+  if (fetchPromise) return fetchPromise;
+  // Otherwise start one
+  return fetchVerifiedSellers();
+}
+
+/**
+ * Add a DID to the known marketplace participants list (Local Only)
  */
 export function addMarketplaceDID(did: string): void {
-  if (!KNOWN_MARKETPLACE_DIDS.includes(did)) {
+  const combined = new Set([...KNOWN_MARKETPLACE_DIDS, ...verifiedSellers]);
+
+  if (!combined.has(did)) {
     KNOWN_MARKETPLACE_DIDS.push(did);
     console.log(`Added ${did} to known marketplace DIDs`);
 
-    // Optionally persist to localStorage for client-side persistence
     if (typeof window !== 'undefined') {
       try {
+        // filter out verified ones so we don't save them to local storage redundantly?
+        // Actually, just save local additions.
         localStorage.setItem('marketplace-dids', JSON.stringify(KNOWN_MARKETPLACE_DIDS));
       } catch (e) {
-        console.warn('Failed to persist marketplace DIDs to localStorage', e);
+        console.warn('Failed to persist marketplace DIDs', e);
       }
     }
   }
 }
 
 /**
- * Load marketplace DIDs from localStorage on client initialization
+ * Load marketplace DIDs from localStorage
  */
 export function loadMarketplaceDIDsFromStorage(): void {
   if (typeof window !== 'undefined') {
@@ -46,22 +97,26 @@ export function loadMarketplaceDIDsFromStorage(): void {
             KNOWN_MARKETPLACE_DIDS.push(did);
           }
         });
-        console.log(`Loaded ${storedDIDs.length} marketplace DIDs from storage`);
       }
+
+      // Kick off the verified fetch
+      fetchVerifiedSellers();
+
     } catch (e) {
-      console.warn('Failed to load marketplace DIDs from localStorage', e);
+      console.warn('Failed to load marketplace DIDs', e);
     }
   }
 }
 
 /**
- * Get all known marketplace DIDs
+ * Get all known marketplace DIDs (Local + Verified)
  */
 export function getKnownMarketplaceDIDs(): string[] {
-  return [...KNOWN_MARKETPLACE_DIDS];
+  // De-duplicate
+  return Array.from(new Set([...KNOWN_MARKETPLACE_DIDS, ...verifiedSellers]));
 }
 
-// Auto-load from storage on module initialization
+// Auto-load
 if (typeof window !== 'undefined') {
   loadMarketplaceDIDsFromStorage();
 }

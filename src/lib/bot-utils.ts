@@ -1,6 +1,6 @@
 import { BskyAgent } from '@atproto/api';
 
-export const BOT_HANDLE = 'at-marketplace-bot.bsky.social';
+export const BOT_HANDLE = 'openmkt.app';
 
 /**
  * Check if a user is following the marketplace bot

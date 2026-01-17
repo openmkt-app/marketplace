@@ -1162,8 +1162,8 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="w-full py-3 px-4 bg-primary-color hover:bg-primary-light text-white font-medium rounded-md focus:outline-none focus:ring-4 focus:ring-primary-light disabled:opacity-70"
+                  disabled={isSubmitting || (!isFollowingBotState && !isCheckingFollow)}
+                  className="w-full py-3 px-4 bg-primary-color hover:bg-primary-light text-white font-medium rounded-md focus:outline-none focus:ring-4 focus:ring-primary-light disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {isSubmitting
                     ? (mode === 'edit' ? 'Updating listing...' : 'Creating listing...')

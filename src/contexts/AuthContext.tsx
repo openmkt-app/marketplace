@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import MarketplaceClient, { SessionData } from '@/lib/marketplace-client';
+import { addMarketplaceDID } from '@/lib/marketplace-dids';
 
 // Define the Auth user type
 type User = {
@@ -27,7 +28,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   client: null,
   login: async () => false,
-  logout: () => {},
+  logout: () => { },
   isLoading: true,
 });
 
@@ -84,6 +85,30 @@ async function fetchUserProfile(client: MarketplaceClient, did: string): Promise
     console.error('Error fetching user profile:', error);
   }
   return {};
+  return {};
+}
+
+// Helper function to auto-register user with the bot
+async function registerWithBot(did: string) {
+  try {
+    // Check if we already tried registering this session
+    const key = `bot-registered-${did}`;
+    if (localStorage.getItem(key)) return;
+
+    console.log('Auto-registering user with marketplace bot...');
+    const response = await fetch('/api/marketplace/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ did })
+    });
+
+    if (response.ok) {
+      console.log('Successfully registered with bot');
+      localStorage.setItem(key, 'true');
+    }
+  } catch (err) {
+    console.warn('Auto-registration failed', err);
+  }
 }
 
 // Provider component for the auth context
@@ -125,6 +150,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 displayName: profile.displayName,
                 avatarCid: profile.avatarCid,
               });
+
+              // Auto-register with bot
+              registerWithBot(sessionData.did);
+
+              // Ensure we are in the local known DIDs list so our listings show up immediately
+              addMarketplaceDID(sessionData.did);
             } else {
               console.error('Failed to resume session, clearing stored data');
               localStorage.removeItem(SESSION_STORAGE_KEY);
@@ -166,6 +197,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           avatarCid: profile.avatarCid,
         });
 
+        // Auto-register with bot
+        registerWithBot(sessionData.did);
+
+        // Ensure we are in the local known DIDs list so our listings show up immediately
+        addMarketplaceDID(sessionData.did);
+
         // Save the session to localStorage for persistence
         if (typeof window !== 'undefined') {
           localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
@@ -187,10 +224,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (client) {
       client.logout();
     }
-    
+
     setIsLoggedIn(false);
     setUser(null);
-    
+
     // Clear session from localStorage
     if (typeof window !== 'undefined') {
       localStorage.removeItem(SESSION_STORAGE_KEY);
