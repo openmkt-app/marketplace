@@ -4,6 +4,7 @@ import type { AtpSessionData } from '@atproto/api';
 import { generateImageUrls } from './image-utils';
 import logger from './logger';
 import { getKnownMarketplaceDIDs, addMarketplaceDID, ensureVerifiedSellersLoaded } from './marketplace-dids';
+import { MARKETPLACE_COLLECTION } from './constants';
 
 // Define types for our marketplace listings
 export type ListingLocation = {
@@ -215,14 +216,14 @@ export class MarketplaceClient {
       });
 
       logger.logApiRequest('POST', 'com.atproto.repo.createRecord', {
-        collection: 'app.atprotomkt.marketplace.listing',
+        collection: MARKETPLACE_COLLECTION,
         imageCount: processedImages ? processedImages.length : 0,
         hideFromFriends: listingDataWithoutImages.hideFromFriends || false
       });
 
       const result = await this.agent.api.com.atproto.repo.createRecord({
         repo: this.agent.session.did,
-        collection: 'app.atprotomkt.marketplace.listing',
+        collection: MARKETPLACE_COLLECTION,
         record: {
           ...listingDataWithoutImages,
           images: processedImages, // Add the processed images
@@ -626,7 +627,7 @@ export class MarketplaceClient {
       }
 
       // Look for listings in the supported namespace
-      const validTypes = ['app.atprotomkt.marketplace.listing'];
+      const validTypes = [MARKETPLACE_COLLECTION];
       const allListings: (MarketplaceListing & {
         authorDid: string;
         authorHandle: string;
@@ -769,7 +770,7 @@ export class MarketplaceClient {
 
           if (searchResults.success && searchResults.data.posts) {
             // Filter for supported listing types
-            const validTypes = ['app.atprotomkt.marketplace.listing'];
+            const validTypes = [MARKETPLACE_COLLECTION];
 
             // Filter for actual marketplace listings
             const marketplaceListings = searchResults.data.posts
@@ -996,7 +997,7 @@ export class MarketplaceClient {
       const record = post.record as PostRecord;
 
       // Check if this is actually a marketplace listing
-      const validTypes = ['app.atprotomkt.marketplace.listing'];
+      const validTypes = [MARKETPLACE_COLLECTION];
       if (!validTypes.includes(record.$type)) {
         logger.warn(`Post is not a marketplace listing: ${record.$type}`);
         return null;
@@ -1132,7 +1133,7 @@ export class MarketplaceClient {
     cursor?: number
   ): () => void {
     // Try the primary Jetstream endpoint (no cursor initially to test connection)
-    let JETSTREAM_URL = 'wss://jetstream1.us-east.bsky.network/subscribe?wantedCollections=app.atprotomkt.marketplace.listing';
+    let JETSTREAM_URL = `wss://jetstream1.us-east.bsky.network/subscribe?wantedCollections=${MARKETPLACE_COLLECTION}`;
 
     // Calculate default cursor (3 months ago) if not provided
     // This allows us to "replay" the history and discover existing listings without a seed seller
@@ -1208,7 +1209,7 @@ export class MarketplaceClient {
           const did = data.did;
 
           // Validate that this is actually a marketplace listing
-          if (data.commit.collection !== 'app.atprotomkt.marketplace.listing') {
+          if (data.commit.collection !== MARKETPLACE_COLLECTION) {
             return;
           }
 
@@ -1424,7 +1425,7 @@ export async function fetchPublicListings(): Promise<(MarketplaceListing & {
       // Fetch listings from the marketplace collection
       const result = await agent.api.com.atproto.repo.listRecords({
         repo: did,
-        collection: 'app.atprotomkt.marketplace.listing',
+        collection: MARKETPLACE_COLLECTION,
         limit: 50
       });
 

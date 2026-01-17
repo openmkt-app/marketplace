@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { MarketplaceListing } from '@/lib/marketplace-client';
 import { fetchListingsFromDID } from '@/lib/fetch-specific-listing';
+import { MARKETPLACE_COLLECTION } from '@/lib/constants';
 
 export default function TestListingPage() {
   const auth = useAuth();
-  const [uri, setUri] = useState('at://did:plc:oyhgprn7edb3dpdaq4mlgfkv/app.atprotomkt.marketplace.listing');
+  const [uri, setUri] = useState(`at://did:plc:oyhgprn7edb3dpdaq4mlgfkv/${MARKETPLACE_COLLECTION}`);
   const [did, setDid] = useState('did:plc:oyhgprn7edb3dpdaq4mlgfkv');
   const [listing, setListing] = useState<MarketplaceListing | null>(null);
   const [didListings, setDidListings] = useState<MarketplaceListing[]>([]);
@@ -172,7 +173,7 @@ export default function TestListingPage() {
                 value={uri}
                 onChange={(e) => setUri(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                placeholder="at://did:plc:xxx/app.atprotomkt.marketplace.listing/rkey"
+                placeholder={`at://did:plc:xxx/${MARKETPLACE_COLLECTION}/rkey`}
               />
             </div>
             <button

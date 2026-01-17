@@ -6,6 +6,7 @@
 import { BskyAgent } from '@atproto/api';
 import type { MarketplaceListing } from './marketplace-client';
 import { generateImageUrls } from './image-utils';
+import { MARKETPLACE_COLLECTION } from './constants';
 
 /**
  * Resolve the PDS (Personal Data Server) for a given DID
@@ -62,7 +63,7 @@ export async function fetchListingsFromDID(
 
     const result = await agent.api.com.atproto.repo.listRecords({
       repo: did,
-      collection: 'app.atprotomkt.marketplace.listing',
+      collection: MARKETPLACE_COLLECTION,
       limit: 100
     });
 
