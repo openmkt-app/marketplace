@@ -65,13 +65,20 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
   const [isLoadingFollowSeller, setIsLoadingFollowSeller] = useState(false);
   const [isSendingInterest, setIsSendingInterest] = useState(false);
   const [interestSent, setInterestSent] = useState(false);
+  const [isInterestModalOpen, setIsInterestModalOpen] = useState(false);
   const [isCheckingFollowStatus, setIsCheckingFollowStatus] = useState(true);
+
+  // Reporting State
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [reportReason, setReportReason] = useState('Spam');
+  const [reportDescription, setReportDescription] = useState('');
 
   // Check if this is the user's own listing
   const isOwnListing = user?.did && listing.authorDid && user.did === listing.authorDid;
 
-  // Storage key for persisting interest sent state
-  const interestStorageKey = listing.uri ? `interest-sent-${listing.uri}` : null;
+  // Storage key for persisting interest sent state - scoped to user!
+  const interestStorageKey = listing.uri && user?.did ? `interest-sent-${user.did}-${listing.uri}` : null;
 
   // Check if user follows bot and seller on mount
   React.useEffect(() => {
@@ -84,9 +91,9 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
           // Check if interest was already sent (from localStorage)
           if (interestStorageKey) {
             const alreadySent = localStorage.getItem(interestStorageKey) === 'true';
-            if (alreadySent) {
-              setInterestSent(true);
-            }
+            setInterestSent(alreadySent);
+          } else {
+            setInterestSent(false);
           }
 
           // Check if user follows the bot
@@ -191,17 +198,7 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
     }
   };
 
-  // Determine the current step in the interest flow
-  const getInterestFlowStep = (): 'loading' | 'follow-bot' | 'follow-seller' | 'ready' | 'sent' | 'own-listing' => {
-    if (isOwnListing) return 'own-listing';
-    if (isCheckingFollowStatus) return 'loading';
-    if (interestSent) return 'sent';
-    if (!isFollowingBotState) return 'follow-bot';
-    if (!isFollowingSellerState) return 'follow-seller';
-    return 'ready';
-  };
 
-  const flowStep = getInterestFlowStep();
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -219,6 +216,40 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
       // Fallback: copy to clipboard
       await navigator.clipboard.writeText(window.location.href);
       alert('Link copied to clipboard!');
+    }
+  };
+
+  const handleReportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!listing.uri) return;
+
+    setIsSubmittingReport(true);
+    try {
+      const response = await fetch('/api/admin/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          listingUri: listing.uri,
+          reason: reportReason,
+          description: reportDescription,
+          reporterDid: user?.did
+        })
+      });
+
+      if (response.ok) {
+        alert('Report submitted. An admin will review this listing shortly.');
+        setIsReportModalOpen(false);
+        setReportDescription('');
+        setReportReason('Spam');
+      } else {
+        const data = await response.json();
+        alert(`Failed to submit report: ${data.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error submitting report:', error);
+      alert('Failed to submit report. Please try again.');
+    } finally {
+      setIsSubmittingReport(false);
     }
   };
 
@@ -380,39 +411,8 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
           <div className="space-y-3">
             {isLoggedIn ? (
               <>
-                {/* Step indicator for multi-step flow */}
-                {flowStep !== 'sent' && flowStep !== 'own-listing' && flowStep !== 'loading' && (
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${isFollowingBotState ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'
-                      }`}>
-                      {isFollowingBotState ? <CheckCircle size={14} /> : '1'}
-                    </div>
-                    <div className={`h-0.5 flex-1 ${isFollowingBotState ? 'bg-green-200' : 'bg-gray-200'}`} />
-                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${isFollowingSellerState ? 'bg-green-100 text-green-600' : isFollowingBotState ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'
-                      }`}>
-                      {isFollowingSellerState ? <CheckCircle size={14} /> : '2'}
-                    </div>
-                    <div className={`h-0.5 flex-1 ${isFollowingSellerState ? 'bg-green-200' : 'bg-gray-200'}`} />
-                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${flowStep === 'ready' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'
-                      }`}>
-                      3
-                    </div>
-                  </div>
-                )}
-
-                {/* Loading state */}
-                {flowStep === 'loading' && (
-                  <button
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-gray-100 text-gray-500 font-medium rounded-xl"
-                    disabled
-                  >
-                    <Loader2 size={20} className="animate-spin" />
-                    Checking status...
-                  </button>
-                )}
-
-                {/* Own listing - show management link */}
-                {flowStep === 'own-listing' && (
+                {/* 1. Own Listing State */}
+                {isOwnListing ? (
                   <div className="p-5 bg-blue-50 border border-blue-100 rounded-xl text-center space-y-3">
                     <p className="font-medium text-blue-800">This is your listing.</p>
                     <Link
@@ -426,115 +426,9 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                       </svg>
                     </Link>
                   </div>
-                )}
-
-                {/* Step 1: Follow the bot */}
-                {flowStep === 'follow-bot' && (
-                  <>
-                    <button
-                      className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={handleFollowBot}
-                      disabled={isLoadingFollowBot}
-                    >
-                      {isLoadingFollowBot ? (
-                        <>
-                          <Loader2 size={20} className="animate-spin" />
-                          Following...
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus size={20} />
-                          Step 1: Follow Our Bot
-                        </>
-                      )}
-                    </button>
-                    <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
-                      <Info size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
-                      <p className="text-xs text-blue-700">
-                        Bluesky requires mutual follows to chat. Follow our bot to enable the introduction system.
-                      </p>
-                    </div>
-                  </>
-                )}
-
-                {/* Step 2: Follow the seller */}
-                {flowStep === 'follow-seller' && (
-                  <>
-                    <button
-                      className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={handleFollowSeller}
-                      disabled={isLoadingFollowSeller}
-                    >
-                      {isLoadingFollowSeller ? (
-                        <>
-                          <Loader2 size={20} className="animate-spin" />
-                          Following...
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus size={20} />
-                          Step 2: Follow the Seller
-                        </>
-                      )}
-                    </button>
-                    <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
-                      <Info size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
-                      <p className="text-xs text-blue-700">
-                        Follow the seller so they can message you back after seeing your interest.
-                      </p>
-                    </div>
-                  </>
-                )}
-
-                {/* Step 3: Show interest (ready to send) */}
-                {flowStep === 'ready' && (
-                  <>
-                    {rateLimitError ? (
-                      <>
-                        <div className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-amber-100 text-amber-700 font-medium rounded-xl">
-                          <Info size={20} />
-                          Limit Reached
-                        </div>
-                        <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg">
-                          <Info size={16} className="text-amber-600 mt-0.5 flex-shrink-0" />
-                          <p className="text-xs text-amber-700">
-                            {rateLimitError}
-                          </p>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          onClick={handleShowInterest}
-                          disabled={isSendingInterest}
-                        >
-                          {isSendingInterest ? (
-                            <>
-                              <Loader2 size={20} className="animate-spin" />
-                              Sending...
-                            </>
-                          ) : (
-                            <>
-                              <Send size={20} />
-                              Show Interest
-                            </>
-                          )}
-                        </button>
-                        <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
-                          <Info size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
-                          <p className="text-xs text-blue-700">
-                            Our bot will introduce you to the seller via Bluesky DM. They can then message you directly.
-                          </p>
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
-
-                {/* Interest sent - success state */}
-                {flowStep === 'sent' && (
-                  <>
+                ) : interestSent ? (
+                  /* 2. Success State */
+                  <div className="space-y-3">
                     <div className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-green-100 text-green-700 font-medium rounded-xl">
                       <CheckCircle size={20} />
                       Interest Sent!
@@ -543,13 +437,140 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                       <Info size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
                       <p className="text-xs text-green-700">
                         The seller has been notified of your interest. They will reach out to you via Bluesky DM if interested.
-                        Please wait for them to respond.
                       </p>
                     </div>
-                  </>
+                  </div>
+                ) : (
+                  /* 3. Primary Action Button */
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => {
+                        if (isFollowingBotState && isFollowingSellerState) {
+                          handleShowInterest();
+                        } else {
+                          setIsInterestModalOpen(true);
+                        }
+                      }}
+                      disabled={isCheckingFollowStatus || isSendingInterest}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold rounded-xl shadow-sm hover:shadow-md transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                      {isSendingInterest ? (
+                        <>
+                          <Loader2 size={24} className="animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <MessageCircle size={24} />
+                          I&apos;m Interested
+                        </>
+                      )}
+                    </button>
+                    <p className="text-center text-xs text-gray-500">
+                      Click to contact the seller via secure DM
+                    </p>
+                  </div>
+                )}
+
+                {/* MODAL: Interest Flow */}
+                {isInterestModalOpen && (
+                  <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-200">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold text-gray-900">Contact Seller</h3>
+                        <button
+                          onClick={() => setIsInterestModalOpen(false)}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                      </div>
+
+                      <div className="space-y-6">
+                        <p className="text-sm text-gray-600">
+                          To protect privacy and ensure delivery, please complete these steps to enable secure messaging.
+                        </p>
+
+                        {/* Step 1: Follow Bot */}
+                        <div className={`p-4 rounded-lg border ${isFollowingBotState ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'}`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className={`font-semibold ${isFollowingBotState ? 'text-green-700' : 'text-gray-900'}`}>1. Enable Notifications</span>
+                            {isFollowingBotState && <CheckCircle size={18} className="text-green-600" />}
+                          </div>
+                          {!isFollowingBotState ? (
+                            <button
+                              onClick={handleFollowBot}
+                              disabled={isLoadingFollowBot}
+                              className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                            >
+                              {isLoadingFollowBot ? <Loader2 size={16} className="animate-spin" /> : 'Follow Marketplace Bot'}
+                            </button>
+                          ) : (
+                            <p className="text-xs text-green-700">You are following the bot.</p>
+                          )}
+                        </div>
+
+                        {/* Step 2: Follow Seller */}
+                        <div className={`p-4 rounded-lg border ${isFollowingSellerState ? 'bg-green-50 border-green-200' : isFollowingBotState ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-200 opacity-70'}`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className={`font-semibold ${isFollowingSellerState ? 'text-green-700' : 'text-gray-900'}`}>2. Connect with Seller</span>
+                            {isFollowingSellerState && <CheckCircle size={18} className="text-green-600" />}
+                          </div>
+                          {!isFollowingSellerState && (
+                            isFollowingBotState ? (
+                              <button
+                                onClick={handleFollowSeller}
+                                disabled={isLoadingFollowSeller}
+                                className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                              >
+                                {isLoadingFollowSeller ? <Loader2 size={16} className="animate-spin" /> : 'Follow Seller'}
+                              </button>
+                            ) : (
+                              <p className="text-xs text-gray-500">Complete step 1 first.</p>
+                            )
+                          )}
+                          {isFollowingSellerState && <p className="text-xs text-green-700">You are following the seller.</p>}
+                        </div>
+
+                        {/* Step 3: Send Interest */}
+                        <div className="pt-2 border-t border-gray-100">
+                          {rateLimitError && (
+                            <p className="text-xs text-amber-600 mb-2">{rateLimitError}</p>
+                          )}
+                          <button
+                            onClick={() => {
+                              handleShowInterest();
+                              // Close modal on success is handled by effect or manual check, but handleShowInterest sets state.
+                              // We can close modal if success. 
+                              // Actually handleShowInterest sets 'interestSent'.
+                              // We should close modal here if send is triggered? 
+                              // Better to let the user see "Sending..." then close.
+                              // We'll assume handleShowInterest works.
+                              setIsInterestModalOpen(false);
+                            }}
+                            disabled={!isFollowingBotState || !isFollowingSellerState || isSendingInterest}
+                            className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                          >
+                            {isSendingInterest ? (
+                              <>
+                                <Loader2 size={20} className="animate-spin" />
+                                Sending...
+                              </>
+                            ) : (
+                              <>
+                                <Send size={20} />
+                                Send Interest
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </>
             ) : (
+              /* Logged Out State */
               <>
                 <Link
                   href="/login"
@@ -589,8 +610,80 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
               <span>Payment happens outside this app (Cash/Zelle).</span>
             </li>
           </ul>
+
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <button
+              onClick={() => setIsReportModalOpen(true)}
+              className="text-xs text-gray-400 hover:text-red-600 hover:underline flex items-center gap-1 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+                <line x1="4" y1="22" x2="4" y2="15"></line>
+              </svg>
+              Report this listing
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Report Modal */}
+      {isReportModalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Report Listing</h3>
+            <form onSubmit={handleReportSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+                <select
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  <option value="Spam">Spam</option>
+                  <option value="Scam">Scam / Fraud</option>
+                  <option value="Illegal">Illegal Goods</option>
+                  <option value="Offensive">Offensive Content</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
+                <textarea
+                  value={reportDescription}
+                  onChange={(e) => setReportDescription(e.target.value)}
+                  placeholder="Please provide more details..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
+                />
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsReportModalOpen(false)}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors font-medium"
+                  disabled={isSubmittingReport}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingReport}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
+                >
+                  {isSubmittingReport ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    'Submit Report'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

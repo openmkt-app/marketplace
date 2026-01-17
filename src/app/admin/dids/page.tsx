@@ -1,10 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import { getKnownMarketplaceDIDs, addMarketplaceDID } from '@/lib/marketplace-dids';
 import { fetchListingsFromDID } from '@/lib/fetch-specific-listing';
 
 export default function ManageDIDsPage() {
+  const { user, isLoggedIn, isLoading } = useAuth();
+  const router = useRouter();
   const [dids, setDids] = useState<string[]>([]);
   const [newDid, setNewDid] = useState('');
   const [verifying, setVerifying] = useState(false);
@@ -12,8 +16,19 @@ export default function ManageDIDsPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
+    // If loading, wait
+    if (isLoading) return;
+
+    // Check if logged in and is admin
+    const adminHandle = 'openmkt.app'; // Harcoded for verification
+
+    if (!isLoggedIn || !user || user.handle !== adminHandle) {
+      router.push('/');
+      return;
+    }
+
     loadDIDs();
-  }, []);
+  }, [isLoggedIn, user, isLoading, router]);
 
   const loadDIDs = () => {
     const knownDIDs = getKnownMarketplaceDIDs();
