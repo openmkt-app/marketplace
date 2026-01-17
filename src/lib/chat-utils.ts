@@ -235,13 +235,19 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
     console.warn('getUnreadChatCount: Primary method failed, attempting fallback...', error.message || error);
 
     // Fallback: Try calling the chat API directly via the main agent (PDS proxy)
-    // This works if the PDS proxies the request or if we have a session that works differently
+    // This uses the current session and proxies through the PDS
     try {
       console.log('getUnreadChatCount: Attempting fallback PDS proxy call...');
-      const response = await agent.api.chat.bsky.convo.listConvos({ limit: 50 });
 
-      if (response.success) {
-        const convos = response.data.convos;
+      // Use generic xrpc call to avoid typing issues or wrapper quirks
+      const result = await agent.call(
+        'chat.bsky.convo.listConvos',
+        { limit: 50 },
+        { headers: { 'Atproto-Proxy': 'did:web:api.bsky.chat#bsky_chat' } } // Hint for the proxy
+      );
+
+      if (result.success && result.data && (result.data as any).convos) {
+        const convos = (result.data as any).convos as any[];
         const unreadCount = convos.reduce((total, convo) => {
           return total + (convo.unreadCount || 0);
         }, 0);
