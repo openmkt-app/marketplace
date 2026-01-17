@@ -228,6 +228,7 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
 
     const response = await fetch(url, {
       method: 'GET',
+      credentials: 'omit', // Important: Do not send cookies, they might conflict with Bearer token
       headers: {
         'Authorization': `Bearer ${session.accessJwt}`,
         'Atproto-Proxy': 'did:web:api.bsky.chat#bsky_chat'
