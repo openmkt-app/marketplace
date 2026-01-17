@@ -199,8 +199,25 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
     });
 
     if (!convoAuth.success) {
-      // Common error with App Passwords (no access to chat)
-      // console.warn('Failed to get service auth token for listing convos', convoAuth);
+      console.warn('getUnreadChatCount: Failed to get service auth token', convoAuth);
+
+      // Fallback: Try calling the chat API directly via the main agent (PDS proxy)
+      try {
+        console.log('getUnreadChatCount: Attempting fallback PDS proxy call...');
+        const response = await agent.api.chat.bsky.convo.listConvos({ limit: 50 });
+
+        if (response.success) {
+          const convos = response.data.convos;
+          const unreadCount = convos.reduce((total, convo) => {
+            return total + (convo.unreadCount || 0);
+          }, 0);
+          console.log(`getUnreadChatCount: Fallback success! Found ${unreadCount} unread messages.`);
+          return unreadCount;
+        }
+      } catch (fallbackError) {
+        console.warn('getUnreadChatCount: Fallback proxy call failed:', fallbackError);
+      }
+
       return 0;
     }
 
@@ -218,7 +235,7 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
     );
 
     if (!response.success) {
-      // console.error('Failed to list conversations', response);
+      console.error('getUnreadChatCount: Failed to list conversations', response);
       return 0;
     }
 
@@ -229,17 +246,11 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
       return total + (convo.unreadCount || 0);
     }, 0);
 
+    console.log(`getUnreadChatCount: Found ${unreadCount} unread messages in ${convos.length} conversations`);
     return unreadCount;
 
   } catch (error: any) {
-    // Suppress "insufficient access" error which is expected for App Passwords
-    const errorMessage = error.message || error.error || '';
-    if (errorMessage.includes('insufficient access')) {
-      // Expected behavior for App Passwords
-      return 0;
-    }
-
-    console.error('Error checking unread messages:', error);
+    console.error('getUnreadChatCount: Error checking unread messages:', error);
     return 0;
   }
 }
