@@ -184,7 +184,8 @@ export async function sendMessageToSeller(
 }
 
 /**
- * Check for unread messages using the Bluesky Chat API
+ * Get unread chat message count using the Bluesky Chat API
+ * This uses chat.bsky.convo.listConvos proxied through the user's PDS
  */
 export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
   try {
@@ -192,76 +193,47 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
       return 0;
     }
 
-    // 1. Get a service auth token for listConvos
-    const convoAuth = await agent.api.com.atproto.server.getServiceAuth({
-      aud: 'did:web:api.bsky.chat',
-      lxm: 'chat.bsky.convo.listConvos',
-    });
+    // Get the PDS URL from the agent and ensure no trailing slash
+    const pdsUrl = (agent.pdsUrl?.toString() || 'https://bsky.social').replace(/\/$/, '');
 
-    if (!convoAuth.success) {
-      console.warn('getUnreadChatCount: Failed to get service auth token (success=false)', convoAuth);
-      throw new Error('AuthTokenFailed'); // Throw to trigger catch block fallback
-    }
-
-    const convoToken = convoAuth.data.token;
-
-    // 2. Create a specialized agent for the chat service
-    const chatAgent = new BskyAgent({
-      service: 'https://api.bsky.chat'
-    });
-
-    // 3. List conversations to check unread count
-    const response = await chatAgent.api.chat.bsky.convo.listConvos(
-      { limit: 50 }, // Check last 50 convos
-      { headers: { Authorization: `Bearer ${convoToken}` } }
+    // Call listConvos through the PDS with the proxy header
+    // The PDS will proxy this request to the chat service (did:web:api.bsky.chat)
+    const response = await fetch(
+      `${pdsUrl}/xrpc/chat.bsky.convo.listConvos?limit=100`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${agent.session.accessJwt}`,
+          'atproto-proxy': 'did:web:api.bsky.chat#bsky_chat',
+        },
+      }
     );
 
-    if (!response.success) {
-      console.error('getUnreadChatCount: Failed to list conversations', response);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.warn('getUnreadChatCount: Failed to list conversations', response.status, errorText);
       return 0;
     }
 
-    // 4. Sum up unread counts
-    const convos = response.data.convos;
-    const unreadCount = convos.reduce((total, convo) => {
-      // unreadCount is available on the conversation object
+    const data = await response.json();
+
+    if (!data.convos || !Array.isArray(data.convos)) {
+      return 0;
+    }
+
+    // Sum up unreadCount from all conversations
+    const unreadCount = data.convos.reduce((total: number, convo: any) => {
       return total + (convo.unreadCount || 0);
     }, 0);
 
-    console.log(`getUnreadChatCount: Found ${unreadCount} unread messages in ${convos.length} conversations`);
+    if (unreadCount > 0) {
+      console.log(`getUnreadChatCount: Found ${unreadCount} unread messages in ${data.convos.length} conversations`);
+    }
+
     return unreadCount;
 
   } catch (error: any) {
-    console.warn('getUnreadChatCount: Primary method failed, attempting fallback...', error.message || error);
-
-    // Fallback: Try calling the chat API directly via the main agent (PDS proxy)
-    // This uses the current session and proxies through the PDS
-    try {
-      console.log('getUnreadChatCount: Attempting fallback PDS proxy call...');
-
-      // Use generic xrpc call to avoid typing issues or wrapper quirks
-      const result = await agent.call(
-        'chat.bsky.convo.listConvos',
-        { limit: 50 },
-        { headers: { 'Atproto-Proxy': 'did:web:api.bsky.chat#bsky_chat' } } // Hint for the proxy
-      );
-
-      if (result.success && result.data && (result.data as any).convos) {
-        const convos = (result.data as any).convos as any[];
-        const unreadCount = convos.reduce((total, convo) => {
-          return total + (convo.unreadCount || 0);
-        }, 0);
-        console.log(`getUnreadChatCount: Fallback success! Found ${unreadCount} unread messages.`);
-        return unreadCount;
-      }
-    } catch (fallbackError: any) {
-      // Suppress "insufficient access" error which is expected for App Passwords
-      const errorMessage = fallbackError.message || fallbackError.error || '';
-      if (!errorMessage.includes('insufficient access')) {
-        console.warn('getUnreadChatCount: Fallback proxy call failed:', fallbackError);
-      }
-    }
-
+    console.warn('getUnreadChatCount: Error checking unread messages', error?.message || error);
     return 0;
   }
 }
