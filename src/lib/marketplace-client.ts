@@ -733,30 +733,30 @@ export class MarketplaceClient {
       // Category to Hashtag Mapping
       const categoryHashtags: Record<string, string> = {
         'antiques': '#Antiques #Vintage',
-        'apparel': '#Fashion #Style',
-        'auto': '#CarPart #Auto',
+        'apparel': '#Fashion #Thrifting',
+        'auto': '#CarParts #ProjectCar',
         'baby': '#BabyGear #Parenting',
-        'books': '#Books #Media',
-        'business': '#Business #Office',
-        'cameras': '#Photography #Camera',
+        'books': '#BookSky #Books',
+        'business': '#SmallBiz #Office',
+        'cameras': '#Photography #CameraGear',
         'cell_phones': '#Tech #Mobile',
-        'collectibles': '#Collectibles #Rare',
-        'computers': '#Tech #Computers',
-        'electronics': '#Tech #Electronics',
-        'entertainment': '#Games #Fun',
-        'free': '#FreeStuff',
-        'furniture': '#Furniture #Home',
-        'garden': '#Garden #Outdoor',
-        'health': '#Wellness #Health',
+        'collectibles': '#Collectibles #RareFinds',
+        'computers': '#Tech #HomeLab',
+        'electronics': '#Tech #Gadgets',
+        'entertainment': '#BoardGames #Fun',
+        'free': '#FreeStuff #Giving',
+        'furniture': '#Furniture #InteriorDesign',
+        'garden': '#Gardening #PlantSky',
+        'health': '#Wellness #SelfCare',
         'hobbies': '#Hobbies #Crafts',
-        'home_goods': '#HomeDecor #House',
-        'home_improvement': '#DIY #HomeImprovement',
+        'home_goods': '#HomeDecor #ThriftFinds',
+        'home_improvement': '#DIY #Renovation',
         'kids': '#Kids #Toys',
-        'musical': '#Music #Instruments',
-        'office': '#Office #Work',
-        'pets': '#Pets #Animals',
+        'musical': '#Musicians #GearTalk',
+        'office': '#RemoteWork #Office',
+        'pets': '#PetSky #Pets',
         'sporting': '#Sports #Outdoors',
-        'video_games': '#Gaming #Gamer',
+        'video_games': '#Gaming #RetroGaming',
         'other': '#Misc #OpenMarket'
       };
 
@@ -793,7 +793,7 @@ export class MarketplaceClient {
           $type: 'app.bsky.embed.external',
           external: {
             uri: listingUrl,
-            title: `Selling: ${listingData.title} - ${price}`,
+            title: `Selling: ${listingData.title} - ${priceStr}`,
             description: listingData.description || 'Check out this item on Open Market',
             thumb: thumbBlob
           }
@@ -804,7 +804,7 @@ export class MarketplaceClient {
           $type: 'app.bsky.embed.external',
           external: {
             uri: listingUrl,
-            title: `Selling: ${listingData.title} - ${price}`,
+            title: `Selling: ${listingData.title} - ${priceStr}`,
             description: listingData.description || 'Check out this item on Open Market',
           }
         };
