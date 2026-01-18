@@ -18,7 +18,7 @@ export default function SafetyTipsPage() {
                 <div className="space-y-8">
                     <section className="bg-white p-6 rounded-lg shadow-sm border border-neutral-light">
                         <div className="flex items-start">
-                            <div className="bg-brand-50 p-3 rounded-full mr-4 text-brand-600">
+                            <div className="bg-blue-50 p-3 rounded-full mr-4 text-primary-color">
                                 <MapPin size={24} />
                             </div>
                             <div>
@@ -32,7 +32,7 @@ export default function SafetyTipsPage() {
 
                     <section className="bg-white p-6 rounded-lg shadow-sm border border-neutral-light">
                         <div className="flex items-start">
-                            <div className="bg-brand-50 p-3 rounded-full mr-4 text-brand-600">
+                            <div className="bg-blue-50 p-3 rounded-full mr-4 text-primary-color">
                                 <Users size={24} />
                             </div>
                             <div>
@@ -46,7 +46,7 @@ export default function SafetyTipsPage() {
 
                     <section className="bg-white p-6 rounded-lg shadow-sm border border-neutral-light">
                         <div className="flex items-start">
-                            <div className="bg-brand-50 p-3 rounded-full mr-4 text-brand-600">
+                            <div className="bg-blue-50 p-3 rounded-full mr-4 text-primary-color">
                                 <ShieldCheck size={24} />
                             </div>
                             <div>
