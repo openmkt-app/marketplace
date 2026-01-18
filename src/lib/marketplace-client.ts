@@ -764,8 +764,15 @@ export class MarketplaceClient {
       const categoryTag = listingData.category ? categoryHashtags[listingData.category] : '#OpenMarket';
 
       // Handle Price and Text Logic
-      const isFree = !listingData.price || parseFloat(listingData.price) === 0;
-      const priceStr = isFree ? "Free" : `$${listingData.price}`;
+      const priceVal = parseFloat(listingData.price || '0');
+      const isFree = !listingData.price || priceVal === 0;
+
+      const formattedPrice = priceVal.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+
+      const priceStr = isFree ? "Free" : `$${formattedPrice}`;
 
       const askingLine = isFree ? "It's Free! 🎁" : `Asking ${priceStr}.`;
       const forSaleTag = isFree ? "" : "#ForSale";
