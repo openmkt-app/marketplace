@@ -10,7 +10,7 @@ export default function CreateListingPage() {
   const router = useRouter();
 
   const handleCreateSuccess = (listingUri?: string) => {
-    console.log('Listing creation successful:', listingUri);
+
 
     // If we have a URI, redirect to the listing page with success flag
     if (listingUri) {

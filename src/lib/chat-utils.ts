@@ -67,7 +67,7 @@ export async function sendMessageToSeller(
     }
 
     // 1. Get a service auth token for getConvoForMembers
-    console.log('Requesting service auth token for getConvoForMembers...');
+
     const convoAuth = await agent.api.com.atproto.server.getServiceAuth({
       aud: 'did:web:api.bsky.chat',
       lxm: 'chat.bsky.convo.getConvoForMembers',
@@ -85,7 +85,7 @@ export async function sendMessageToSeller(
       service: 'https://api.bsky.chat'
     });
 
-    console.log(`Getting conversation with ${sellerDid} via Chat Service directly...`);
+
 
     let convoId: string;
 
@@ -102,7 +102,7 @@ export async function sendMessageToSeller(
       }
 
       convoId = convoResponse.data.convo.id;
-      console.log(`Found conversation ID: ${convoId}`);
+
     } catch (apiError: any) {
       // Check for specific error message regarding followers
       const errorMessage = apiError.message || apiError.error || '';
@@ -120,7 +120,7 @@ export async function sendMessageToSeller(
     }
 
     // 4. Get a NEW service auth token specifically for sendMessage
-    console.log('Requesting service auth token for sendMessage...');
+
     const messageAuth = await agent.api.com.atproto.server.getServiceAuth({
       aud: 'did:web:api.bsky.chat',
       lxm: 'chat.bsky.convo.sendMessage',
@@ -150,7 +150,7 @@ export async function sendMessageToSeller(
         return { success: false, error: 'Failed to send message' };
       }
 
-      console.log('Message sent successfully!');
+
       return { success: true };
 
     } catch (apiError: any) {
@@ -261,7 +261,7 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
 
   // Helper to run the server-side proxy fallback
   const runServerFallback = async () => {
-    // console.log('getUnreadChatCount: Running server-side proxy fallback...');
+
     try {
       // Determine PDS endpoint from DID Doc if available (most reliable)
       let pdsEndpoint = '';
@@ -334,7 +334,7 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
   // Attempt 2: Try `agent.withProxy` if available (User Request)
   try {
     if (typeof (agent as any).withProxy === 'function') {
-      // console.log('getUnreadChatCount: Attempting agent.withProxy...');
+
       const proxyAgent = (agent as any).withProxy('bsky_chat', 'did:web:api.bsky.chat');
       const response = await proxyAgent.api.chat.bsky.convo.listConvos({ limit: 50 });
 
@@ -355,7 +355,7 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
         }
       }
     } else {
-      // console.log('getUnreadChatCount: agent.withProxy not available.');
+
     }
   } catch (error) {
     console.warn('getUnreadChatCount: agent.withProxy failed, switching to fallback...', error);
