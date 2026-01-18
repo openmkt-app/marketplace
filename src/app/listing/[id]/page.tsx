@@ -125,17 +125,18 @@ export default function ListingDetailPage() {
               return false;
             }
 
-            if (image.$type === 'blob' && image.ref && typeof image.ref === 'object') {
-              if (image.ref.$link) {
-                return true;
-              }
+            // Check for standard blob structure (json or class instance)
+            if (image.$type === 'blob' || image.mimeType) {
+              // It's likely a valid blob if it has a ref (even if opaque) or standard properties
+              if (image.ref) return true;
             }
 
+            // Check for legacy/alternative link format
             if (typeof image === 'object' && image.$link) {
               return true;
             }
 
-            console.warn('Skipping invalid image object, missing ref.$link:', image);
+            console.warn('Skipping invalid image object:', image);
             return false;
           });
 

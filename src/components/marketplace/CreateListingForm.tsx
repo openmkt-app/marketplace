@@ -693,7 +693,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         result = await client.createListing(listingDataRaw);
 
         // Post to Bluesky feed if requested (only for new listings)
-        if (postToBluesky && result.uri) {
+        if (postToBluesky && result && result.uri) {
           try {
             // We need to pass the processed blobs which are in result.images
             const shareData = {

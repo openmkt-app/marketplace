@@ -261,11 +261,11 @@ export class MarketplaceClient {
         },
       });
 
-      // Add this DID to known marketplace participants for future discovery
-      addMarketplaceDID(this.agent.session.did);
+      // Handle standard AT Proto response shape { data: { uri, cid }, success: boolean }
+      const recordData = result.data ? result.data : result;
 
       return {
-        ...(result as unknown as Record<string, unknown>),
+        ...(recordData as unknown as Record<string, unknown>),
         images: processedImages // Return the blobs so we can use them for sharing
       };
     } catch (error) {
@@ -766,7 +766,7 @@ export class MarketplaceClient {
         };
       }
 
-      await this.agent.post({
+      const postResult = await this.agent.post({
         text: rt.text,
         facets: rt.facets,
         embed: embed as any,
