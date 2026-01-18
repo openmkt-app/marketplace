@@ -18,34 +18,34 @@ export default function ListingDetailPage() {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const params = useParams();
   const searchParams = useSearchParams();
-  
+
   useEffect(() => {
     // Check if this is a newly created listing
     const isNewListing = searchParams.get('newListing') === 'true';
     setShowSuccessMessage(isNewListing);
-    
+
     // Hide the message after 8 seconds
     if (isNewListing) {
       const timer = setTimeout(() => {
         setShowSuccessMessage(false);
       }, 8000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [searchParams]);
-  
+
   useEffect(() => {
     const fetchListing = async () => {
       setIsLoading(true);
       setError(null);
-      
+
       try {
         const id = decodeURIComponent(params.id as string);
-        
+
         if (!id) {
           throw new Error('No listing ID provided');
         }
-        
+
         // Check if this is a demo listing
         if (id.startsWith('demo-listing-')) {
           const demoListing = demoListingsData.find(listing => listing.uri === id);
@@ -56,42 +56,42 @@ export default function ListingDetailPage() {
             throw new Error('Demo listing not found');
           }
         }
-        
+
         // If it&apos;s not a demo listing, try to fetch from AT Protocol
         const uri = id;
         const parts = uri.split('/');
         const did = parts[2];
         const collection = parts[3];
         const rkey = parts[4];
-        
+
         const agent = new BskyAgent({
           service: 'https://bsky.social',
         });
-        
+
         const record = await agent.api.com.atproto.repo.getRecord({
           repo: did,
           collection: collection,
           rkey: rkey
         });
-        
+
         if (record.data && record.data.value && Array.isArray(record.data.value.images)) {
-          console.log('Images found in API response:', record.data.value.images.length);
+
         } else {
           console.warn('No images array found in API response or it is not an array');
         }
-        
+
         const listingData = {
           ...record.data.value,
           uri: record.data.uri,
           cid: record.data.cid,
           authorDid: did
         } as any;
-        
+
         // Extract image CIDs from raw data
         try {
           const rawJson = JSON.stringify(record.data);
           const cidMatches = rawJson.match(/bafk(?:re)?[a-zA-Z0-9]{44,60}/g) || [];
-          
+
           if (cidMatches.length > 0) {
             const directUrls = cidMatches.map(cid => ({
               thumbnail: `https://cdn.bsky.app/img/feed_thumbnail/plain/${did}/${cid}@jpeg`,
@@ -99,32 +99,32 @@ export default function ListingDetailPage() {
               mimeType: 'image/jpeg',
               extractedCid: cid
             }));
-            
+
             listingData.extractedImageUrls = directUrls;
             listingData.formattedImages = directUrls; // Add this for ListingDetail component
           }
         } catch (error) {
           console.error('Failed to extract CIDs from raw data:', error);
         }
-        
-        console.log('Created listing object:', listingData);
-        
+
+
+
         if (!listingData.authorDid) {
           console.error('Author DID is missing, using DID from the URI');
           listingData.authorDid = did;
         }
-        
-        console.log(`Found ${listingData.images ? listingData.images.length : 0} images in the listing`);
-          
+
+
+
         if (listingData.images && Array.isArray(listingData.images)) {
-          console.log(`Found ${listingData.images.length} images in the listing`);
-          
+
+
           listingData.images = listingData.images.filter((image: any) => {
             if (!image) {
               console.warn('Skipping null/undefined image object');
               return false;
             }
-            
+
             if (image.$type === 'blob' && image.ref && typeof image.ref === 'object') {
               if (image.ref.$link) {
                 return true;
@@ -134,25 +134,25 @@ export default function ListingDetailPage() {
             if (typeof image === 'object' && image.$link) {
               return true;
             }
-            
+
             console.warn('Skipping invalid image object, missing ref.$link:', image);
             return false;
           });
-          
+
           if (listingData.images.length > 0) {
-            console.log('First image object after validation:', JSON.stringify(listingData.images[0], null, 2));
-            console.log(`Validated ${listingData.images.length} images`);
-            
+
+
+
             // Process images using the original logic if we don&apos;t have extracted URLs
             if (!listingData.formattedImages || listingData.formattedImages.length === 0) {
               const processedImages = [];
-              
+
               for (let i = 0; i < listingData.images.length; i++) {
                 const image = listingData.images[i];
-                
+
                 try {
                   const imageUrls = createBlueskyCdnImageUrls(image, listingData.authorDid, image.mimeType);
-                  
+
                   processedImages.push({
                     thumbnail: imageUrls.thumbnail,
                     fullsize: imageUrls.fullsize,
@@ -162,7 +162,7 @@ export default function ListingDetailPage() {
                   console.error(`Error processing image ${i}:`, err);
                 }
               }
-              
+
               listingData.formattedImages = processedImages;
             }
           }
@@ -170,20 +170,20 @@ export default function ListingDetailPage() {
           console.warn('No images found in the listing or images is not an array');
           listingData.images = [];
         }
-        
+
         setListing(listingData);
-        
+
         // Fetch seller profile
         try {
-          console.log('Fetching seller profile for:', listingData.authorDid);
-          
+
+
           // First, get the repo info to get the handle
           const repoInfo = await agent.api.com.atproto.repo.describeRepo({
             repo: did
           });
-          
-          console.log('Got repo info:', repoInfo.data);
-          
+
+
+
           const profileData: {
             did: string;
             handle: string;
@@ -196,7 +196,7 @@ export default function ListingDetailPage() {
             displayName: undefined,
             description: undefined
           };
-          
+
           // Then try to get the profile record for display name and avatar
           try {
             const profileRecord = await agent.api.com.atproto.repo.getRecord({
@@ -204,9 +204,9 @@ export default function ListingDetailPage() {
               collection: 'app.bsky.actor.profile',
               rkey: 'self'
             });
-            
-            console.log('Got profile record:', profileRecord.data);
-            
+
+
+
             if (profileRecord.data && profileRecord.data.value) {
               profileData.displayName = (profileRecord.data.value as any).displayName;
               profileData.description = (profileRecord.data.value as any).description;
@@ -248,16 +248,16 @@ export default function ListingDetailPage() {
           } catch (profileRecordError) {
             console.warn('Could not fetch profile record, but we have the handle:', profileRecordError);
           }
-          
+
           // Add seller info to listing
           listingData.authorHandle = profileData.handle;
           listingData.authorDisplayName = profileData.displayName;
-          
+
           setSellerProfile(profileData);
-          
+
         } catch (profileError) {
           console.error('Failed to fetch seller profile:', profileError);
-          
+
           const basicProfile = {
             did: did,
             handle: did.split(':')[2] + '...',
@@ -266,7 +266,7 @@ export default function ListingDetailPage() {
           listingData.authorHandle = basicProfile.handle;
           setSellerProfile(basicProfile);
         }
-        
+
       } catch (err) {
         console.error('Failed to fetch listing:', err);
         setError(`Failed to load listing: ${err instanceof Error ? err.message : String(err)}`);
@@ -274,12 +274,12 @@ export default function ListingDetailPage() {
         setIsLoading(false);
       }
     };
-    
+
     if (params.id) {
       fetchListing();
     }
   }, [params.id]);
-  
+
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto p-4">
@@ -293,7 +293,7 @@ export default function ListingDetailPage() {
       </div>
     );
   }
-  
+
   if (error) {
     return (
       <div className="max-w-4xl mx-auto p-4">
@@ -315,7 +315,7 @@ export default function ListingDetailPage() {
       </div>
     );
   }
-  
+
   if (!listing) {
     return (
       <div className="max-w-4xl mx-auto p-4">
@@ -331,7 +331,7 @@ export default function ListingDetailPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="bg-gray-50 min-h-screen pb-12">
       {showSuccessMessage && (
@@ -374,7 +374,7 @@ export default function ListingDetailPage() {
         </div>
 
         <ListingDetail listing={listing} sellerProfile={sellerProfile} />
-        
+
         {process.env.NODE_ENV === 'development' && listing && (
           <div className="mt-8 p-4 bg-gray-100 rounded">
             <details>

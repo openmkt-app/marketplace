@@ -96,7 +96,7 @@ async function registerWithBot(did: string) {
     const key = `bot-registered-${did}`;
     if (localStorage.getItem(key)) return;
 
-    console.log('Auto-registering user with marketplace bot...');
+
     const response = await fetch('/api/marketplace/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -104,7 +104,7 @@ async function registerWithBot(did: string) {
     });
 
     if (response.ok) {
-      console.log('Successfully registered with bot');
+
       localStorage.setItem(key, 'true');
     }
   } catch (err) {
@@ -133,13 +133,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (storedSessionData) {
             const sessionData = JSON.parse(storedSessionData) as SessionData;
-            console.log('Found stored session data:', sessionData);
+
 
             // Resume the session using the client
             const result = await newClient.resumeSession(sessionData);
 
             if (result.success) {
-              console.log('Successfully resumed session');
+
 
               // Fetch user profile for avatar
               const profile = await fetchUserProfile(newClient, sessionData.did);

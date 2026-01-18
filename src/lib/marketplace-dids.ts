@@ -41,7 +41,7 @@ export function fetchVerifiedSellers(force = false): Promise<string[]> {
         if (data.sellers && Array.isArray(data.sellers)) {
           verifiedSellers = data.sellers.map((s: any) => s.did);
           lastFetched = Date.now();
-          console.log(`[Registry] Fetched ${verifiedSellers.length} verified sellers`);
+
         }
       }
     } catch (e) {
@@ -82,7 +82,7 @@ export function addMarketplaceDID(did: string): void {
 
   if (!combined.has(did)) {
     KNOWN_MARKETPLACE_DIDS.push(did);
-    console.log(`Added ${did} to known marketplace DIDs`);
+
 
     if (typeof window !== 'undefined') {
       try {

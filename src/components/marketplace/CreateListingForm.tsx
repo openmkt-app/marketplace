@@ -680,7 +680,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         metadata: metadata
       };
 
-      console.log('Submitting listing with data:', listingDataRaw);
+
 
       let result;
       if (mode === 'edit' && initialData && initialData.uri) {

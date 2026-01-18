@@ -647,7 +647,7 @@ const BrowsePageContent = () => {
         const avatar = profileValue.avatar;
 
         // Debug: log the raw avatar object
-        console.log('Avatar for', did, ':', avatar);
+
 
         if (avatar && typeof avatar === 'object') {
           const avatarObj = avatar as Record<string, unknown>;
@@ -672,7 +672,7 @@ const BrowsePageContent = () => {
           }
         }
 
-        console.log('Profile fetched for', did, '- avatarCid:', avatarCid);
+
 
         return {
           did: did,
@@ -696,16 +696,16 @@ const BrowsePageContent = () => {
 
     const fetchListings = async () => {
       try {
-        console.log('Fetching listings...');
+
         let listings: MarketplaceListing[] = [];
 
         if (auth.isLoggedIn && auth.client) {
           // Logged in - use authenticated client (allows privacy filtering etc.)
-          console.log('User is logged in, using authenticated fetch');
+
           listings = await auth.client.getAllListings();
         } else {
           // Logged out - use public fetch (no auth required)
-          console.log('User is logged out, using public fetch');
+
           listings = await fetchPublicListings();
         }
 
@@ -750,11 +750,11 @@ const BrowsePageContent = () => {
             });
           }
 
-          console.log(`Successfully loaded ${listings.length} listings`);
+
           setAllListings(listings as MarketplaceListing[]);
           setFilteredListings(listings as MarketplaceListing[]);
         } else {
-          console.log('No listings found');
+
           setAllListings([]);
           setFilteredListings([]);
         }
@@ -788,7 +788,7 @@ const BrowsePageContent = () => {
         }
       });
 
-      console.log(`Prefetching ${uniqueLocations.size} locations in background...`);
+
 
       // Process in small batches relative to UI non-blocking
       const locations = Array.from(uniqueLocations);
@@ -797,7 +797,7 @@ const BrowsePageContent = () => {
         // It will skip API calls for cached items
         await geocodeLocation(loc);
       }
-      console.log('Location prefetch complete');
+
     };
 
     // Use a small timeout to not block initial render or other critical data fetching

@@ -53,13 +53,13 @@ export async function fetchListingsFromDID(
       return [];
     }
     serviceUrl = resolvedPDS;
-    console.log(`Resolved PDS for ${did}: ${serviceUrl}`);
+
   }
 
   const agent = new BskyAgent({ service: serviceUrl });
 
   try {
-    console.log(`Fetching marketplace listings from DID: ${did}`);
+
 
     const result = await agent.api.com.atproto.repo.listRecords({
       repo: did,
@@ -68,7 +68,7 @@ export async function fetchListingsFromDID(
     });
 
     if (result.success && result.data.records.length > 0) {
-      console.log(`Found ${result.data.records.length} listings from ${did}`);
+
 
       // Get the user's profile for handle
       let handle = did;
@@ -106,7 +106,7 @@ export async function fetchListingsFromDID(
       return listings;
     }
 
-    console.log(`No listings found for DID: ${did}`);
+
     return [];
   } catch (error) {
     console.error(`Error fetching listings from DID ${did}:`, error);
@@ -122,7 +122,7 @@ export async function fetchListingsFromDID(
 export async function fetchListingsFromMultipleDIDs(
   dids: string[]
 ): Promise<MarketplaceListing[]> {
-  console.log(`Fetching listings from ${dids.length} DIDs...`);
+
 
   const allListingsPromises = dids.map(did => fetchListingsFromDID(did));
   const allListingsArrays = await Promise.all(allListingsPromises);
@@ -130,6 +130,6 @@ export async function fetchListingsFromMultipleDIDs(
   // Flatten the array of arrays
   const allListings = allListingsArrays.flat();
 
-  console.log(`Total listings found: ${allListings.length}`);
+
   return allListings;
 }
