@@ -74,7 +74,7 @@ export default function SellerGuidePage() {
                     <p className="text-text-secondary mb-6 max-w-lg mx-auto">
                         Join our community of buyers and sellers today. It's free, decentralized, and built on the open web.
                     </p>
-                    <Link href="/create-listing" className="inline-block bg-primary-color text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-light transition-colors shadow-sm">
+                    <Link href="/create-listing" className="inline-block bg-primary-color text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-light hover:text-white transition-colors shadow-sm">
                         Create Your First Listing
                     </Link>
                 </div>
