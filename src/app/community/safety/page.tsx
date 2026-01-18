@@ -79,9 +79,7 @@ export default function SafetyTipsPage() {
                         If you encounter a suspicious listing or user, please report it to us immediately using the "Report Listing" feature or contacting us directly.
                     </p>
                     <a
-                        href="https://github.com/openmkt-app/marketplace"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        href="mailto:support@openmkt.app?subject=Safety Report: [Issue Title]"
                         className="inline-block bg-white text-primary-color border border-neutral-light px-6 py-2 rounded-lg font-medium hover:bg-neutral-50 transition-colors"
                     >
                         Report an Issue
