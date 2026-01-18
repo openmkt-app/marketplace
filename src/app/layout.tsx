@@ -17,7 +17,7 @@ export const metadata = {
     description: 'Buy, sell, and trade locally without fees. Open Market is a community-owned marketplace built on the open web.',
     type: 'website',
     url: 'https://openmkt.app',
-    // images: ['https://openmkt.app/og-image.png'],
+    images: ['https://openmkt.app/og-image.png'],
   },
 }
 
