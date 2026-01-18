@@ -13,10 +13,11 @@ export default function CreateListingPage() {
 
 
     // If we have a URI, redirect to the listing page with success flag
+    // If we have a URI, redirect to the listing page with success flag
     if (listingUri) {
-      // Extract the ID part from the URI to construct the URL
-      const uriParts = listingUri.split('/');
-      const listingId = uriParts[uriParts.length - 1];
+      // Use the full encoded URI as the ID to ensures the listing page can parse it correctly
+      // matching the logic used in shareListingOnBluesky
+      const listingId = encodeURIComponent(listingUri);
 
       // Redirect to the listing page with a success flag
       // The flag will be used to show a confirmation message

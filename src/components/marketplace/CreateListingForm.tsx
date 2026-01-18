@@ -34,6 +34,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [hideFromFriends, setHideFromFriends] = useState(false);
+  const [postToBluesky, setPostToBluesky] = useState(true);
 
   // Bot Following State
   const [isFollowingBotState, setIsFollowingBotState] = useState(false);
@@ -690,6 +691,21 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       } else {
         // Create new listing
         result = await client.createListing(listingDataRaw);
+
+        // Post to Bluesky feed if requested (only for new listings)
+        if (postToBluesky && result.uri) {
+          try {
+            // We need to pass the processed blobs which are in result.images
+            const shareData = {
+              ...listingDataRaw,
+              images: (result as any).images || []
+            };
+            await client.shareListingOnBluesky(shareData, result.uri as string);
+          } catch (shareError) {
+            console.error('Failed to post to Bluesky feed:', shareError);
+            // Don't block the huge success flow, just log it
+          }
+        }
       }
 
       // Save the location for future use
@@ -797,6 +813,8 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
             <form id="listing-form" onSubmit={handleSubmit} className="space-y-8">
               {/* Photos Section */}
+
+              {/* Error Message */}
               <div className="bg-white p-6 rounded-lg shadow-sm border border-neutral-light">
                 <h2 className="text-xl font-semibold mb-4 text-text-primary">Images</h2>
 
@@ -1179,6 +1197,30 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                   </label>
                 </div>
               </div>
+
+              {/* Post to Bluesky Checkbox (Create Mode Only) */}
+              {mode === 'create' && (
+                <div className="bg-blue-50 border border-blue-100 p-4 rounded-lg flex items-start">
+                  <div className="flex items-center h-5">
+                    <input
+                      id="postToBluesky"
+                      name="postToBluesky"
+                      type="checkbox"
+                      checked={postToBluesky}
+                      onChange={(e) => setPostToBluesky(e.target.checked)}
+                      className="focus:ring-primary-500 h-4 w-4 text-primary-color border-gray-300 rounded"
+                    />
+                  </div>
+                  <div className="ml-3 text-sm">
+                    <label htmlFor="postToBluesky" className="font-medium text-blue-900">
+                      Post to Bluesky
+                    </label>
+                    <p className="text-blue-700">
+                      Automatically create a post on your Bluesky feed to let your followers know about this listing.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="bg-gray-50 p-4 rounded-md">
                 <p className="text-sm text-text-secondary mb-4">

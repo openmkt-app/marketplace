@@ -1,5 +1,5 @@
 // src/lib/marketplace-client.ts
-import { BskyAgent } from '@atproto/api';
+import { BskyAgent, RichText } from '@atproto/api';
 import type { AtpSessionData } from '@atproto/api';
 import { generateImageUrls } from './image-utils';
 import logger from './logger';
@@ -264,7 +264,10 @@ export class MarketplaceClient {
       // Add this DID to known marketplace participants for future discovery
       addMarketplaceDID(this.agent.session.did);
 
-      return result as unknown as Record<string, unknown>;
+      return {
+        ...(result as unknown as Record<string, unknown>),
+        images: processedImages // Return the blobs so we can use them for sharing
+      };
     } catch (error) {
       console.error('Failed to create listing:', error);
       throw error;
@@ -709,6 +712,73 @@ export class MarketplaceClient {
     } catch (error) {
       logger.error('Failed to get user listings', error as Error);
       return [];
+    }
+  }
+
+  /**
+   * Post the listing to the user's Bluesky feed
+   */
+  async shareListingOnBluesky(listingData: Record<string, any>, uri: string): Promise<void> {
+    if (!this.isLoggedIn || !this.agent.session) {
+      throw new Error('User must be logged in to share a listing');
+    }
+
+    try {
+      logger.info(`Sharing listing to Bluesky feed: ${uri}`);
+
+      // Construct the web URL for the listing
+      // We use the encoded URI as the ID to ensure it can be resolved
+      const listingUrl = `https://openmkt.app/listing/${encodeURIComponent(uri)}`;
+
+      // Create post text
+      const price = listingData.price ? `$${listingData.price}` : 'Free';
+      const text = `🛒 New Listing: ${listingData.title}\n\nPrice: ${price}\n\n${listingData.description ? listingData.description.substring(0, 100) + (listingData.description.length > 100 ? '...' : '') : ''}\n\nLink: ${listingUrl}`;
+
+      // Create RichText to handle facets (links)
+      const rt = new RichText({ text });
+      await rt.detectFacets(this.agent);
+
+      // Prepare embed if images exist
+      let embed;
+      // listingData.images is already processed blobs from createRecord
+      if (listingData.images && Array.isArray(listingData.images) && listingData.images.length > 0) {
+        const thumbBlob = listingData.images[0];
+
+        embed = {
+          $type: 'app.bsky.embed.external',
+          external: {
+            uri: listingUrl,
+            title: `Selling: ${listingData.title} - ${price}`,
+            description: listingData.description || 'Check out this item on Open Market',
+            thumb: thumbBlob
+          }
+        };
+      } else {
+        // Text-only embed (just the link card without image, or maybe just text)
+        // If we want a card without image, we still use embed.external but without thumb
+        embed = {
+          $type: 'app.bsky.embed.external',
+          external: {
+            uri: listingUrl,
+            title: `Selling: ${listingData.title} - ${price}`,
+            description: listingData.description || 'Check out this item on Open Market',
+          }
+        };
+      }
+
+      await this.agent.post({
+        text: rt.text,
+        facets: rt.facets,
+        embed: embed as any,
+        createdAt: new Date().toISOString()
+      });
+
+      logger.info('Successfully shared listing to Bluesky feed');
+
+    } catch (error) {
+      logger.error('Failed to share listing to Bluesky', error as Error);
+      // We don't throw here to avoid failing the whole flow if just the social post fails
+      // But we log it clearly
     }
   }
 
