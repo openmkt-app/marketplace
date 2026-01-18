@@ -191,8 +191,39 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
   const session = agent.session;
   if (!session || !session.accessJwt) return 0;
 
-  const sumUnread = (convos: any[]) =>
-    convos.reduce((total: number, convo: any) => total + (convo.unreadCount || 0), 0);
+  const OPENMKT_HANDLE = 'openmkt.app';
+
+  const getOpenMktDid = (convo: any) => {
+    const members = Array.isArray(convo.members) ? convo.members : [];
+    const openMktMember = members.find(
+      (member: any) => member?.handle?.toLowerCase() === OPENMKT_HANDLE
+    );
+    return openMktMember?.did as string | undefined;
+  };
+
+  const countUnreadFromOpenMkt = async (
+    convo: any,
+    fetchMessages: (convoId: string, limit: number) => Promise<any[]>
+  ) => {
+    const unreadCount = convo.unreadCount || 0;
+    if (!unreadCount) return 0;
+
+    const openMktDid = getOpenMktDid(convo);
+    if (!openMktDid || !convo.id) return 0;
+
+    const limit = Math.min(unreadCount, 50);
+    const messages = await fetchMessages(convo.id, limit);
+
+    let total = 0;
+    for (const message of messages) {
+      const senderDid = message?.sender?.did;
+      if (senderDid === openMktDid) {
+        total += 1;
+      }
+    }
+
+    return total;
+  };
 
   // Attempt 1: Use service auth directly with api.bsky.chat (most reliable)
   try {
@@ -209,7 +240,19 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
       );
 
       if (response.success) {
-        return sumUnread(response.data.convos);
+        const fetchMessages = async (convoId: string, limit: number) => {
+          const messagesResponse = await chatAgent.api.chat.bsky.convo.getMessages(
+            { convoId, limit },
+            { headers: { Authorization: `Bearer ${boundAuth.data.token}` } }
+          );
+          return messagesResponse.success ? messagesResponse.data.messages : [];
+        };
+
+        let total = 0;
+        for (const convo of response.data.convos) {
+          total += await countUnreadFromOpenMkt(convo, fetchMessages);
+          if (total > 0) return total;
+        }
       }
     }
   } catch (error) {
@@ -248,6 +291,7 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
       pdsEndpoint = pdsEndpoint.replace(/\/$/, '');
 
       const proxyUrl = `/api/proxy/chat/unread?pdsEndpoint=${encodeURIComponent(pdsEndpoint)}`;
+      const messagesUrl = `/api/proxy/chat/messages?pdsEndpoint=${encodeURIComponent(pdsEndpoint)}`;
 
       const response = await fetch(proxyUrl, {
         method: 'GET',
@@ -259,9 +303,27 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
       if (response.ok) {
         const data = await response.json();
         const convos = data.convos as any[];
-        const unreadCount = sumUnread(convos);
-        // console.log(`getUnreadChatCount: Server proxy success! Found ${unreadCount} unread messages.`);
-        return unreadCount;
+
+        const fetchMessages = async (convoId: string, limit: number) => {
+          const msgResponse = await fetch(
+            `${messagesUrl}&convoId=${encodeURIComponent(convoId)}&limit=${limit}`,
+            {
+              method: 'GET',
+              headers: {
+                Authorization: `Bearer ${session.accessJwt}`,
+              },
+            }
+          );
+          if (!msgResponse.ok) return [];
+          const msgData = await msgResponse.json();
+          return msgData.messages || [];
+        };
+
+        let total = 0;
+        for (const convo of convos) {
+          total += await countUnreadFromOpenMkt(convo, fetchMessages);
+          if (total > 0) return total;
+        }
       }
     } catch (err) {
       console.warn('getUnreadChatCount: Server fallback failed', err);
@@ -278,9 +340,19 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
 
       if (response.success) {
         const convos = response.data.convos;
-        const unreadCount = sumUnread(convos);
-        // console.log(`getUnreadChatCount: withProxy success! Found ${unreadCount} unread messages.`);
-        return unreadCount;
+        const fetchMessages = async (convoId: string, limit: number) => {
+          const messagesResponse = await proxyAgent.api.chat.bsky.convo.getMessages({
+            convoId,
+            limit,
+          });
+          return messagesResponse.success ? messagesResponse.data.messages : [];
+        };
+
+        let total = 0;
+        for (const convo of convos) {
+          total += await countUnreadFromOpenMkt(convo, fetchMessages);
+          if (total > 0) return total;
+        }
       }
     } else {
       // console.log('getUnreadChatCount: agent.withProxy not available.');
