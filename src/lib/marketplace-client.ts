@@ -730,12 +730,53 @@ export class MarketplaceClient {
       // We use the encoded URI as the ID to ensure it can be resolved
       const listingUrl = `https://openmkt.app/listing/${encodeURIComponent(uri)}`;
 
+      // Category to Hashtag Mapping
+      const categoryHashtags: Record<string, string> = {
+        'antiques': '#Antiques #Vintage',
+        'apparel': '#Fashion #Style',
+        'auto': '#CarPart #Auto',
+        'baby': '#BabyGear #Parenting',
+        'books': '#Books #Media',
+        'business': '#Business #Office',
+        'cameras': '#Photography #Camera',
+        'cell_phones': '#Tech #Mobile',
+        'collectibles': '#Collectibles #Rare',
+        'computers': '#Tech #Computers',
+        'electronics': '#Tech #Electronics',
+        'entertainment': '#Games #Fun',
+        'free': '#FreeStuff #Recycle',
+        'furniture': '#Furniture #Home',
+        'garden': '#Garden #Outdoor',
+        'health': '#Wellness #Health',
+        'hobbies': '#Hobbies #Crafts',
+        'home_goods': '#HomeDecor #House',
+        'home_improvement': '#DIY #HomeImprovement',
+        'kids': '#Kids #Toys',
+        'musical': '#Music #Instruments',
+        'office': '#Office #Work',
+        'pets': '#Pets #Animals',
+        'sporting': '#Sports #Outdoors',
+        'video_games': '#Gaming #Gamer',
+        'other': '#Misc #OpenMarket'
+      };
+
+      // Get hashtags for the category, fallback to generic if not found
+      const categoryTag = listingData.category ? categoryHashtags[listingData.category] : '#OpenMarket';
+
       // Create post text
       const price = listingData.price ? `$${listingData.price}` : 'Free';
-      const text = `🛒 New Listing: ${listingData.title}\n\nPrice: ${price}\n\n${listingData.description ? listingData.description.substring(0, 100) + (listingData.description.length > 100 ? '...' : '') : ''}\n\nLink: ${listingUrl}`;
 
-      // Create RichText to handle facets (links)
+      // Format:
+      // Selling my {Title} 📦
+      // Asking {Price}.
+      // Listed it on @openmkt.app for the community. Link below! 👇
+      // {Hashtags} #ForSale
+
+      const text = `Selling my ${listingData.title} 📦\n\nAsking ${price}.\n\nListed it on @openmkt.app for the community. Link below! 👇\n\n${categoryTag} #ForSale`;
+
+      // Create RichText to handle facets (links, mentions, tags)
       const rt = new RichText({ text });
+      // Automatically detect mentions (@openmkt.app) and links
       await rt.detectFacets(this.agent);
 
       // Prepare embed if images exist
@@ -754,8 +795,7 @@ export class MarketplaceClient {
           }
         };
       } else {
-        // Text-only embed (just the link card without image, or maybe just text)
-        // If we want a card without image, we still use embed.external but without thumb
+        // Text-only embed (just the link card without image)
         embed = {
           $type: 'app.bsky.embed.external',
           external: {
