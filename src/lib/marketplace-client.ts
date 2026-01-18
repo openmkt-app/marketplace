@@ -744,7 +744,7 @@ export class MarketplaceClient {
         'computers': '#Tech #Computers',
         'electronics': '#Tech #Electronics',
         'entertainment': '#Games #Fun',
-        'free': '#FreeStuff #Recycle',
+        'free': '#FreeStuff',
         'furniture': '#Furniture #Home',
         'garden': '#Garden #Outdoor',
         'health': '#Wellness #Health',
@@ -763,16 +763,20 @@ export class MarketplaceClient {
       // Get hashtags for the category, fallback to generic if not found
       const categoryTag = listingData.category ? categoryHashtags[listingData.category] : '#OpenMarket';
 
-      // Create post text
-      const price = listingData.price ? `$${listingData.price}` : 'Free';
+      // Handle Price and Text Logic
+      const isFree = !listingData.price || parseFloat(listingData.price) === 0;
+      const priceStr = isFree ? "Free" : `$${listingData.price}`;
+
+      const askingLine = isFree ? "It's Free! 🎁" : `Asking ${priceStr}.`;
+      const forSaleTag = isFree ? "" : "#ForSale";
 
       // Format:
       // Selling my {Title} 📦
-      // Asking {Price}.
+      // {AskingLine}
       // Listed it on @openmkt.app for the community. Link below! 👇
-      // {Hashtags} #ForSale
+      // {Hashtags} {ForSaleTag}
 
-      const text = `Selling my ${listingData.title} 📦\n\nAsking ${price}.\n\nListed it on @openmkt.app for the community. Link below! 👇\n\n${categoryTag} #ForSale`;
+      const text = `Selling my ${listingData.title} 📦\n\n${askingLine}\n\nListed it on @openmkt.app for the community. Link below! 👇\n\n${categoryTag} ${forSaleTag}`.trim();
 
       // Create RichText to handle facets (links, mentions, tags)
       const rt = new RichText({ text });
