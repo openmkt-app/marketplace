@@ -777,13 +777,16 @@ export class MarketplaceClient {
       const askingLine = isFree ? "It's Free! 🎁" : `Asking ${priceStr}.`;
       const forSaleTag = isFree ? "" : "#ForSale";
 
+      const introLine = isFree ? `Giving away my ${listingData.title} 🎁` : `Selling my ${listingData.title} 📦`;
+      const embedAction = isFree ? "Giving Away" : "Selling";
+
       // Format:
-      // Selling my {Title} 📦
+      // {IntroLine}
       // {AskingLine}
       // Listed it on @openmkt.app for the community. Link below! 👇
       // {Hashtags} {ForSaleTag}
 
-      const text = `Selling my ${listingData.title} 📦\n\n${askingLine}\n\nListed it on @openmkt.app for the community. Link below! 👇\n\n${categoryTag} ${forSaleTag}`.trim();
+      const text = `${introLine}\n\n${askingLine}\n\nListed it on @openmkt.app for the community. Link below! 👇\n\n${categoryTag} ${forSaleTag}`.trim();
 
       // Create RichText to handle facets (links, mentions, tags)
       const rt = new RichText({ text });
@@ -800,7 +803,7 @@ export class MarketplaceClient {
           $type: 'app.bsky.embed.external',
           external: {
             uri: listingUrl,
-            title: `Selling: ${listingData.title} - ${priceStr}`,
+            title: `${embedAction}: ${listingData.title} - ${priceStr}`,
             description: listingData.description || 'Check out this item on Open Market',
             thumb: thumbBlob
           }
@@ -811,7 +814,7 @@ export class MarketplaceClient {
           $type: 'app.bsky.embed.external',
           external: {
             uri: listingUrl,
-            title: `Selling: ${listingData.title} - ${priceStr}`,
+            title: `${embedAction}: ${listingData.title} - ${priceStr}`,
             description: listingData.description || 'Check out this item on Open Market',
           }
         };
