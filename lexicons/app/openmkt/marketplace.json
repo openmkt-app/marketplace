@@ -1,0 +1,89 @@
+{
+    "lexicon": 1,
+    "id": "app.openmkt.marketplace",
+    "defs": {
+        "listing": {
+            "type": "record",
+            "key": "tid",
+            "record": {
+                "type": "object",
+                "required": [
+                    "title",
+                    "price",
+                    "category",
+                    "location",
+                    "createdAt"
+                ],
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "maxLength": 300
+                    },
+                    "price": {
+                        "type": "string",
+                        "description": "String representation"
+                    },
+                    "category": {
+                        "type": "string"
+                    },
+                    "condition": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string",
+                        "maxLength": 3000
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "datetime"
+                    },
+                    "hideFromFriends": {
+                        "type": "boolean"
+                    },
+                    "images": {
+                        "type": "array",
+                        "items": {
+                            "type": "blob",
+                            "accept": [
+                                "image/*"
+                            ]
+                        }
+                    },
+                    "location": {
+                        "type": "ref",
+                        "ref": "#locationObj"
+                    },
+                    "metadata": {
+                        "type": "ref",
+                        "ref": "#metadataObj"
+                    }
+                }
+            }
+        },
+        "locationObj": {
+            "type": "object",
+            "properties": {
+                "state": {
+                    "type": "string"
+                },
+                "county": {
+                    "type": "string"
+                },
+                "locality": {
+                    "type": "string"
+                },
+                "zipPrefix": {
+                    "type": "string"
+                }
+            }
+        },
+        "metadataObj": {
+            "type": "object",
+            "properties": {
+                "subcategory": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
