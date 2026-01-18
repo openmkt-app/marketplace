@@ -61,12 +61,12 @@ export default function SafetyTipsPage() {
                     <section className="bg-white p-6 rounded-lg shadow-sm border border-neutral-light">
                         <div className="flex items-start">
                             <div className="bg-yellow-50 p-3 rounded-full mr-4 text-yellow-600">
-                                <AlertTriangle size={24} />
+                                <ShieldCheck size={24} />
                             </div>
                             <div>
-                                <h2 className="text-xl font-semibold text-text-primary mb-2">4. Watch Out for Scams</h2>
+                                <h2 className="text-xl font-semibold text-text-primary mb-2">4. Check Their Reputation</h2>
                                 <p className="text-text-secondary">
-                                    Be wary of buyers who ask to pay via wire transfer, cashier's check, or gift cards. Cash or secure peer-to-peer payment apps (handled in person) are usually safer. Never give out personal financial information.
+                                    Unlike other platforms, Open Market connects you to real Bluesky profiles. Click the seller's handle to see their activity. Do they have followers? Have they been active for a while? Reputation is your best safety tool.
                                 </p>
                             </div>
                         </div>
