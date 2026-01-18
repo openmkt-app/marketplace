@@ -10,8 +10,15 @@ import { GoogleAnalytics } from '@next/third-parties/google'
 const inter = Inter({ subsets: ['latin'], display: 'swap' })
 
 export const metadata = {
-  title: 'Open Market - openmkt.app',
-  description: 'A decentralized local marketplace built on the AT Protocol',
+  title: 'Open Market - Buy, Sell, and Trade Locally',
+  description: 'Buy, sell, and trade locally without fees. Open Market is a community-owned marketplace built on the open web. Discover unique items from verified neighbors.',
+  openGraph: {
+    title: 'Open Market - Buy, Sell, and Trade Locally',
+    description: 'Buy, sell, and trade locally without fees. Open Market is a community-owned marketplace built on the open web.',
+    type: 'website',
+    url: 'https://openmkt.app',
+    // images: ['https://openmkt.app/og-image.png'],
+  },
 }
 
 export default function RootLayout({
