@@ -23,8 +23,10 @@ import {
   Tag,
   UserPlus,
   CheckCircle,
-  Info
+  Info,
+  ExternalLink
 } from 'lucide-react';
+import { getPlatformDisplayName } from '@/lib/external-link-utils';
 import { trackListingView, trackInterest } from '@/lib/analytics';
 
 interface ListingDetailProps {
@@ -363,8 +365,8 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
 
           {/* Seller Info */}
           {(sellerDisplayName || sellerHandle) && (
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-4">
-              <div className="flex items-center gap-3">
+            <div className="p-4 bg-gray-50 rounded-lg mb-4">
+              <div className="flex items-center gap-3 mb-3">
                 {sellerProfile?.avatarUrl ? (
                   <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-200">
                     <Image
@@ -390,14 +392,22 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                 </div>
               </div>
               {sellerHandle && (
-                <Link
-                  href={`https://bsky.app/profile/${sellerHandle}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
-                >
-                  View Profile
-                </Link>
+                <div className="flex gap-2">
+                  <Link
+                    href={`/store/${sellerHandle}`}
+                    className="flex-1 px-3 py-2 text-sm font-medium text-center text-white bg-primary-color rounded-lg hover:bg-primary-light hover:text-white transition-colors"
+                  >
+                    View Store
+                  </Link>
+                  <Link
+                    href={`https://bsky.app/profile/${sellerHandle}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 px-3 py-2 text-sm font-medium text-center text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                  >
+                    Bluesky Profile
+                  </Link>
+                </div>
               )}
             </div>
           )}
@@ -430,6 +440,24 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
 
           {/* Show Interest Section */}
           <div className="space-y-3">
+            {/* External Buy Button - Always show if externalUrl exists */}
+            {listing.externalUrl && (
+              <div className="space-y-2">
+                <a
+                  href={listing.externalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-yellow-400 hover:bg-yellow-300 text-slate-900 text-lg font-bold rounded-xl shadow-sm hover:shadow-md transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  <ExternalLink size={24} />
+                  Buy on {getPlatformDisplayName(listing.externalUrl) || 'Website'}
+                </a>
+                <p className="text-center text-xs text-gray-500">
+                  Opens in a new tab on {getPlatformDisplayName(listing.externalUrl) || 'external website'}
+                </p>
+              </div>
+            )}
+
             {isLoggedIn ? (
               <>
                 {/* 1. Own Listing State */}

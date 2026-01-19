@@ -10,6 +10,7 @@ import { isFollowingBot, followBot } from '@/lib/bot-utils';
 import LiveListingPreview from './LiveListingPreview';
 import { createBlueskyCdnImageUrls } from '@/lib/image-utils';
 import { trackCreateListing } from '@/lib/analytics';
+import { processExternalLink, getPlatformDisplayName } from '@/lib/external-link-utils';
 
 // Define the SavedLocation type
 interface SavedLocation {
@@ -76,6 +77,11 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   // Add state for Free category confirmation dialog
   const [showFreeConfirmation, setShowFreeConfirmation] = useState(false);
   const [previousCategory, setPreviousCategory] = useState<string>('');
+
+  // Add state for external URL
+  const [externalUrl, setExternalUrl] = useState('');
+  const [externalUrlError, setExternalUrlError] = useState<string | null>(null);
+  const [detectedPlatform, setDetectedPlatform] = useState<string | null>(null);
 
   // Set up an effect to auto-dismiss error messages after a timeout
   useEffect(() => {
@@ -185,6 +191,12 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       setCondition(initialData.condition);
       setSelectedCategory(initialData.category);
       setHideFromFriends(initialData.hideFromFriends || false);
+
+      // Handle External URL
+      if (initialData.externalUrl) {
+        setExternalUrl(initialData.externalUrl);
+        setDetectedPlatform(getPlatformDisplayName(initialData.externalUrl));
+      }
 
       // Handle Location
       if (initialData.location) {
@@ -565,6 +577,25 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
     setShowFreeConfirmation(false);
   };
 
+  // Handle external URL changes
+  const handleExternalUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const url = e.target.value;
+    setExternalUrl(url);
+    setExternalUrlError(null);
+
+    if (url.trim()) {
+      const result = processExternalLink(url);
+      if (!result.isValid) {
+        setExternalUrlError(result.error || 'Invalid URL');
+        setDetectedPlatform(null);
+      } else {
+        setDetectedPlatform(result.platformName);
+      }
+    } else {
+      setDetectedPlatform(null);
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
@@ -663,6 +694,19 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       // Update the price input to show the formatted price
       setPriceInput(formattedPrice);
 
+      // Validate external URL if provided
+      let processedExternalUrl: string | undefined;
+      if (externalUrl.trim()) {
+        const urlResult = processExternalLink(externalUrl);
+        if (!urlResult.isValid) {
+          setError(urlResult.error || 'Invalid external URL');
+          setIsSubmitting(false);
+          return;
+        }
+        // Use the processed URL with affiliate tracking
+        processedExternalUrl = urlResult.processedUrl;
+      }
+
       // Create custom metadata for inclusion in description
       const metadata = {
         subcategory: subcategoryName
@@ -678,7 +722,8 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         condition: formData.get('condition') as string,
         images: images as any, // The client handles mixed types now
         hideFromFriends: hideFromFriends,
-        metadata: metadata
+        metadata: metadata,
+        ...(processedExternalUrl && { externalUrl: processedExternalUrl })
       };
 
 
@@ -993,6 +1038,37 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                       placeholder="Describe your item in detail. Include features, specifications, and why you&apos;re selling. The more details you provide, the more likely buyers will be interested."
                       className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
                     />
+                  </div>
+
+                  <div>
+                    <label htmlFor="externalUrl" className="block text-sm font-medium text-text-secondary mb-1">
+                      External Buy Link (optional)
+                    </label>
+                    <input
+                      type="url"
+                      id="externalUrl"
+                      name="externalUrl"
+                      value={externalUrl}
+                      onChange={handleExternalUrlChange}
+                      placeholder="https://amazon.com/dp/..."
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light ${
+                        externalUrlError ? 'border-red-400' : 'border-neutral-light'
+                      }`}
+                    />
+                    {externalUrlError && (
+                      <p className="text-sm text-red-500 mt-1">{externalUrlError}</p>
+                    )}
+                    {detectedPlatform && !externalUrlError && (
+                      <p className="text-sm text-green-600 mt-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Detected: {detectedPlatform}
+                      </p>
+                    )}
+                    <p className="text-xs text-text-secondary mt-1">
+                      Link to where buyers can purchase this item (Amazon, eBay, Etsy, etc.). A &quot;Buy on Website&quot; button will appear on your listing.
+                    </p>
                   </div>
                 </div>
               </div>

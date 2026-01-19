@@ -22,7 +22,8 @@
             "items": { "type": "blob", "accept": ["image/*"], "maxSize": 1000000 }
           },
           "location": { "type": "ref", "ref": "#locationObj" },
-          "metadata": { "type": "ref", "ref": "#metadataObj" }
+          "metadata": { "type": "ref", "ref": "#metadataObj" },
+          "externalUrl": { "type": "string", "maxLength": 2000, "description": "Optional external URL for purchasing the item (e.g., Amazon, eBay link)" }
         }
       }
     },
