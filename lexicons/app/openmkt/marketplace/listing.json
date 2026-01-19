@@ -1,19 +1,14 @@
 {
   "lexicon": 1,
   "id": "app.openmkt.marketplace.listing",
+  "$type": "com.atproto.lexicon.schema",
   "defs": {
     "main": {
       "type": "record",
       "key": "tid",
       "record": {
         "type": "object",
-        "required": [
-          "title",
-          "price",
-          "category",
-          "location",
-          "createdAt"
-        ],
+        "required": ["title", "price", "category", "location", "createdAt"],
         "properties": {
           "title": { "type": "string", "maxLength": 300 },
           "price": { "type": "string", "description": "String representation" },
@@ -24,7 +19,7 @@
           "hideFromFriends": { "type": "boolean" },
           "images": {
             "type": "array",
-            "items": { "type": "blob", "accept": ["image/*"] }
+            "items": { "type": "blob", "accept": ["image/*"], "maxSize": 1000000 }
           },
           "location": { "type": "ref", "ref": "#locationObj" },
           "metadata": { "type": "ref", "ref": "#metadataObj" }
