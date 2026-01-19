@@ -1,8 +1,8 @@
 {
   "lexicon": 1,
-  "id": "app.openmkt.marketplace",
+  "id": "app.openmkt.marketplace.listing",
   "defs": {
-    "listing": {
+    "main": {
       "type": "record",
       "key": "tid",
       "record": {
@@ -16,7 +16,7 @@
         ],
         "properties": {
           "title": { "type": "string", "maxLength": 300 },
-          "price": { "type": "string", "description": "String representation to avoid float errors" },
+          "price": { "type": "string", "description": "String representation" },
           "category": { "type": "string" },
           "condition": { "type": "string" },
           "description": { "type": "string", "maxLength": 3000 },
