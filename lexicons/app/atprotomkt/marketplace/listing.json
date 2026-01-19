@@ -1,8 +1,8 @@
 {
   "lexicon": 1,
-  "id": "app.atprotomkt.marketplace.listing",
+  "id": "app.openmkt.marketplace",
   "defs": {
-    "main": {
+    "listing": {
       "type": "record",
       "key": "tid",
       "record": {
