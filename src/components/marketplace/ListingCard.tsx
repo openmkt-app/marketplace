@@ -4,7 +4,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { MapPin } from 'lucide-react';
+import { MapPin, ShoppingCart } from 'lucide-react';
 import ListingImageDisplay from './ListingImageDisplay';
 import ListingImageDebug from './ListingImageDebug';
 import type { MarketplaceListing } from '@/lib/marketplace-client';
@@ -70,6 +70,16 @@ const ListingCard = React.memo(({ listing, showDebug = false }: ListingCardProps
             {formatConditionForDisplay(listing.condition)}
           </span>
         </div>
+
+        {/* External Buy Badge */}
+        {listing.externalUrl && (
+          <div className="absolute top-3 right-3 z-20 pointer-events-none">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-400 text-slate-800 shadow-sm">
+              <ShoppingCart size={12} />
+              Buy Online
+            </span>
+          </div>
+        )}
 
         {/* Quick View Overlay - pointer-events-none so clicks pass through to the card link */}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex justify-center z-20 pointer-events-none">

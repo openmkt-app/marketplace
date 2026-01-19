@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { generateAvatarUrl } from '@/lib/image-utils';
-import { LogOut, LayoutGrid, User, Settings } from 'lucide-react';
+import { LogOut, LayoutGrid, Store, Settings } from 'lucide-react';
 
 interface NavbarUserMenuProps {
     user: {
@@ -77,25 +77,21 @@ export default function NavbarUserMenu({ user, onLogout }: NavbarUserMenuProps) 
                     {/* Menu Items */}
                     <div className="py-1">
                         <Link
+                            href={`/store/${user.handle}`}
+                            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-color transition-colors"
+                            onClick={() => setIsOpen(false)}
+                        >
+                            <Store size={16} />
+                            My Store
+                        </Link>
+                        <Link
                             href="/my-listings"
                             className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-color transition-colors"
                             onClick={() => setIsOpen(false)}
                         >
                             <LayoutGrid size={16} />
-                            My Listings
+                            Manage Listings
                         </Link>
-
-                        {/* Future placeholder for Profile Editing */}
-                        {/* 
-            <Link
-              href="/profile"
-              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-color transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              <User size={16} />
-              My Profile
-            </Link>
-            */}
                     </div>
 
                     {/* Divider */}

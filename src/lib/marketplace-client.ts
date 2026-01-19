@@ -38,6 +38,8 @@ export type MarketplaceListing = {
   createdAt: string;
   // Added for listing metadata, like subcategory
   metadata?: ListingMetadata;
+  // Added for external commerce
+  externalUrl?: string;
   // Added for UI display
   formattedImages?: Array<{
     thumbnail: string;
