@@ -101,15 +101,18 @@ async function getVerifiedSellers(): Promise<SellerWithListings[]> {
         console.warn(`Could not fetch listings for ${followProfile.handle}:`, e);
       }
 
-      sellers.push({
-        did: followProfile.did,
-        handle: followProfile.handle,
-        displayName: fullProfile.displayName,
-        description: fullProfile.description,
-        avatar: fullProfile.avatar,
-        followersCount: (fullProfile as { followersCount?: number }).followersCount,
-        listingsCount,
-      });
+      // Only include sellers who have at least one listing
+      if (listingsCount > 0) {
+        sellers.push({
+          did: followProfile.did,
+          handle: followProfile.handle,
+          displayName: fullProfile.displayName,
+          description: fullProfile.description,
+          avatar: fullProfile.avatar,
+          followersCount: (fullProfile as { followersCount?: number }).followersCount,
+          listingsCount,
+        });
+      }
     }
 
     // Sort by listings count (most listings first), then by followers
