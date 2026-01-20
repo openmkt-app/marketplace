@@ -206,6 +206,13 @@ const NavbarContent = () => {
               Browse Listings
             </Link>
             <Link
+              href="/mall"
+              className={`block px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive('/mall') ? 'bg-primary-color/10 text-primary-color' : 'text-slate-600 hover:bg-gray-50'}`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              The Mall
+            </Link>
+            <Link
               href="/create-listing"
               className={`block px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive('/create-listing') ? 'bg-primary-color/10 text-primary-color' : 'text-slate-600 hover:bg-gray-50'}`}
               onClick={() => setIsMenuOpen(false)}
