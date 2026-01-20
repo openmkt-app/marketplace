@@ -209,12 +209,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
         }
 
-        // Start a server-side chat session for unread counts (no storage on client)
+        // Start a server-side chat session for unread counts using JWT tokens (never send password to our server)
         try {
           await fetch('/api/chat/session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ handle: username, password }),
+            body: JSON.stringify({
+              did: sessionData.did,
+              handle: sessionData.handle,
+              accessJwt: sessionData.accessJwt,
+              refreshJwt: sessionData.refreshJwt,
+            }),
           });
         } catch (error) {
           console.warn('Failed to initialize chat session', error);
