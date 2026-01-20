@@ -94,75 +94,169 @@ export async function validateImage(file: File, options: {
 }
 
 /**
- * Compresses an image if it exceeds a certain size threshold
- * 
+ * Compresses and resizes an image to fit within AT Protocol's blob size limits.
+ * Uses progressive quality reduction and dimension scaling to achieve target size.
+ *
  * @param file File to compress
- * @param maxSizeKB Maximum size in KB before compression is applied
- * @param quality Compression quality (0-1)
- * @returns Compressed file or original file if no compression needed
+ * @param targetSizeKB Target maximum size in KB (default 900KB to stay under 1MB limit)
+ * @param maxDimension Maximum width/height in pixels (default 2048)
+ * @returns Object with compressed file and compression metadata
  */
-export async function compressImage(file: File, maxSizeKB: number = 900, quality: number = 0.8): Promise<File> {
+export async function compressImage(
+  file: File,
+  targetSizeKB: number = 900,
+  maxDimension: number = 2048
+): Promise<{ file: File; wasCompressed: boolean; originalSize: number; newSize: number }> {
+  const originalSize = file.size;
+
   // If the file is already under the size threshold, return it as is
-  if (file.size <= maxSizeKB * 1024) {
-    return file;
+  if (file.size <= targetSizeKB * 1024) {
+    return { file, wasCompressed: false, originalSize, newSize: originalSize };
   }
-  
-  // Only compress JPEG and PNG files
-  if (file.type !== 'image/jpeg' && file.type !== 'image/png') {
-    return file;
+
+  // Only compress image files
+  if (!file.type.startsWith('image/')) {
+    return { file, wasCompressed: false, originalSize, newSize: originalSize };
   }
-  
+
+  // Output as JPEG for better compression (unless PNG with transparency needed)
+  const outputType = 'image/jpeg';
+
   return new Promise((resolve) => {
     const reader = new FileReader();
-    
+
     reader.onload = (e) => {
       const img = new Image();
-      
-      img.onload = () => {
+
+      img.onload = async () => {
+        // Calculate dimensions - scale down if needed
+        let width = img.width;
+        let height = img.height;
+
+        // Scale down large images
+        if (width > maxDimension || height > maxDimension) {
+          const ratio = Math.min(maxDimension / width, maxDimension / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
         // Create a canvas to draw the compressed image
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        
+
         if (!ctx) {
-          resolve(file); // If canvas context isn't available, return original file
+          resolve({ file, wasCompressed: false, originalSize, newSize: originalSize });
           return;
         }
-        
-        // Set canvas dimensions to match the image
-        canvas.width = img.width;
-        canvas.height = img.height;
-        
+
+        canvas.width = width;
+        canvas.height = height;
+
+        // Use better image smoothing for resized images
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
         // Draw the image on the canvas
-        ctx.drawImage(img, 0, 0, img.width, img.height);
-        
-        // Convert canvas to blob with compression
-        canvas.toBlob((blob) => {
-          if (!blob) {
-            resolve(file); // If compression fails, return original file
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Try progressively lower quality until we're under the target size
+        const targetBytes = targetSizeKB * 1024;
+        const qualities = [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3];
+
+        for (const quality of qualities) {
+          const blob = await new Promise<Blob | null>((resolveBlob) => {
+            canvas.toBlob(resolveBlob, outputType, quality);
+          });
+
+          if (blob && blob.size <= targetBytes) {
+            // Success! Create a new file from the blob
+            const newFileName = file.name.replace(/\.[^.]+$/, '.jpg');
+
+            const newFile = new File([blob], newFileName, {
+              type: outputType,
+              lastModified: Date.now()
+            });
+
+            console.log(`[Image Compression] ${file.name}: ${(originalSize / 1024).toFixed(0)}KB -> ${(blob.size / 1024).toFixed(0)}KB (quality: ${quality}, dimensions: ${width}x${height})`);
+
+            resolve({ file: newFile, wasCompressed: true, originalSize, newSize: blob.size });
             return;
           }
-          
-          // Create a new file from the blob
-          const newFile = new File([blob], file.name, {
-            type: file.type,
-            lastModified: file.lastModified
+        }
+
+        // If we still can't get under the target, try scaling down more aggressively
+        const scaledDimensions = [1600, 1200, 1000, 800];
+        for (const dim of scaledDimensions) {
+          if (dim >= Math.max(width, height)) continue;
+
+          const ratio = dim / Math.max(img.width, img.height);
+          const scaledWidth = Math.round(img.width * ratio);
+          const scaledHeight = Math.round(img.height * ratio);
+
+          canvas.width = scaledWidth;
+          canvas.height = scaledHeight;
+          ctx.drawImage(img, 0, 0, scaledWidth, scaledHeight);
+
+          const blob = await new Promise<Blob | null>((resolveBlob) => {
+            canvas.toBlob(resolveBlob, outputType, 0.7);
           });
-          
-          resolve(newFile);
-        }, file.type, quality);
+
+          if (blob && blob.size <= targetBytes) {
+            const newFileName = file.name.replace(/\.[^.]+$/, '.jpg');
+
+            const newFile = new File([blob], newFileName, {
+              type: outputType,
+              lastModified: Date.now()
+            });
+
+            console.log(`[Image Compression] ${file.name}: ${(originalSize / 1024).toFixed(0)}KB -> ${(blob.size / 1024).toFixed(0)}KB (scaled to: ${scaledWidth}x${scaledHeight})`);
+
+            resolve({ file: newFile, wasCompressed: true, originalSize, newSize: blob.size });
+            return;
+          }
+        }
+
+        // Last resort: very aggressive compression at 800px
+        const finalRatio = 800 / Math.max(img.width, img.height);
+        const finalWidth = Math.round(img.width * finalRatio);
+        const finalHeight = Math.round(img.height * finalRatio);
+
+        canvas.width = finalWidth;
+        canvas.height = finalHeight;
+        ctx.drawImage(img, 0, 0, finalWidth, finalHeight);
+
+        const finalBlob = await new Promise<Blob | null>((resolveBlob) => {
+          canvas.toBlob(resolveBlob, 'image/jpeg', 0.5);
+        });
+
+        if (finalBlob && finalBlob.size <= targetBytes) {
+          const newFile = new File([finalBlob], file.name.replace(/\.[^.]+$/, '.jpg'), {
+            type: 'image/jpeg',
+            lastModified: Date.now()
+          });
+
+          console.log(`[Image Compression] ${file.name}: ${(originalSize / 1024).toFixed(0)}KB -> ${(finalBlob.size / 1024).toFixed(0)}KB (aggressive compression at ${finalWidth}x${finalHeight})`);
+
+          resolve({ file: newFile, wasCompressed: true, originalSize, newSize: finalBlob.size });
+          return;
+        }
+
+        // Could not compress enough - return original and let caller handle it
+        console.warn(`[Image Compression] Could not compress ${file.name} below ${targetSizeKB}KB`);
+        resolve({ file, wasCompressed: false, originalSize, newSize: originalSize });
       };
-      
+
       img.onerror = () => {
-        resolve(file); // If loading fails, return original file
+        resolve({ file, wasCompressed: false, originalSize, newSize: originalSize });
       };
-      
+
       img.src = e.target?.result as string;
     };
-    
+
     reader.onerror = () => {
-      resolve(file); // If reading fails, return original file
+      resolve({ file, wasCompressed: false, originalSize, newSize: originalSize });
     };
-    
+
     reader.readAsDataURL(file);
   });
 }
