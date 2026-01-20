@@ -10,6 +10,7 @@ import { MARKETPLACE_COLLECTION } from '@/lib/constants';
 import ListingCard from '@/components/marketplace/ListingCard';
 import { ExternalLink, Calendar } from 'lucide-react';
 import type { SellerProfile } from '@/lib/server/fetch-store';
+import { linkifyText } from '@/lib/linkify';
 
 interface SellerListing extends MarketplaceListing {
   uri: string;
@@ -287,7 +288,7 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
             {/* Bio */}
             {profile.description && (
               <div className="mt-4 max-w-2xl">
-                <p className="text-gray-700 whitespace-pre-wrap">{profile.description}</p>
+                <p className="text-gray-700 whitespace-pre-wrap">{linkifyText(profile.description)}</p>
               </div>
             )}
 
