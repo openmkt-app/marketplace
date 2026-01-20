@@ -1,7 +1,7 @@
 // src/lib/marketplace-client.ts
 import { BskyAgent, RichText } from '@atproto/api';
 import type { AtpSessionData } from '@atproto/api';
-import { generateImageUrls } from './image-utils';
+import { generateImageUrls, compressImage } from './image-utils';
 import logger from './logger';
 import { getKnownMarketplaceDIDs, addMarketplaceDID, ensureVerifiedSellersLoaded } from './marketplace-dids';
 import { MARKETPLACE_COLLECTION } from './constants';
@@ -435,8 +435,9 @@ export class MarketplaceClient {
     }
 
     const processedImages: ListingImage[] = [];
+    const MAX_SIZE_BYTES = 980000; // Slightly below 1MB to be safe
 
-    for (const file of imageFiles) {
+    for (let file of imageFiles) {
       try {
         logger.debug(`Processing image: ${file.name}`, {
           meta: {
@@ -446,16 +447,25 @@ export class MarketplaceClient {
           }
         });
 
-        // Check file size to prevent errors
-        if (file.size > 980000) { // Slightly below 1MB to be safe
-          logger.warn(`Image ${file.name} is too large (${file.size} bytes), skipping`);
-          continue;
-        }
-
         // Check file type to ensure it's an image
         if (!file.type.startsWith('image/')) {
           logger.warn(`File ${file.name} is not an image (${file.type}), skipping`);
           continue;
+        }
+
+        // Compress image if it exceeds size limit
+        if (file.size > MAX_SIZE_BYTES) {
+          logger.info(`Image ${file.name} is ${(file.size / 1024).toFixed(0)}KB, compressing...`);
+
+          const compressionResult = await compressImage(file, 900, 2048);
+
+          if (compressionResult.wasCompressed && compressionResult.newSize <= MAX_SIZE_BYTES) {
+            logger.info(`Compressed ${file.name}: ${(compressionResult.originalSize / 1024).toFixed(0)}KB -> ${(compressionResult.newSize / 1024).toFixed(0)}KB`);
+            file = compressionResult.file;
+          } else {
+            logger.warn(`Could not compress ${file.name} below 1MB (${(compressionResult.newSize / 1024).toFixed(0)}KB), skipping`);
+            continue;
+          }
         }
 
         const arrayBuffer = await file.arrayBuffer();
