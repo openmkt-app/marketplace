@@ -10,6 +10,7 @@ import { formatConditionForDisplay } from '@/lib/condition-utils';
 import { formatPrice } from '@/lib/price-utils';
 import { extractSubcategoryFromDescription, formatCategoryDisplay, getCategoryName } from '@/lib/category-utils';
 import { getSellerDisplayName } from '@/lib/chat-utils';
+import { linkifyText } from '@/lib/linkify';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 import {
@@ -321,7 +322,7 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-3">Description</h2>
           <p className="text-gray-600 whitespace-pre-line leading-relaxed">
-            {cleanDescription}
+            {linkifyText(cleanDescription)}
           </p>
 
           {/* Tags */}
