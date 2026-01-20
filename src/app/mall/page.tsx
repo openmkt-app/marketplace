@@ -24,6 +24,7 @@ type SellerWithListings = {
   displayName?: string;
   description?: string;
   avatar?: string;
+  banner?: string;
   followersCount?: number;
   listingsCount: number;
 };
@@ -109,6 +110,7 @@ async function getVerifiedSellers(): Promise<SellerWithListings[]> {
           displayName: fullProfile.displayName,
           description: fullProfile.description,
           avatar: fullProfile.avatar,
+          banner: (fullProfile as { banner?: string }).banner,
           followersCount: (fullProfile as { followersCount?: number }).followersCount,
           listingsCount,
         });
@@ -139,8 +141,20 @@ function StoreCard({ seller }: { seller: SellerWithListings }) {
       href={`/store/${seller.handle}`}
       className="group bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden border border-gray-100 hover:border-blue-200"
     >
-      {/* Header with gradient background */}
-      <div className="h-20 bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-500 relative">
+      {/* Header with banner or gradient background */}
+      <div className="h-20 relative overflow-hidden">
+        {seller.banner ? (
+          <Image
+            src={seller.banner}
+            alt={`${displayName}'s banner`}
+            fill
+            className="object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-500" />
+        )}
+        {/* Subtle overlay for better avatar visibility */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
         {/* Avatar positioned at bottom edge */}
         <div className="absolute -bottom-8 left-4">
           <div className="w-16 h-16 rounded-full border-4 border-white bg-white shadow-sm overflow-hidden">
