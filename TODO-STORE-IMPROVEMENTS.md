@@ -28,6 +28,14 @@ This document tracks planned improvements for the seller storefront and store ma
 - [ ] **Featured sellers** - Highlight top sellers or new stores
 - [ ] **Store ratings/reviews** - Allow buyers to rate their experience
 
+## Favorites / Wishlist
+
+- [ ] **Favorite listings** - Allow users to save listings they're interested in (heart button currently hidden in `ListingImageGallery`)
+- [ ] **Favorites page** - Create a `/favorites` page where users can view their saved items
+- [ ] **localStorage persistence** - Store favorites in localStorage for non-logged-in users
+- [ ] **AT Protocol persistence** - Optionally sync favorites to user's AT Protocol repo for logged-in users
+- [ ] **Favorite notifications** - Notify users when a favorited item's price changes or is about to be removed
+
 ## External Commerce Integration
 
 - [ ] **More affiliate platforms** - Add support for additional platforms

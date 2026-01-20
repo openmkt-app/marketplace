@@ -59,7 +59,7 @@ export default function ListingImageGallery({ images, title }: ListingImageGalle
           unoptimized
         />
 
-        {/* Favorite Heart Button */}
+{/* TODO: Favorite Heart Button - Hidden until favorites feature is implemented (see TODO-STORE-IMPROVEMENTS.md)
         <button
           onClick={() => setIsFavorited(!isFavorited)}
           className="absolute top-4 right-4 w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center hover:scale-110 transition-transform"
@@ -70,6 +70,7 @@ export default function ListingImageGallery({ images, title }: ListingImageGalle
             className={isFavorited ? 'fill-red-500 text-red-500' : 'text-gray-400'}
           />
         </button>
+        */}
       </div>
 
       {/* Thumbnails */}

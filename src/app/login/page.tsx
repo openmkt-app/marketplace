@@ -122,16 +122,7 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-neutral-light"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-text-secondary">Or</span>
-              </div>
-            </div>
-
-            <div className="mt-6">
+            <div>
               <div className="rounded-md bg-primary-light/10 p-4">
                 <div className="flex">
                   <div className="flex-shrink-0">
@@ -153,7 +144,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="mt-6">
+          <div className="mt-4">
             <div className="text-sm text-center">
               <p className="text-text-secondary">
                 New to this whole thing?{' '}
