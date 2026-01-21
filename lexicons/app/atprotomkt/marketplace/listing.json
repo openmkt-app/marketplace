@@ -1,88 +1,49 @@
 {
   "lexicon": 1,
-  "id": "app.openmkt.marketplace",
+  "id": "app.atprotomkt.marketplace.listing",
+  "$type": "com.atproto.lexicon.schema",
   "defs": {
-    "listing": {
+    "main": {
       "type": "record",
       "key": "tid",
       "record": {
         "type": "object",
-        "required": [
-          "title",
-          "price",
-          "category",
-          "location",
-          "createdAt"
-        ],
+        "required": ["title", "price", "category", "location", "createdAt"],
         "properties": {
-          "title": {
-            "type": "string",
-            "maxLength": 300
-          },
-          "price": {
-            "type": "string",
-            "description": "String representation to avoid float errors"
-          },
-          "category": {
-            "type": "string"
-          },
-          "condition": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string",
-            "maxLength": 3000
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "datetime"
-          },
-          "hideFromFriends": {
-            "type": "boolean"
-          },
+          "title": { "type": "string", "maxLength": 300 },
+          "price": { "type": "string", "description": "String representation" },
+          "category": { "type": "string" },
+          "condition": { "type": "string" },
+          "description": { "type": "string", "maxLength": 3000 },
+          "createdAt": { "type": "string", "format": "datetime" },
+          "hideFromFriends": { "type": "boolean" },
           "images": {
             "type": "array",
-            "items": {
-              "type": "blob",
-              "accept": [
-                "image/*"
-              ]
-            }
+            "items": { "type": "blob", "accept": ["image/*"], "maxSize": 1000000 }
           },
-          "location": {
-            "type": "ref",
-            "ref": "#locationObj"
-          },
-          "metadata": {
-            "type": "ref",
-            "ref": "#metadataObj"
-          }
+          "location": { "type": "ref", "ref": "#locationObj" },
+          "metadata": { "type": "ref", "ref": "#metadataObj" },
+          "externalUrl": { "type": "string", "maxLength": 2000, "description": "Optional external URL for purchasing the item (e.g., Amazon, eBay link)" }
         }
       }
     },
     "locationObj": {
       "type": "object",
       "properties": {
-        "state": {
-          "type": "string"
-        },
-        "county": {
-          "type": "string"
-        },
-        "locality": {
-          "type": "string"
-        },
-        "zipPrefix": {
-          "type": "string"
+        "state": { "type": "string" },
+        "county": { "type": "string" },
+        "locality": { "type": "string" },
+        "zipPrefix": { "type": "string" },
+        "isOnlineStore": {
+          "type": "boolean",
+          "description": "If true, this is an online store listing with no physical location shown"
         }
       }
     },
     "metadataObj": {
       "type": "object",
       "properties": {
-        "subcategory": {
-          "type": "string"
-        }
+        "subcategory": { "type": "string" }
       }
     }
   }

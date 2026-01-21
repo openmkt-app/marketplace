@@ -223,6 +223,11 @@ export function calculateDistance(location1: ListingLocation, _location2: Listin
  * Format a location for display
  */
 export function formatLocation(location: ListingLocation): string {
+  // Handle online store
+  if (location.isOnlineStore) {
+    return 'Online Store';
+  }
+
   const parts = [];
 
   if (location.locality) parts.push(location.locality);
@@ -230,6 +235,28 @@ export function formatLocation(location: ListingLocation): string {
   if (location.state) parts.push(location.state);
 
   return parts.join(', ');
+}
+
+/**
+ * Format a short location for display (locality + state only)
+ */
+export function formatLocationShort(location: ListingLocation): string {
+  // Handle online store
+  if (location.isOnlineStore) {
+    return 'Online Store';
+  }
+
+  if (location.locality && location.state) {
+    return `${location.locality}, ${location.state}`;
+  }
+  return location.locality || location.state || '';
+}
+
+/**
+ * Check if a location is an online store
+ */
+export function isOnlineStore(location: ListingLocation): boolean {
+  return !!location.isOnlineStore;
 }
 
 /**

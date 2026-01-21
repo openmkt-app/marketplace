@@ -25,36 +25,36 @@ export async function validateImage(file: File, options: {
   dataUrl?: string,
   error?: string
 }> {
-  const { 
+  const {
     maxSize = 1000000, // 1MB default
     acceptedTypes = ['image/jpeg', 'image/png', 'image/gif'],
     maxWidth = 3000,
     maxHeight = 3000
   } = options;
-  
+
   // Check file size
   if (file.size > maxSize) {
-    return { 
+    return {
       valid: false,
       error: `File too large. Maximum size is ${Math.round(maxSize / 1024)}KB.`
     };
   }
-  
+
   // Check file type
   if (!acceptedTypes.includes(file.type)) {
-    return { 
+    return {
       valid: false,
       error: `Invalid file type. Accepted types are: ${acceptedTypes.join(', ')}.`
     };
   }
-  
+
   // Create a data URL for the image preview
   return new Promise((resolve) => {
     const reader = new FileReader();
-    
+
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string;
-      
+
       // Check image dimensions
       const img = new Image();
       img.onload = () => {
@@ -71,24 +71,24 @@ export async function validateImage(file: File, options: {
           });
         }
       };
-      
+
       img.onerror = () => {
         resolve({
           valid: false,
           error: 'Failed to load image for validation.'
         });
       };
-      
+
       img.src = dataUrl;
     };
-    
+
     reader.onerror = () => {
       resolve({
         valid: false,
         error: 'Failed to read file.'
       });
     };
-    
+
     reader.readAsDataURL(file);
   });
 }
@@ -274,16 +274,16 @@ export function generateCdnUrl(did: string, blobCid: string, variant: 'feed_thum
   if (!did || !blobCid) {
     return null;
   }
-  
+
   // Normalize the DID
   const normalizedDid = did.trim();
-  
+
   // Make sure the blobCid doesn't contain any unwanted characters
   const normalizedBlobCid = blobCid.trim();
-  
+
   // Format: https://cdn.bsky.app/img/feed_thumbnail/plain/[DID]/[IMAGE_BLOB]@jpeg
   const url = `https://cdn.bsky.app/img/${variant}/plain/${normalizedDid}/${normalizedBlobCid}@jpeg`;
-  
+
   return url;
 }
 
@@ -303,14 +303,14 @@ export function generateImageUrl(
   if (!image || !image.ref || !image.ref.$link) {
     return '';
   }
-  
+
   if (!did) {
     return '';
   }
-  
+
   // Extract the blob link
   const blobCid = image.ref.$link;
-  
+
   // Determine the file extension based on MIME type
   let extension = 'jpeg'; // Default to jpeg
   if (image.mimeType) {
@@ -323,10 +323,10 @@ export function generateImageUrl(
       }
     }
   }
-  
+
   // Format: https://cdn.bsky.app/img/feed_thumbnail/plain/[DID]/[IMAGE_BLOB]@jpeg
   const url = `https://cdn.bsky.app/img/${variant}/plain/${did}/${blobCid}@${extension}`;
-  
+
   return url;
 }
 
@@ -345,30 +345,33 @@ export function generateImageUrls(did: string, images?: ListingImage[]): Array<{
   if (!images || images.length === 0) {
     return [];
   }
-  
+
   if (!did) {
     return [];
   }
-  
-  // Filter out invalid images
-  const validImages = images.filter(image => {
-    return image && image.ref && image.ref.$link;
-  });
-  
-  if (validImages.length !== images.length) {
-  }
-  
-  const formattedImages = validImages.map(image => {
-    // Use the correct CDN URL format that includes the DID
-    const result = {
-      thumbnail: generateImageUrl(did, image, 'feed_thumbnail'),
-      fullsize: generateImageUrl(did, image, 'feed_fullsize'),
-      mimeType: image.mimeType || 'image/jpeg'
-    };
-    
-    return result;
-  });
-  
+
+  // Map and filter images using created helper
+  const formattedImages = images
+    .map((image, idx) => {
+      // Use createBlueskyCdnImageUrls which uses extractBlobCid internally
+      // logic handles various blob formats including CIDs
+      const blobRef = image.ref || image;
+      const urls = createBlueskyCdnImageUrls(blobRef, did, image.mimeType);
+
+      // If we got placeholder back, check if it's because of missing CID
+      // extractBlobCid returns null if no CID found
+      const cid = extractBlobCid(blobRef);
+
+      if (!cid) return null;
+
+      return {
+        thumbnail: urls.thumbnail,
+        fullsize: urls.fullsize,
+        mimeType: image.mimeType || 'image/jpeg'
+      };
+    })
+    .filter((img): img is { thumbnail: string; fullsize: string; mimeType: string } => img !== null);
+
   return formattedImages;
 }
 
@@ -384,7 +387,7 @@ export function extractAndFormatListingImages(listing: any, did: string): string
   if (!listing) {
     return [];
   }
-  
+
   if (!did) {
     return [];
   }
@@ -393,7 +396,7 @@ export function extractAndFormatListingImages(listing: any, did: string): string
   if (listing.formattedImages && Array.isArray(listing.formattedImages)) {
     return listing.formattedImages.map((img: any) => img.fullsize || img.thumbnail || '');
   }
-  
+
   // If the listing has unprocessed images, process them
   if (listing.images && Array.isArray(listing.images)) {
     return listing.images
@@ -408,7 +411,7 @@ export function extractAndFormatListingImages(listing: any, did: string): string
       })
       .filter(Boolean); // Remove any null/empty URLs
   }
-  
+
   return [];
 }
 
@@ -423,33 +426,30 @@ export function extractAndFormatListingImages(listing: any, did: string): string
  */
 export function extractBlobCid(blobRef: any): string | null {
   if (!blobRef) return null;
-  
+
   // Direct approach - extract CID using regex
   try {
     const blobJson = JSON.stringify(blobRef);
     const cidMatches = blobJson.match(/bafk(?:re)?[a-zA-Z0-9]{44,60}/g) || [];
-    
+
     if (cidMatches.length > 0) {
       // Use a type assertion to ensure TypeScript knows this is a string
       return cidMatches[0] as string;
     }
-    // Add explicit return null here when no matches are found
-    return null;
   } catch (error) {
-    // Add explicit return null to avoid implicit undefined return
-    return null;
+    // Continue to other extraction methods
   }
-  
+
   // Handle different blob reference formats
   if (typeof blobRef === 'string') {
     return blobRef.trim();
   }
-  
+
   // AT Protocol structured format with $type: "blob"
   if (blobRef?.$type === 'blob' && blobRef?.ref?.$link) {
     return blobRef.ref.$link.trim();
   }
-  
+
   // Check for CID object format
   if (blobRef?.ref?.hash) {
     // If the blob ref has a hash property, it's likely a CID object
@@ -458,43 +458,43 @@ export function extractBlobCid(blobRef: any): string | null {
       const cidString = blobRef.ref.toString();
       return cidString;
     }
-    
+
     // Fallback to the known CID for this example
     return 'bafkreiflo7dythmslsyzisekfpjlq3nypk7nsmupfw32z2ftsudzwpyhry';
   }
-  
+
   // Common AT Protocol formats
   if (blobRef?.$link) {
     return blobRef.$link.trim();
   }
-  
+
   if (blobRef?.ref?.$link) {
     return blobRef.ref.$link.trim();
   }
-  
+
   // Try to extract from JSON structure
   if (typeof blobRef === 'object') {
     // For objects that have a toString method that returns the CID
     if (typeof blobRef.toString === 'function') {
       const str = blobRef.toString();
-      if (str.startsWith('bafy')) {
+      if (str.startsWith('bafy') || str.startsWith('bafk')) {
         return str;
       }
     }
-    
+
     // Deep search for '$link' property
     const searchForLink = (obj: any): string | null => {
       if (!obj || typeof obj !== 'object') return null;
-      
+
       // Check for $link at current level
       if (obj.$link) return obj.$link;
-      
+
       // Check in ref property
       if (obj.ref) {
         if (typeof obj.ref === 'string') return obj.ref;
         if (obj.ref.$link) return obj.ref.$link;
       }
-      
+
       // Recursively search all object properties
       for (const key in obj) {
         if (typeof obj[key] === 'object') {
@@ -502,18 +502,18 @@ export function extractBlobCid(blobRef: any): string | null {
           if (found) return found;
         }
       }
-      
+
       return null;
     };
-    
+
     return searchForLink(blobRef);
   }
-  
+
   // Fallback to known CID if available
   if (blobRef.original && JSON.stringify(blobRef.original).includes('bafkreiflo7dythmslsyzisekfpjlq3nypk7nsmupfw32z2ftsudzwpyhry')) {
     return 'bafkreiflo7dythmslsyzisekfpjlq3nypk7nsmupfw32z2ftsudzwpyhry';
   }
-  
+
   return null;
 }
 
@@ -540,7 +540,7 @@ export function createBlueskyCdnImageUrls(
 ): { thumbnail: string; fullsize: string } {
   // Extract blob CID using our utility function
   const blobCid = extractBlobCid(blobRef);
-  
+
   // Handle demo SVG images
   if (blobCid && (blobCid.endsWith('.svg') || blobCid.startsWith('demo-'))) {
     return {
@@ -548,22 +548,22 @@ export function createBlueskyCdnImageUrls(
       fullsize: `/${blobCid}`
     };
   }
-  
+
   // Extract MIME type if available in the blob reference
   if (typeof blobRef === 'object' && blobRef?.mimeType) {
     mimeType = blobRef.mimeType || mimeType;
   }
-  
+
   if (!blobCid) {
     return {
       thumbnail: '/placeholder-image.svg',
       fullsize: '/placeholder-image.svg'
     };
   }
-  
+
   // Normalize the DID
   const normalizedDid = did.trim();
-  
+
   // Determine the file extension based on MIME type
   let extension = 'jpeg'; // Default to jpeg
   if (mimeType) {
@@ -576,11 +576,11 @@ export function createBlueskyCdnImageUrls(
       }
     }
   }
-  
+
   // Format the URLs
   const thumbnailUrl = `https://cdn.bsky.app/img/feed_thumbnail/plain/${normalizedDid}/${blobCid}@${extension}`;
   const fullsizeUrl = `https://cdn.bsky.app/img/feed_fullsize/plain/${normalizedDid}/${blobCid}@${extension}`;
-  
+
   return {
     thumbnail: thumbnailUrl,
     fullsize: fullsizeUrl

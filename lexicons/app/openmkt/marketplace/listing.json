@@ -33,7 +33,11 @@
         "state": { "type": "string" },
         "county": { "type": "string" },
         "locality": { "type": "string" },
-        "zipPrefix": { "type": "string" }
+        "zipPrefix": { "type": "string" },
+        "isOnlineStore": {
+          "type": "boolean",
+          "description": "If true, this is an online store listing with no physical location shown"
+        }
       }
     },
     "metadataObj": {

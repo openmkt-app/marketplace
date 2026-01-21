@@ -4,12 +4,13 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { MapPin, ShoppingCart } from 'lucide-react';
+import { MapPin, ShoppingCart, Globe } from 'lucide-react';
 import ListingImageDisplay from './ListingImageDisplay';
 import ListingImageDebug from './ListingImageDebug';
 import type { MarketplaceListing } from '@/lib/marketplace-client';
 import { formatConditionForDisplay } from '@/lib/condition-utils';
 import { formatPrice, formatDate, formatLocation } from '@/lib/price-utils';
+import { isOnlineStore } from '@/lib/location-utils';
 import { extractSubcategoryFromDescription, getCategoryName } from '@/lib/category-utils';
 import { generateAvatarUrl } from '@/lib/image-utils';
 import { getSellerDisplayName } from '@/lib/chat-utils';
@@ -38,7 +39,10 @@ const ListingCard = React.memo(({ listing, showDebug = false }: ListingCardProps
   const postedDate = formatDate(listing.createdAt);
 
   // Format location - clean up prefixes and abbreviate state
-  const locationString = formatLocation(listing.location?.locality, listing.location?.state);
+  const isOnline = listing.location ? isOnlineStore(listing.location) : false;
+  const locationString = isOnline
+    ? 'Online Store'
+    : formatLocation(listing.location?.locality, listing.location?.state);
 
   return (
     <div className="group bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full relative">
@@ -112,7 +116,11 @@ const ListingCard = React.memo(({ listing, showDebug = false }: ListingCardProps
         <div className="mt-auto space-y-2">
           {locationString && (
             <div className="flex items-center text-xs text-slate-400">
-              <MapPin size={12} className="mr-1" />
+              {isOnline ? (
+                <Globe size={12} className="mr-1 text-blue-400" />
+              ) : (
+                <MapPin size={12} className="mr-1" />
+              )}
               <span className="truncate">
                 {locationString}
               </span>

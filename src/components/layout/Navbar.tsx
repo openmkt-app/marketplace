@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import SearchBar from '../marketplace/filters/SearchBar';
 import { generateAvatarUrl } from '@/lib/image-utils';
 import { getUnreadChatCount } from '@/lib/chat-utils';
-import { Bell } from 'lucide-react';
+import { Bell, Store } from 'lucide-react';
 
 import NavbarUserMenu from './NavbarUserMenu';
 
@@ -137,6 +137,14 @@ const NavbarContent = () => {
                 )}
               </a>
             )}
+
+            <Link
+              href="/mall"
+              className="hidden sm:flex items-center gap-1.5 text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <Store size={18} />
+              <span className="text-sm font-medium">The Mall</span>
+            </Link>
 
             <Link
               href="/create-listing"
