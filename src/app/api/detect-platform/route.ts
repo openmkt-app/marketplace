@@ -32,16 +32,18 @@ export async function GET(request: NextRequest) {
 
         // If URL doesn't match known patterns, fetch and analyze the page
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
 
+        // Use Googlebot user agent - most sites allow crawlers for SEO
         const response = await fetch(targetUrl.toString(), {
             method: 'GET',
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Language': 'en-US,en;q=0.5',
             },
-            signal: controller.signal
+            signal: controller.signal,
+            redirect: 'follow',
         });
 
         clearTimeout(timeoutId);
