@@ -779,6 +779,7 @@ export class MarketplaceClient {
       // Handle Price and Text Logic
       const priceVal = parseFloat(listingData.price || '0');
       const isFree = !listingData.price || priceVal === 0;
+      const isOnlineStore = listingData.location?.isOnlineStore === true;
 
       const formattedPrice = priceVal.toLocaleString('en-US', {
         minimumFractionDigits: 2,
@@ -787,19 +788,28 @@ export class MarketplaceClient {
 
       const priceStr = isFree ? "Free" : `$${formattedPrice}`;
 
-      const askingLine = isFree ? "It's Free! 🎁" : `Asking ${priceStr}.`;
-      const forSaleTag = isFree ? "" : "#ForSale";
+      let text: string;
+      let embedAction: string;
 
-      const introLine = isFree ? `Giving away my ${listingData.title} 🎁` : `Selling my ${listingData.title} 📦`;
-      const embedAction = isFree ? "Giving Away" : "Selling";
+      if (isOnlineStore) {
+        // Online store format
+        embedAction = "Shop";
+        text = `New in the shop: ${listingData.title} ✨\n\n${priceStr}\n\nAvailable now on my Open Market storefront. 👇\n\n#OpenMarket ${categoryTag}`.trim();
+      } else {
+        // Personal listing format
+        const askingLine = isFree ? "It's Free! 🎁" : `Asking ${priceStr}.`;
+        const forSaleTag = isFree ? "" : "#ForSale";
+        const introLine = isFree ? `Giving away my ${listingData.title} 🎁` : `Selling my ${listingData.title} 📦`;
+        embedAction = isFree ? "Giving Away" : "Selling";
 
-      // Format:
-      // {IntroLine}
-      // {AskingLine}
-      // Listed it on @openmkt.app for the community. Link below! 👇
-      // {Hashtags} {ForSaleTag}
+        // Format:
+        // {IntroLine}
+        // {AskingLine}
+        // Listed it on @openmkt.app for the community. Link below! 👇
+        // {Hashtags} {ForSaleTag}
 
-      const text = `${introLine}\n\n${askingLine}\n\nListed it on @openmkt.app for the community. Link below! 👇\n\n${categoryTag} ${forSaleTag}`.trim();
+        text = `${introLine}\n\n${askingLine}\n\nListed it on @openmkt.app for the community. Link below! 👇\n\n${categoryTag} ${forSaleTag}`.trim();
+      }
 
       // Create RichText to handle facets (links, mentions, tags)
       const rt = new RichText({ text });
