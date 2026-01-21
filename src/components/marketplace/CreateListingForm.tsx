@@ -614,7 +614,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   };
 
   // Handle external URL changes
-  const handleExternalUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleExternalUrlChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const url = e.target.value;
     setExternalUrl(url);
     setExternalUrlError(null);
@@ -625,7 +625,21 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         setExternalUrlError(result.error || 'Invalid URL');
         setDetectedPlatform(null);
       } else {
+        // First set platform from URL pattern (synchronous)
         setDetectedPlatform(result.platformName);
+
+        // If no platform detected from URL, try async detection (for Shopify, etc.)
+        if (!result.platformName) {
+          try {
+            const platformRes = await fetch(`/api/detect-platform?url=${encodeURIComponent(url)}`);
+            const platformData = await platformRes.json();
+            if (platformData.platformName) {
+              setDetectedPlatform(platformData.platformName);
+            }
+          } catch (e) {
+            // Non-blocking - just won't show platform badge
+          }
+        }
       }
     } else {
       setDetectedPlatform(null);
@@ -661,7 +675,22 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
       // Set External URL
       setExternalUrl(magicLinkUrl);
-      setDetectedPlatform(getPlatformDisplayName(magicLinkUrl));
+
+      // Try to detect platform - first from URL pattern, then via async detection
+      let platform = getPlatformDisplayName(magicLinkUrl);
+      if (!platform) {
+        try {
+          const platformRes = await fetch(`/api/detect-platform?url=${encodeURIComponent(magicLinkUrl)}`);
+          const platformData = await platformRes.json();
+          if (platformData.platformName) {
+            platform = platformData.platformName;
+          }
+        } catch (e) {
+          // Non-blocking - just won't show platform badge
+          console.warn('Platform detection failed:', e);
+        }
+      }
+      setDetectedPlatform(platform);
 
       // 3. Handle Image (Fetch via proxy -> Blob -> File)
       if (data.image) {
@@ -820,9 +849,15 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       }
 
       // Create custom metadata for inclusion in description
-      const metadata = {
+      const metadata: Record<string, any> = {
         subcategory: subcategoryName
       };
+
+      // Store detected platform in metadata for badge display
+      if (detectedPlatform) {
+        // Convert display name to key (e.g., "Shopify" -> "shopify")
+        metadata.externalPlatform = detectedPlatform.toLowerCase().replace(/\s+/g, '');
+      }
 
       // Prepare listing data with metadata embedded as JSON
       const listingDataRaw = {
