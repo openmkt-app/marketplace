@@ -252,16 +252,27 @@ export class MarketplaceClient {
         hideFromFriends: listingDataWithoutImages.hideFromFriends || false
       });
 
+      // Construct the record with ONLY the fields defined in the lexicon
+      // This prevents 'authorHandle' or other hydrated fields from polluting the PDS record
+      const recordToCreate = {
+        title: listingDataWithoutImages.title,
+        price: listingDataWithoutImages.price,
+        category: listingDataWithoutImages.category,
+        condition: listingDataWithoutImages.condition,
+        description: listingDataWithoutImages.description,
+        location: listingDataWithoutImages.location,
+        images: processedImages,
+        createdAt: new Date().toISOString(),
+        hideFromFriends: listingDataWithoutImages.hideFromFriends || false,
+        metadata: listingDataWithoutImages.metadata || {},
+        externalUrl: listingDataWithoutImages.externalUrl,
+        $type: MARKETPLACE_COLLECTION
+      };
+
       const result = await this.agent.api.com.atproto.repo.createRecord({
         repo: this.agent.session.did,
         collection: MARKETPLACE_COLLECTION,
-        record: {
-          ...listingDataWithoutImages,
-          images: processedImages, // Add the processed images
-          createdAt: new Date().toISOString(),
-          hideFromFriends: listingDataWithoutImages.hideFromFriends || false,
-          metadata: listingDataWithoutImages.metadata || {} // Include metadata with subcategory
-        },
+        record: recordToCreate,
       });
 
       // Handle standard AT Proto response shape { data: { uri, cid }, success: boolean }
@@ -393,32 +404,28 @@ export class MarketplaceClient {
         }
       });
 
+      // Construct the record with ONLY the fields defined in the lexicon
+      const recordToUpdate = {
+        title: listingDataWithoutImages.title,
+        price: listingDataWithoutImages.price,
+        category: listingDataWithoutImages.category,
+        condition: listingDataWithoutImages.condition,
+        description: listingDataWithoutImages.description,
+        location: listingDataWithoutImages.location,
+        images: finalImages,
+        createdAt: new Date().toISOString(), // Bumps to top of feed
+        hideFromFriends: listingDataWithoutImages.hideFromFriends || false,
+        metadata: listingDataWithoutImages.metadata || {},
+        externalUrl: listingDataWithoutImages.externalUrl,
+        $type: MARKETPLACE_COLLECTION
+      };
+
       // Use putRecord to overwrite
       await this.agent.api.com.atproto.repo.putRecord({
         repo,
         collection,
         rkey,
-        record: {
-          ...listingDataWithoutImages,
-          images: finalImages,
-          // Preserve creation date if passed, or it uses input's createdAt? 
-          // Ideally we preserve the ORIGINAL createdAt from the fetch, usually passed in listingData if we are careful.
-          // If the form sends new Date(), we might want to be careful. 
-          // But `CreateListingParams` lacks createdAt usually (it's Omit<..., 'createdAt'>).
-          // Wait, `CreateListingParams` is `Omit<MarketplaceListing, 'createdAt'>`.
-          // So we should ideally fetch the original record to preserve `createdAt` or pass it in.
-          // For now, let's assume we update the `createdAt` to "updatedAt" conceptually, 
-          // OR we should be passing the original `createdAt` if we want to keep it.
-          // AT Protocol records usually have `createdAt`. 
-          // I'll use the current time as "updated" or trust the caller to pass it if they extended the type.
-          // But `CreateListingParams` excludes it. 
-          // I will insert `createdAt: new Date().toISOString()` which effectively bumps it. 
-          // If we want to preserve it, we'd need to fetch or pass it. 
-          // I'll stick to bumping it for now as "last modified" or just new Date().
-          createdAt: new Date().toISOString(), // This bumps it to top of feed usually
-          hideFromFriends: listingDataWithoutImages.hideFromFriends || false,
-          metadata: listingDataWithoutImages.metadata || {}
-        }
+        record: recordToUpdate
       });
 
       // Invalidate cache
