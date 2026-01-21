@@ -80,6 +80,34 @@ export const AFFILIATE_CONFIG: Record<string, AffiliateConfig> = {
     affiliateValue: 'openmkt',
     enabled: false, // Craigslist doesn't support affiliate params
   },
+  shopify: {
+    name: 'Shopify',
+    domains: [], // Shopify stores use custom domains, detected via HTTP headers/HTML
+    affiliateParam: '',
+    affiliateValue: '',
+    enabled: false, // No affiliate program, but badge display is supported
+  },
+  woocommerce: {
+    name: 'WooCommerce',
+    domains: [], // WooCommerce stores use custom domains
+    affiliateParam: '',
+    affiliateValue: '',
+    enabled: false,
+  },
+  bigcommerce: {
+    name: 'BigCommerce',
+    domains: [], // BigCommerce stores use custom domains
+    affiliateParam: '',
+    affiliateValue: '',
+    enabled: false,
+  },
+  squarespace: {
+    name: 'Squarespace',
+    domains: [], // Squarespace stores use custom domains
+    affiliateParam: '',
+    affiliateValue: '',
+    enabled: false,
+  },
 };
 
 export interface ProcessedLink {
@@ -229,4 +257,16 @@ export function getPlatformDisplayName(url: string): string | null {
  */
 export function isKnownPlatform(url: string): boolean {
   return detectPlatform(url) !== null;
+}
+
+/**
+ * Platforms that use custom domains and require async detection via HTTP/HTML analysis
+ */
+export const ASYNC_DETECT_PLATFORMS = ['shopify', 'woocommerce', 'bigcommerce', 'squarespace'] as const;
+
+/**
+ * Gets the config for a platform by key (useful for async-detected platforms)
+ */
+export function getPlatformConfig(platformKey: string): AffiliateConfig | null {
+  return AFFILIATE_CONFIG[platformKey] || null;
 }

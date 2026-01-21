@@ -30,18 +30,28 @@ const PLATFORM_BADGES: Record<string, { letter: string; color: string; bgColor: 
     mercari: { letter: 'M', color: '#4A9BDB', bgColor: '#EDF5FB' },
     poshmark: { letter: 'P', color: '#7F0353', bgColor: '#F8ECF3' },
     depop: { letter: 'D', color: '#FF2300', bgColor: '#FFEBE7' },
+    woocommerce: { letter: 'W', color: '#96588A', bgColor: '#F5EEF4' },
+    bigcommerce: { letter: 'B', color: '#34313F', bgColor: '#ECEBED' },
+    squarespace: { letter: 'S', color: '#000000', bgColor: '#F0F0F0' },
 };
 
 // Detect external platforms from seller's listings and description
 function detectSellerPlatforms(seller: SellerWithListings): string[] {
     const platforms = new Set<string>();
 
-    // Check listings for external URLs
+    // Check listings for external URLs and metadata
     seller.listings?.forEach(listing => {
+        // First check metadata for stored platform (supports async-detected platforms like Shopify)
+        if (listing.metadata?.externalPlatform) {
+            platforms.add(listing.metadata.externalPlatform);
+        }
+
+        // Then check external URL for pattern-based detection
         if (listing.externalUrl) {
             const detected = detectPlatform(listing.externalUrl);
             if (detected) platforms.add(detected.key);
         }
+
         // Also check description for platform links
         if (listing.description) {
             for (const [key, config] of Object.entries(AFFILIATE_CONFIG)) {
