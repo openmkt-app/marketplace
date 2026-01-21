@@ -14,7 +14,10 @@ const USER_AGENTS = {
 };
 
 // Sites that block regular browsers but allow crawlers
-const CRAWLER_PREFERRED_DOMAINS = ['etsy.com', 'poshmark.com', 'depop.com'];
+const CRAWLER_PREFERRED_DOMAINS = ['poshmark.com', 'depop.com'];
+
+// Sites that are very aggressive with rate limiting - use special handling
+const AGGRESSIVE_RATE_LIMIT_DOMAINS = ['etsy.com'];
 
 function selectUserAgent(hostname: string): string {
     const normalizedHost = hostname.toLowerCase().replace(/^www\./, '');
@@ -25,6 +28,92 @@ function selectUserAgent(hostname: string): string {
     }
 
     return USER_AGENTS.chrome;
+}
+
+function isAggressiveRateLimitSite(hostname: string): boolean {
+    const normalizedHost = hostname.toLowerCase().replace(/^www\./, '');
+    return AGGRESSIVE_RATE_LIMIT_DOMAINS.some(domain => normalizedHost.includes(domain));
+}
+
+// Helper to add random delay for rate-limited sites
+function randomDelay(min: number, max: number): Promise<void> {
+    const delay = Math.floor(Math.random() * (max - min + 1)) + min;
+    return new Promise(resolve => setTimeout(resolve, delay));
+}
+
+// Fetch with retry logic for rate-limited sites
+async function fetchWithRetry(
+    url: URL,
+    maxRetries: number = 3
+): Promise<{ response: Response | null; error: string | null }> {
+    const isAggressiveSite = isAggressiveRateLimitSite(url.hostname);
+    const userAgents = isAggressiveSite
+        ? [USER_AGENTS.mobile, USER_AGENTS.chrome, USER_AGENTS.googlebot] // Try different UAs
+        : [selectUserAgent(url.hostname)];
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        // Add delay between retries, longer for aggressive sites
+        if (attempt > 0) {
+            const baseDelay = isAggressiveSite ? 2000 : 500;
+            await randomDelay(baseDelay * attempt, baseDelay * attempt * 2);
+        }
+
+        const userAgent = userAgents[attempt % userAgents.length];
+        const isGooglebot = userAgent.includes('Googlebot');
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+        const headers: Record<string, string> = isGooglebot
+            ? {
+                'User-Agent': userAgent,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+            }
+            : {
+                'User-Agent': userAgent,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Cache-Control': 'no-cache',
+                'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+                'Sec-Ch-Ua-Mobile': userAgent.includes('Mobile') ? '?1' : '?0',
+                'Sec-Ch-Ua-Platform': userAgent.includes('Android') ? '"Android"' : '"macOS"',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none',
+                'Sec-Fetch-User': '?1',
+                'Upgrade-Insecure-Requests': '1',
+            };
+
+        try {
+            const response = await fetch(url.toString(), {
+                headers,
+                signal: controller.signal,
+                redirect: 'follow',
+            });
+
+            clearTimeout(timeoutId);
+
+            // If rate limited, retry with backoff
+            if (response.status === 429 || response.status === 403) {
+                console.log(`Attempt ${attempt + 1} failed with ${response.status}, retrying...`);
+                continue;
+            }
+
+            if (!response.ok) {
+                return { response: null, error: `Failed to fetch URL: ${response.status} ${response.statusText}` };
+            }
+
+            return { response, error: null };
+        } catch (err: any) {
+            clearTimeout(timeoutId);
+            if (attempt === maxRetries - 1) {
+                return { response: null, error: err.message || 'Request failed' };
+            }
+        }
+    }
+
+    return { response: null, error: 'Max retries exceeded - site may be blocking requests' };
 }
 
 export async function GET(request: NextRequest) {
@@ -38,47 +127,12 @@ export async function GET(request: NextRequest) {
     try {
         // validate URL
         const targetUrl = new URL(url);
-        const userAgent = selectUserAgent(targetUrl.hostname);
-        const isGooglebot = userAgent.includes('Googlebot');
 
-        // Fetch HTML
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+        // Fetch with retry logic
+        const { response, error } = await fetchWithRetry(targetUrl);
 
-        // Use simpler headers for Googlebot, full browser headers otherwise
-        const headers: Record<string, string> = isGooglebot
-            ? {
-                'User-Agent': userAgent,
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
-            }
-            : {
-                'User-Agent': userAgent,
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache',
-                'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
-                'Sec-Ch-Ua-Mobile': '?0',
-                'Sec-Ch-Ua-Platform': '"macOS"',
-                'Sec-Fetch-Dest': 'document',
-                'Sec-Fetch-Mode': 'navigate',
-                'Sec-Fetch-Site': 'none',
-                'Sec-Fetch-User': '?1',
-                'Upgrade-Insecure-Requests': '1',
-            };
-
-        const response = await fetch(targetUrl.toString(), {
-            headers,
-            signal: controller.signal,
-            redirect: 'follow',
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-            return NextResponse.json({ error: `Failed to fetch URL: ${response.status} ${response.statusText}` }, { status: response.status });
+        if (error || !response) {
+            return NextResponse.json({ error: error || 'Failed to fetch URL' }, { status: 400 });
         }
 
         const html = await response.text();
