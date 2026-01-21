@@ -139,7 +139,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const result = await newClient.resumeSession(sessionData);
 
             if (result.success) {
-
+              // Check if handle has changed (e.g. user renamed) and update it
+              if (result.data && result.data.user) {
+                const profileView = result.data.user as any;
+                if (profileView.handle && profileView.handle !== sessionData.handle) {
+                  console.log(`Handle changed from ${sessionData.handle} to ${profileView.handle}, updating session...`);
+                  sessionData.handle = profileView.handle;
+                  // Update localStorage with new handle
+                  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
+                }
+              }
 
               // Fetch user profile for avatar
               const profile = await fetchUserProfile(newClient, sessionData.did);

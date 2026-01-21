@@ -11,6 +11,8 @@ import LiveListingPreview from './LiveListingPreview';
 import { createBlueskyCdnImageUrls } from '@/lib/image-utils';
 import { trackCreateListing } from '@/lib/analytics';
 import { processExternalLink, getPlatformDisplayName } from '@/lib/external-link-utils';
+import { Wand2, Loader2, Sparkles } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
 // Define the SavedLocation type
 interface SavedLocation {
@@ -19,6 +21,7 @@ interface SavedLocation {
   county: string;
   locality: string;
   zipPrefix?: string;
+  isOnlineStore?: boolean;
 }
 
 interface CreateListingFormProps {
@@ -29,6 +32,7 @@ interface CreateListingFormProps {
 }
 
 export default function CreateListingForm({ client, onSuccess, initialData, mode = 'create' }: CreateListingFormProps) {
+  const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [images, setImages] = useState<(File | ListingImage)[]>([]);
@@ -86,6 +90,11 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   // Add state for online store mode (hides location, shows "Online Store")
   const [isOnlineStore, setIsOnlineStore] = useState(false);
 
+  // Magic Link State
+  const [magicLinkUrl, setMagicLinkUrl] = useState('');
+  const [isMagicLoading, setIsMagicLoading] = useState(false);
+  const [magicError, setMagicError] = useState<string | null>(null);
+
   // Set up an effect to auto-dismiss error messages after a timeout
   useEffect(() => {
     if (error) {
@@ -107,6 +116,14 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         setSelectedLocation(lastLocation);
         // Keep accordion closed if we have a saved location
         setIsLocationExpanded(false);
+
+        // Check if this is an online store location
+        const isOnline = lastLocation.isOnlineStore === true ||
+          (lastLocation.locality === 'Online Store' && lastLocation.state === 'Online');
+
+        if (isOnline) {
+          setIsOnlineStore(true);
+        }
 
         // We need to update the form fields after the component has mounted
         // and the form is available in the DOM
@@ -214,10 +231,16 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
           state: loc.state,
           county: loc.county,
           locality: loc.locality,
-          zipPrefix: loc.zipPrefix
+          zipPrefix: loc.zipPrefix,
+          isOnlineStore: loc.isOnlineStore
         };
         setSelectedLocation(locObj);
         setIsLocationExpanded(false);
+
+        // Ensure checkbox is checked if it's an online store
+        if (loc.isOnlineStore) {
+          setIsOnlineStore(true);
+        }
       }
 
       // Handle Images
@@ -266,7 +289,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       return;
     }
 
-    // Clear any existing error message since we&apos;re under the limit now
+    // Clear any existing error message since we're under the limit now
     if (error && error.includes("maximum of 10 images")) {
       setError(null);
     }
@@ -289,7 +312,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
     setImages(prev => prev.filter((_, i) => i !== index));
     setPreviewUrls(prev => prev.filter((_, i) => i !== index));
 
-    // Clear any "too many images" error message since we&apos;re reducing the count
+    // Clear any "too many images" error message since we're reducing the count
     if (error && error.includes("maximum of 10 images")) {
       setError(null);
     }
@@ -297,18 +320,14 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
   // Save the current location for future use
   const saveCurrentLocation = (locationData: { state: string; county: string; locality: string; zipPrefix?: string; isOnlineStore?: boolean }) => {
-    // Don't save online store mode locations - they're not reusable
-    if (locationData.isOnlineStore) {
-      return;
-    }
-
     // Create a location object for saving
     const locationToSave: SavedLocation = {
-      name: `${locationData.locality}, ${locationData.state}`,
+      name: locationData.isOnlineStore ? 'Online Store, Online' : `${locationData.locality}, ${locationData.state}`,
       state: locationData.state,
       county: locationData.county,
       locality: locationData.locality,
-      zipPrefix: locationData.zipPrefix
+      zipPrefix: locationData.zipPrefix,
+      isOnlineStore: locationData.isOnlineStore
     };
 
     // Save to localStorage
@@ -336,6 +355,12 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   // Load saved location data into form
   const handleSelectLocation = (location: SavedLocation) => {
     setSelectedLocation(location);
+
+    // Update Online Store state
+    const isOnline = location.isOnlineStore === true ||
+      (location.locality === 'Online Store' && location.state === 'Online');
+
+    setIsOnlineStore(isOnline);
 
     // Update form fields directly
     const form = document.getElementById('listing-form') as HTMLFormElement;
@@ -604,6 +629,71 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       }
     } else {
       setDetectedPlatform(null);
+    }
+  };
+
+  // Handle Magic Link Auto-Fill
+  const handleMagicFill = async () => {
+    if (!magicLinkUrl.trim()) return;
+
+    setIsMagicLoading(true);
+    setMagicError(null);
+
+    try {
+      // 1. Fetch Metadata
+      const res = await fetch(`/api/magic-link?url=${encodeURIComponent(magicLinkUrl)}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to fetch link data');
+      }
+
+      // 2. Populate Fields
+      if (data.title) setTitle(data.title.substring(0, 300)); // Limit title length
+      if (data.description) setDescription(data.description.substring(0, 3000)); // Limit desc length
+
+      // Handle Price if found
+      if (data.price) {
+        setPriceInput(formatPrice(data.price));
+      }
+
+      // Set External URL
+      setExternalUrl(magicLinkUrl);
+      setDetectedPlatform(getPlatformDisplayName(magicLinkUrl));
+
+      // 3. Handle Image (Fetch via proxy -> Blob -> File)
+      if (data.image) {
+        try {
+          const imageRes = await fetch(`/api/proxy-image?url=${encodeURIComponent(data.image)}`);
+          if (imageRes.ok) {
+            const blob = await imageRes.blob();
+            // Guess extension from MIME type or default to jpg
+            const mimeType = blob.type;
+            const ext = mimeType.split('/')[1] || 'jpg';
+            const filename = `imported-image.${ext}`;
+            const file = new File([blob], filename, { type: mimeType });
+
+            // Add to images if we have space
+            if (images.length < 10) {
+              setImages(prev => [...prev, file]);
+              setPreviewUrls(prev => [...prev, URL.createObjectURL(file)]);
+            }
+          }
+        } catch (imgErr) {
+          console.warn('Failed to auto-import image:', imgErr);
+          // Non-blocking error
+        }
+      }
+
+      // Success feedback
+      setMagicError(null);
+      // Optional: scroll to title?
+
+    } catch (err: any) {
+      console.error('Magic Link Error:', err);
+      setMagicError(err.message || 'Could not auto-fill details. Please try manually.');
+    } finally {
+      setIsMagicLoading(false);
     }
   };
 
@@ -877,6 +967,54 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
             )}
 
             <form id="listing-form" onSubmit={handleSubmit} className="space-y-8">
+              {/* Magic Link Section (Hidden unless ?ml=true) */}
+              {searchParams.get('ml') === 'true' && (
+                <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-2xl p-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="p-1.5 bg-indigo-100 rounded-lg text-indigo-600">
+                      <Wand2 size={18} />
+                    </div>
+                    <h3 className="font-bold text-indigo-900">Magic Import</h3>
+                    <span className="bg-indigo-600 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-full tracking-wide">Beta</span>
+                  </div>
+                  <p className="text-sm text-indigo-700/80 mb-4">
+                    Paste a link from Amazon, Shopify, or other stores to auto-fill details.
+                  </p>
+
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      placeholder="https://amazon.com/dp/..."
+                      value={magicLinkUrl}
+                      onChange={(e) => setMagicLinkUrl(e.target.value)}
+                      className="flex-1 rounded-xl border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500 bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleMagicFill}
+                      disabled={isMagicLoading || !magicLinkUrl}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+                    >
+                      {isMagicLoading ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" />
+                          Fetching...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={16} />
+                          Auto-Fill
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  {magicError && (
+                    <p className="text-red-600 text-sm mt-2 flex items-center gap-1">
+                      ⚠️ {magicError}
+                    </p>
+                  )}
+                </div>
+              )}
               {/* Photos Section */}
 
               {/* Error Message */}
@@ -1071,9 +1209,8 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                       value={externalUrl}
                       onChange={handleExternalUrlChange}
                       placeholder="https://amazon.com/dp/..."
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light ${
-                        externalUrlError ? 'border-red-400' : 'border-neutral-light'
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light ${externalUrlError ? 'border-red-400' : 'border-neutral-light'
+                        }`}
                     />
                     {externalUrlError && (
                       <p className="text-sm text-red-500 mt-1">{externalUrlError}</p>
@@ -1160,143 +1297,143 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                     {/* Local location fields - only shown if not online store */}
                     {!isOnlineStore && (
                       <>
-                    {/* Geolocation Button - add more padding at the top */}
-                    <div className="mb-4 mt-3">
-                      <button
-                        type="button"
-                        onClick={getCurrentLocation}
-                        disabled={isGeolocating}
-                        className="flex items-center px-4 py-2 bg-primary-color hover:bg-primary-light text-white rounded-md transition-colors"
-                      >
-                        {isGeolocating ? (
-                          <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Detecting your location...
-                          </>
-                        ) : (
-                          <>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            Use my current location
-                          </>
-                        )}
-                      </button>
+                        {/* Geolocation Button - add more padding at the top */}
+                        <div className="mb-4 mt-3">
+                          <button
+                            type="button"
+                            onClick={getCurrentLocation}
+                            disabled={isGeolocating}
+                            className="flex items-center px-4 py-2 bg-primary-color hover:bg-primary-light text-white rounded-md transition-colors"
+                          >
+                            {isGeolocating ? (
+                              <>
+                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Detecting your location...
+                              </>
+                            ) : (
+                              <>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                Use my current location
+                              </>
+                            )}
+                          </button>
 
-                      {geoSuccess === true && (
-                        <p className="text-sm text-green-600 mt-2">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          Location detected successfully!
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Saved Locations */}
-                    {savedLocations.length > 0 && (
-                      <div className="mb-4">
-                        <label className="block text-sm font-medium text-text-secondary mb-2">
-                          Your Saved Locations
-                        </label>
-                        <div className="flex flex-wrap gap-2">
-                          {savedLocations.map((location, index) => (
-                            <button
-                              key={index}
-                              type="button"
-                              onClick={() => handleSelectLocation(location)}
-                              className={`px-3 py-1 rounded-full text-sm ${selectedLocation?.name === location.name
-                                ? 'bg-primary-color text-white'
-                                : 'bg-neutral-light hover:bg-neutral-light text-text-secondary'
-                                }`}
-                            >
-                              {location.name}
-                            </button>
-                          ))}
+                          {geoSuccess === true && (
+                            <p className="text-sm text-green-600 mt-2">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                              Location detected successfully!
+                            </p>
+                          )}
                         </div>
-                      </div>
-                    )}
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="state" className="block text-sm font-medium text-text-secondary mb-1">
-                          State
-                        </label>
-                        <input
-                          type="text"
-                          id="state"
-                          name="state"
-                          required
-                          value={locationState}
-                          onChange={(e) => setLocationState(e.target.value)}
-                          placeholder="e.g. California"
-                          className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
-                        />
-                      </div>
-
-                      <div>
-                        <label htmlFor="county" className="block text-sm font-medium text-text-secondary mb-1">
-                          County
-                        </label>
-                        <input
-                          type="text"
-                          id="county"
-                          name="county"
-                          required
-                          value={locationCounty}
-                          onChange={(e) => setLocationCounty(e.target.value)}
-                          placeholder="e.g. Los Angeles County"
-                          className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
-                        />
-                      </div>
-
-                      <div>
-                        <label htmlFor="locality" className="block text-sm font-medium text-text-secondary mb-1">
-                          City/Town/Village
-                        </label>
-                        <input
-                          type="text"
-                          id="locality"
-                          name="locality"
-                          required
-                          value={locationLocality}
-                          onChange={(e) => setLocationLocality(e.target.value)}
-                          placeholder="e.g. Los Angeles"
-                          className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
-                        />
-                      </div>
-
-                      <div>
-                        <label htmlFor="zipPrefix" className="block text-sm font-medium text-text-secondary mb-1">
-                          ZIP Code (first 3 digits, optional)
-                        </label>
-                        <input
-                          type="text"
-                          id="zipPrefix"
-                          name="zipPrefix"
-                          maxLength={3}
-                          pattern="[0-9]{3}"
-                          value={locationZip}
-                          onChange={(e) => setLocationZip(e.target.value)}
-                          placeholder="e.g. 900"
-                          className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
-                        />
-                        {selectedLocation?.zipPrefix && (
-                          <p className="text-xs text-text-secondary mt-1">
-                            Full ZIP code area: {formatZipPrefix(selectedLocation.zipPrefix)}
-                          </p>
+                        {/* Saved Locations */}
+                        {savedLocations.length > 0 && (
+                          <div className="mb-4">
+                            <label className="block text-sm font-medium text-text-secondary mb-2">
+                              Your Saved Locations
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                              {savedLocations.map((location, index) => (
+                                <button
+                                  key={index}
+                                  type="button"
+                                  onClick={() => handleSelectLocation(location)}
+                                  className={`px-3 py-1 rounded-full text-sm ${selectedLocation?.name === location.name
+                                    ? 'bg-primary-color text-white'
+                                    : 'bg-neutral-light hover:bg-neutral-light text-text-secondary'
+                                    }`}
+                                >
+                                  {location.name}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         )}
-                      </div>
-                    </div>
 
-                    <p className="text-xs text-text-secondary mt-3">
-                      Location information helps buyers find items near them. More specific location details
-                      will make your listing appear in more relevant searches.
-                    </p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label htmlFor="state" className="block text-sm font-medium text-text-secondary mb-1">
+                              State
+                            </label>
+                            <input
+                              type="text"
+                              id="state"
+                              name="state"
+                              required
+                              value={locationState}
+                              onChange={(e) => setLocationState(e.target.value)}
+                              placeholder="e.g. California"
+                              className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
+                            />
+                          </div>
+
+                          <div>
+                            <label htmlFor="county" className="block text-sm font-medium text-text-secondary mb-1">
+                              County
+                            </label>
+                            <input
+                              type="text"
+                              id="county"
+                              name="county"
+                              required
+                              value={locationCounty}
+                              onChange={(e) => setLocationCounty(e.target.value)}
+                              placeholder="e.g. Los Angeles County"
+                              className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
+                            />
+                          </div>
+
+                          <div>
+                            <label htmlFor="locality" className="block text-sm font-medium text-text-secondary mb-1">
+                              City/Town/Village
+                            </label>
+                            <input
+                              type="text"
+                              id="locality"
+                              name="locality"
+                              required
+                              value={locationLocality}
+                              onChange={(e) => setLocationLocality(e.target.value)}
+                              placeholder="e.g. Los Angeles"
+                              className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
+                            />
+                          </div>
+
+                          <div>
+                            <label htmlFor="zipPrefix" className="block text-sm font-medium text-text-secondary mb-1">
+                              ZIP Code (first 3 digits, optional)
+                            </label>
+                            <input
+                              type="text"
+                              id="zipPrefix"
+                              name="zipPrefix"
+                              maxLength={3}
+                              pattern="[0-9]{3}"
+                              value={locationZip}
+                              onChange={(e) => setLocationZip(e.target.value)}
+                              placeholder="e.g. 900"
+                              className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
+                            />
+                            {selectedLocation?.zipPrefix && (
+                              <p className="text-xs text-text-secondary mt-1">
+                                Full ZIP code area: {formatZipPrefix(selectedLocation.zipPrefix)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-text-secondary mt-3">
+                          Location information helps buyers find items near them. More specific location details
+                          will make your listing appear in more relevant searches.
+                        </p>
                       </>
                     )}
                   </div>

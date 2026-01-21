@@ -1,18 +1,16 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import CreateListingForm from '@/components/marketplace/CreateListingForm';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function CreateListingPage() {
+function CreateListingContent() {
   const { client, isLoggedIn, isLoading } = useAuth();
   const router = useRouter();
 
   const handleCreateSuccess = (listingUri?: string) => {
-
-
-    // If we have a URI, redirect to the listing page with success flag
     // If we have a URI, redirect to the listing page with success flag
     if (listingUri) {
       // Use the full encoded URI as the ID to ensures the listing page can parse it correctly
@@ -98,5 +96,17 @@ export default function CreateListingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CreateListingPage() {
+  return (
+    <Suspense fallback={
+      <div className="max-w-7xl mx-auto px-4 py-12 flex justify-center">
+        <div className="animate-spin h-10 w-10 border-4 border-primary-color border-t-transparent rounded-full"></div>
+      </div>
+    }>
+      <CreateListingContent />
+    </Suspense>
   );
 }
