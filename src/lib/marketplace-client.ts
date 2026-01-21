@@ -745,6 +745,7 @@ export class MarketplaceClient {
 
     try {
       logger.info(`Sharing listing to Bluesky feed: ${uri}`);
+      logger.info(`Listing data images:`, { meta: { images: listingData.images } });
 
       // Construct the web URL for the listing
       // We use the encoded URI as the ID to ensure it can be resolved
