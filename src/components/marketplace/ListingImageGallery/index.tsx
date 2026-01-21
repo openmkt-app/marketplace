@@ -50,12 +50,12 @@ export default function ListingImageGallery({ images, title }: ListingImageGalle
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
       {/* Main Image with Heart Icon */}
-      <div className="relative w-full h-[400px] sm:h-[450px]">
+      <div className="relative w-full h-[400px] sm:h-[500px] bg-gray-100">
         <Image
           src={images[selectedImageIndex].fullsize}
           alt={`${title} - Image ${selectedImageIndex + 1}`}
           fill
-          className="object-cover"
+          className="object-contain"
           unoptimized
         />
 
