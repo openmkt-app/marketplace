@@ -1,6 +1,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
+// Disable caching for this route to prevent stale images in Magic Link imports
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
     const url = request.nextUrl.searchParams.get('url');
 
@@ -21,7 +24,10 @@ export async function GET(request: NextRequest) {
         const blob = await imageRes.blob();
         const headers = new Headers();
         headers.set('Content-Type', blob.type);
-        headers.set('Cache-Control', 'public, max-age=3600');
+        // Disable caching to prevent stale images in Magic Link imports
+        headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        headers.set('Pragma', 'no-cache');
+        headers.set('Expires', '0');
 
         return new NextResponse(blob, { headers });
     } catch (error) {
