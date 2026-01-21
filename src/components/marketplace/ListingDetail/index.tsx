@@ -18,6 +18,7 @@ import {
   Send,
   Loader2,
   MapPin,
+  Globe,
   Calendar,
   Share2,
   ShieldCheck,
@@ -27,6 +28,7 @@ import {
   Info,
   ExternalLink
 } from 'lucide-react';
+import { isOnlineStore, formatLocationShort } from '@/lib/location-utils';
 import { getPlatformDisplayName } from '@/lib/external-link-utils';
 import { trackListingView, trackInterest } from '@/lib/analytics';
 
@@ -432,9 +434,13 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
           <div className="p-3 bg-gray-50 rounded-lg mb-6">
             <p className="text-xs text-gray-500 mb-1">Location</p>
             <div className="flex items-center gap-1.5">
-              <MapPin size={14} className="text-gray-400" />
+              {isOnlineStore(listing.location) ? (
+                <Globe size={14} className="text-blue-400" />
+              ) : (
+                <MapPin size={14} className="text-gray-400" />
+              )}
               <p className="font-medium text-gray-900">
-                {listing.location.locality}, {listing.location.state}
+                {formatLocationShort(listing.location)}
               </p>
             </div>
           </div>

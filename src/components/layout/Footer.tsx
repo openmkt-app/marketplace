@@ -56,6 +56,11 @@ export default function Footer() {
             <h3 className="text-lg font-semibold mb-4 text-text-primary">Community</h3>
             <ul className="space-y-3 text-sm">
               <li>
+                <Link href="/what-is-open-market" className="text-text-primary hover:text-primary-color transition-colors">
+                  What's Open Market?
+                </Link>
+              </li>
+              <li>
                 <Link href="/community/safety" className="text-text-primary hover:text-primary-color transition-colors">
                   Safety Tips
                 </Link>

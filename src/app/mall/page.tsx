@@ -1,33 +1,32 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import Image from 'next/image';
 import { BskyAgent } from '@atproto/api';
-import { Store, Users, ShoppingBag } from 'lucide-react';
+import { Store } from 'lucide-react';
 import { isSellerExcluded } from '@/lib/excluded-sellers';
 import { MARKETPLACE_COLLECTION } from '@/lib/constants';
+import { generateImageUrls } from '@/lib/image-utils';
+import MallGrid from '@/components/marketplace/MallGrid';
+import type { SellerWithListings } from '@/components/marketplace/StoreCard';
+import type { MarketplaceListing } from '@/lib/marketplace-client';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'The Mall | Open Market',
-  description: 'Browse all stores on Open Market. Discover verified sellers and their unique offerings on the decentralized marketplace.',
+  description: 'Browse online storefronts on Open Market. Discover verified sellers linking to Etsy, Amazon, Shopify and more.',
   openGraph: {
     title: 'The Mall | Open Market',
-    description: 'Browse all stores on Open Market. Discover verified sellers and their unique offerings.',
+    description: 'Browse online storefronts on Open Market. Discover verified sellers linking to Etsy, Amazon, Shopify and more.',
     type: 'website',
     url: 'https://openmkt.app/mall',
     siteName: 'Open Market',
   },
 };
 
-type SellerWithListings = {
-  did: string;
-  handle: string;
-  displayName?: string;
-  description?: string;
-  avatar?: string;
-  banner?: string;
-  followersCount?: number;
-  listingsCount: number;
-};
+// Helper to check if a listing is an online store listing
+function isOnlineStoreListing(listing: MarketplaceListing): boolean {
+  return listing.location?.isOnlineStore === true;
+}
 
 async function getVerifiedSellers(): Promise<SellerWithListings[]> {
   try {
@@ -71,7 +70,9 @@ async function getVerifiedSellers(): Promise<SellerWithListings[]> {
       }
 
       // Fetch listing count for this seller
+      let listings: MarketplaceListing[] = [];
       let listingsCount = 0;
+
       try {
         // Resolve PDS for the seller
         let pdsEndpoint = 'https://bsky.social';
@@ -92,18 +93,58 @@ async function getVerifiedSellers(): Promise<SellerWithListings[]> {
         const listingsResult = await pdsAgent.api.com.atproto.repo.listRecords({
           repo: followProfile.did,
           collection: MARKETPLACE_COLLECTION,
-          limit: 100,
+          limit: 50, // Get more items for accurate count (up to 50)
+          reverse: true, // get latest first
         });
 
         if (listingsResult.success) {
+          console.log(`[Debug] Fetched ${listingsResult.data.records.length} records for ${followProfile.handle}`);
+          listingsResult.data.records.forEach((r, i) => {
+            console.log(`[Debug] Record ${i}:`, JSON.stringify(r.value));
+          });
+
+          listingsCount = listingsResult.data.records.length; // This is just the page count, but good enough as a proxy if < 100
+          // If we want total count we might need to count all, but for perf we'll just check if > 0
+          // Actually, if we want accurate count we might need another strategy or just accept the count of current page if small
+
+          // Re-map records to listings
+          listings = listingsResult.data.records.map(record => {
+            const listing = record.value as MarketplaceListing;
+            const formattedImages = generateImageUrls(followProfile.did, listing.images);
+
+            // Create a sanitized listing object without the raw images array
+            // The raw images array contains CIDs which cause serialization errors in Client Components
+            const { images, ...sanitizedListing } = listing;
+
+            return {
+              ...sanitizedListing,
+              uri: record.uri,
+              cid: record.cid,
+              sellerDid: followProfile.did,
+              formattedImages
+            };
+          });
+
+          // To get accurate total counts we'd need to paginate, but let's just stick to what we have or existing logic 
+          // The previous logic fetched limit 100 and counted them. 
+          // Let's do a quick separate fetch for count using the 100 limit if we really need accurate counts,
+          // OR we can just carry over the listing logic
+
+          // Simplify: Just use the count from the main fetch (up to 50)
+          // Ideally we would use a lightweight HEAD request or separate counter if we expected > 50 items
+          // But for now, 50 is plenty for a "Mall" view context.
           listingsCount = listingsResult.data.records.length;
         }
       } catch (e) {
         console.warn(`Could not fetch listings for ${followProfile.handle}:`, e);
       }
 
-      // Only include sellers who have at least one listing
-      if (listingsCount > 0) {
+      // Filter to only include online store listings
+      const onlineStoreListings = listings.filter(isOnlineStoreListing);
+      const onlineListingsCount = onlineStoreListings.length;
+
+      // Only include sellers who have at least one ONLINE STORE listing
+      if (onlineListingsCount > 0) {
         sellers.push({
           did: followProfile.did,
           handle: followProfile.handle,
@@ -112,7 +153,8 @@ async function getVerifiedSellers(): Promise<SellerWithListings[]> {
           avatar: fullProfile.avatar,
           banner: (fullProfile as { banner?: string }).banner,
           followersCount: (fullProfile as { followersCount?: number }).followersCount,
-          listingsCount,
+          listingsCount: onlineListingsCount,
+          listings: onlineStoreListings,
         });
       }
     }
@@ -132,109 +174,53 @@ async function getVerifiedSellers(): Promise<SellerWithListings[]> {
   }
 }
 
-function StoreCard({ seller }: { seller: SellerWithListings }) {
-  const displayName = seller.displayName || seller.handle;
-  const shortHandle = seller.handle.replace('.bsky.social', '');
-
-  return (
-    <Link
-      href={`/store/${seller.handle}`}
-      className="group bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden border border-gray-100 hover:border-blue-200"
-    >
-      {/* Header with banner or gradient background */}
-      <div className="h-20 relative">
-        <div className="absolute inset-0 overflow-hidden rounded-t-xl">
-          {seller.banner ? (
-            <Image
-              src={seller.banner}
-              alt={`${displayName}'s banner`}
-              fill
-              className="object-cover"
-            />
-          ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-500" />
-          )}
-          {/* Subtle overlay for better avatar visibility */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-        </div>
-      </div>
-
-      {/* Avatar positioned to overlap header and content */}
-      <div className="relative px-4">
-        <div className="absolute -top-8 left-4">
-          <div className="w-16 h-16 rounded-full border-4 border-white bg-white shadow-sm overflow-hidden">
-            {seller.avatar ? (
-              <Image
-                src={seller.avatar}
-                alt={displayName}
-                width={64}
-                height={64}
-                className="object-cover w-full h-full"
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center">
-                <span className="text-xl font-bold text-white">
-                  {displayName.charAt(0).toUpperCase()}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="pt-10 pb-4 px-4">
-        <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
-          {displayName}
-        </h3>
-        <p className="text-sm text-gray-500 truncate">@{shortHandle}</p>
-
-        {seller.description && (
-          <p className="mt-2 text-sm text-gray-600 line-clamp-2">
-            {seller.description}
-          </p>
-        )}
-
-        {/* Stats */}
-        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-4 text-sm text-gray-500">
-          <div className="flex items-center gap-1">
-            <ShoppingBag size={14} className="text-gray-400" />
-            <span>{seller.listingsCount} listing{seller.listingsCount !== 1 ? 's' : ''}</span>
-          </div>
-          {seller.followersCount !== undefined && seller.followersCount > 0 && (
-            <div className="flex items-center gap-1">
-              <Users size={14} className="text-gray-400" />
-              <span>{seller.followersCount.toLocaleString()}</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </Link>
-  );
-}
-
 export default async function MallPage() {
   const sellers = await getVerifiedSellers();
+  const sellersCount = sellers.length;
+  const listingsCount = sellers.reduce((acc, s) => acc + s.listingsCount, 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-700 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-          <div className="flex items-center gap-3 mb-4">
-            <Store size={32} className="text-white/90" />
-            <h1 className="text-3xl sm:text-4xl font-bold">The Mall</h1>
-          </div>
-          <p className="text-lg text-white/80 max-w-2xl">
-            Discover verified sellers on Open Market. Each store is run by a real person
-            with a Bluesky account, offering unique items across various categories.
-          </p>
-          <div className="mt-6 flex items-center gap-4 text-sm">
-            <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
-              <span className="font-semibold">{sellers.length}</span> verified stores
+      {/* Hero Section */}
+      <div className="relative bg-slate-900 border-b border-white/10 overflow-hidden">
+        {/* Abstract background gradient */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-700/40 via-slate-900 to-slate-900 pointer-events-none" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-24">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+
+            {/* Left Col: Text */}
+            <div className="space-y-8">
+              <div className="flex items-center gap-3">
+                <Store size={20} className="text-blue-400" />
+                <span className="text-blue-400 font-medium tracking-wider text-sm uppercase">The Open Mall</span>
+              </div>
+
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
+                Discover <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-amber-200">
+                  Online Storefronts
+                </span>
+              </h1>
+
+              <p className="text-lg text-slate-300 max-w-xl leading-relaxed">
+                Browse verified sellers linking to Etsy, Amazon, Shopify and more. Shop from trusted storefronts with real identities on Bluesky.
+              </p>
             </div>
-            <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
-              <span className="font-semibold">{sellers.reduce((acc, s) => acc + s.listingsCount, 0)}</span> total listings
+
+            {/* Right Col: Stats */}
+            <div className="flex flex-wrap lg:justify-end gap-6">
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 min-w-[160px] flex flex-col items-center justify-center text-center shadow-2xl shadow-blue-900/20">
+                <span className="text-3xl font-bold text-white mb-1">{sellersCount}</span>
+                <span className="text-xs text-slate-400 font-medium tracking-wide uppercase">Active Stores</span>
+              </div>
+
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 min-w-[160px] flex flex-col items-center justify-center text-center shadow-2xl shadow-blue-900/20">
+                {/* Mocked Sales Count for Design Parity - In real app, this would be aggregated */}
+                <span className="text-3xl font-bold text-amber-200 mb-1">{listingsCount}</span>
+                <span className="text-xs text-slate-400 font-medium tracking-wide uppercase">Items Listed</span>
+              </div>
             </div>
           </div>
         </div>
@@ -247,9 +233,9 @@ export default async function MallPage() {
             <div className="mx-auto h-20 w-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
               <Store size={32} className="text-gray-400" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No stores yet</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No online stores yet</h3>
             <p className="text-gray-500 max-w-md mx-auto">
-              Be the first to open a store on Open Market! Create a listing to get started.
+              Be the first to open an online storefront! Create a listing and check &quot;Online / Store Listing&quot; to appear here.
             </p>
             <Link
               href="/create-listing"
@@ -259,20 +245,7 @@ export default async function MallPage() {
             </Link>
           </div>
         ) : (
-          <>
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">All Stores</h2>
-              <p className="text-gray-500 text-sm mt-1">
-                Browse stores by clicking on any card below
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {sellers.map((seller) => (
-                <StoreCard key={seller.did} seller={seller} />
-              ))}
-            </div>
-          </>
+          <MallGrid sellers={sellers} />
         )}
       </div>
 

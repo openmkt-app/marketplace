@@ -83,6 +83,9 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   const [externalUrlError, setExternalUrlError] = useState<string | null>(null);
   const [detectedPlatform, setDetectedPlatform] = useState<string | null>(null);
 
+  // Add state for online store mode (hides location, shows "Online Store")
+  const [isOnlineStore, setIsOnlineStore] = useState(false);
+
   // Set up an effect to auto-dismiss error messages after a timeout
   useEffect(() => {
     if (error) {
@@ -293,11 +296,19 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   };
 
   // Save the current location for future use
-  const saveCurrentLocation = (locationData: { state: string; county: string; locality: string; zipPrefix?: string }) => {
+  const saveCurrentLocation = (locationData: { state: string; county: string; locality: string; zipPrefix?: string; isOnlineStore?: boolean }) => {
+    // Don't save online store mode locations - they're not reusable
+    if (locationData.isOnlineStore) {
+      return;
+    }
+
     // Create a location object for saving
     const locationToSave: SavedLocation = {
       name: `${locationData.locality}, ${locationData.state}`,
-      ...locationData
+      state: locationData.state,
+      county: locationData.county,
+      locality: locationData.locality,
+      zipPrefix: locationData.zipPrefix
     };
 
     // Save to localStorage
@@ -638,8 +649,17 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       // Collect the location data from the form or use selected location
       let locationData;
 
-      // If we have a selectedLocation and the accordion is closed (i.e., the user is using the saved location)
-      if (selectedLocation && !isLocationExpanded) {
+      // Handle online store mode - hide specific location
+      if (isOnlineStore) {
+        // For online stores, we use placeholder values and mark as online
+        locationData = {
+          state: 'Online',
+          county: 'Online',
+          locality: 'Online Store',
+          isOnlineStore: true
+        };
+      } else if (selectedLocation && !isLocationExpanded) {
+        // If we have a selectedLocation and the accordion is closed (i.e., the user is using the saved location)
         locationData = {
           state: selectedLocation.state,
           county: selectedLocation.county,
@@ -656,8 +676,8 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         };
       }
 
-      // Validate location data
-      if (!locationData.state || !locationData.county || !locationData.locality) {
+      // Validate location data (skip for online store mode which has preset values)
+      if (!isOnlineStore && (!locationData.state || !locationData.county || !locationData.locality)) {
         setError("Please provide complete location information (state, county, and city/town).");
         setIsSubmitting(false);
         return;
@@ -1088,7 +1108,11 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                         </span>
                       )}
                     </div>
-                    {selectedLocation && (
+                    {isOnlineStore ? (
+                      <p className="text-sm text-text-secondary mt-1">
+                        <span className="font-medium text-blue-600">Online Store</span>
+                      </p>
+                    ) : selectedLocation && (
                       <p className="text-sm text-text-secondary mt-1">
                         <span className="font-medium">{selectedLocation.name}</span>
                         {selectedLocation.zipPrefix && (
@@ -1112,6 +1136,30 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
                 {isLocationExpanded && (
                   <div className="p-6 border-t border-neutral-light">
+                    {/* Online Store Toggle */}
+                    <div className="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          id="onlineStore"
+                          checked={isOnlineStore}
+                          onChange={(e) => setIsOnlineStore(e.target.checked)}
+                          className="mt-1 h-4 w-4 text-primary-color border-gray-300 rounded focus:ring-primary-light"
+                        />
+                        <div className="flex-1">
+                          <label htmlFor="onlineStore" className="font-medium text-blue-900 cursor-pointer">
+                            Online / Store Listing
+                          </label>
+                          <p className="text-sm text-blue-700 mt-1">
+                            Check this if you are linking to an external store (Etsy, Shopify, etc.). We will hide your specific location and mark the item as &quot;Online Store&quot;.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Local location fields - only shown if not online store */}
+                    {!isOnlineStore && (
+                      <>
                     {/* Geolocation Button - add more padding at the top */}
                     <div className="mb-4 mt-3">
                       <button
@@ -1249,6 +1297,8 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                       Location information helps buyers find items near them. More specific location details
                       will make your listing appear in more relevant searches.
                     </p>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

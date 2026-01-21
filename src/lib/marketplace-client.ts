@@ -12,6 +12,7 @@ export type ListingLocation = {
   county: string;
   locality: string;
   zipPrefix?: string;
+  isOnlineStore?: boolean;
 };
 
 export type ListingImage = {

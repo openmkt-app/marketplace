@@ -20,6 +20,8 @@ import { formatConditionForDisplay } from '@/lib/condition-utils';
 import { formatPrice, formatDate, formatLocation } from '@/lib/price-utils';
 import { formatCategoryDisplay, getCategoryName, getSubcategoryName, getListingSubcategory, extractSubcategoryFromDescription } from '@/lib/category-utils';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { isOnlineStore } from '@/lib/location-utils';
+import { Globe, MapPin } from 'lucide-react';
 
 // Fix the location filter utility functions types to match MarketplaceListing
 const fixFilterResults = <T extends { location: any }>(listings: T[]): MarketplaceListing[] => {
@@ -441,6 +443,9 @@ const BrowsePageContent = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Listing type filter: 'all' | 'community' | 'online'
+  const [listingTypeFilter, setListingTypeFilter] = useState<'all' | 'community' | 'online'>('all');
+
   // Filtering state - initialize with location from localStorage if available
   const [filters, setFilters] = useState<FilterValues>(() => {
     // Try to restore location from localStorage on initial render
@@ -847,6 +852,13 @@ const BrowsePageContent = () => {
 
       let filtered = [...allListings];
 
+      // Apply listing type filter (community vs online stores)
+      if (listingTypeFilter === 'community') {
+        filtered = filtered.filter(listing => !isOnlineStore(listing.location));
+      } else if (listingTypeFilter === 'online') {
+        filtered = filtered.filter(listing => isOnlineStore(listing.location));
+      }
+
       // Apply search filter first
       if (effectiveSearchQuery) {
         filtered = filterListingsBySearchQuery(filtered, effectiveSearchQuery);
@@ -902,7 +914,7 @@ const BrowsePageContent = () => {
     };
 
     applyFilters();
-  }, [filters, allListings, initialized, isLoading, auth.user?.did, viewedListings, searchParams]);
+  }, [filters, allListings, initialized, isLoading, auth.user?.did, viewedListings, searchParams, listingTypeFilter]);
 
   // Memoize the filter change handler to prevent unnecessary re-renders
   const handleFilterChange = useCallback((newFilters: FilterValues) => {
@@ -966,6 +978,42 @@ const BrowsePageContent = () => {
         <div className="mb-4">
           <h1 className="text-2xl font-bold text-gray-900">Browse Listings</h1>
           <p className="text-sm text-gray-500 mt-1">Discover what the community is selling.</p>
+        </div>
+
+        {/* Listing Type Tabs */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setListingTypeFilter('all')}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              listingTypeFilter === 'all'
+                ? 'bg-slate-900 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setListingTypeFilter('online')}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${
+              listingTypeFilter === 'online'
+                ? 'bg-slate-900 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            <Globe size={14} />
+            Online Stores
+          </button>
+          <button
+            onClick={() => setListingTypeFilter('community')}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${
+              listingTypeFilter === 'community'
+                ? 'bg-slate-900 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            <MapPin size={14} />
+            Local / Community
+          </button>
         </div>
 
         {/* Smart Filter Summary with controls */}

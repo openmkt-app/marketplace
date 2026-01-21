@@ -8,9 +8,10 @@ import { MarketplaceListing } from '@/lib/marketplace-client';
 import { generateImageUrls } from '@/lib/image-utils';
 import { MARKETPLACE_COLLECTION } from '@/lib/constants';
 import ListingCard from '@/components/marketplace/ListingCard';
-import { ExternalLink, Calendar } from 'lucide-react';
+import { ExternalLink, Calendar, Globe, MapPin } from 'lucide-react';
 import type { SellerProfile } from '@/lib/server/fetch-store';
 import { linkifyText } from '@/lib/linkify';
+import { isOnlineStore } from '@/lib/location-utils';
 
 interface SellerListing extends MarketplaceListing {
   uri: string;
@@ -34,6 +35,7 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
   const [listings, setListings] = useState<SellerListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'store' | 'local'>('store');
 
   useEffect(() => {
     async function fetchStoreData() {
@@ -316,31 +318,75 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
 
       {/* Listings Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">
-            {listings.length > 0 ? `${listings.length} Item${listings.length !== 1 ? 's' : ''} for Sale` : 'Items for Sale'}
-          </h2>
-        </div>
+        {(() => {
+          // Separate listings by type
+          const onlineListings = listings.filter(l => isOnlineStore(l.location));
+          const localListings = listings.filter(l => !isOnlineStore(l.location));
+          const hasBothTypes = onlineListings.length > 0 && localListings.length > 0;
 
-        {listings.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
-            <div className="mx-auto h-20 w-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-1">No listings yet</h3>
-            <p className="text-gray-500 max-w-md mx-auto">
-              This seller hasn&apos;t listed any items for sale yet. Check back later!
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {listings.map((listing) => (
-              <ListingCard key={listing.uri} listing={listing} />
-            ))}
-          </div>
-        )}
+          // Determine which listings to show
+          const displayListings = hasBothTypes
+            ? (activeTab === 'store' ? onlineListings : localListings)
+            : listings;
+
+          return (
+            <>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900">
+                  {listings.length > 0 ? `${listings.length} Item${listings.length !== 1 ? 's' : ''} for Sale` : 'Items for Sale'}
+                </h2>
+              </div>
+
+              {/* Store/Local Tabs - only show if seller has both types */}
+              {hasBothTypes && (
+                <div className="flex gap-2 mb-6">
+                  <button
+                    onClick={() => setActiveTab('store')}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                      activeTab === 'store'
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    <Globe size={14} />
+                    Store ({onlineListings.length})
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('local')}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                      activeTab === 'local'
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    <MapPin size={14} />
+                    Local ({localListings.length})
+                  </button>
+                </div>
+              )}
+
+              {displayListings.length === 0 ? (
+                <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
+                  <div className="mx-auto h-20 w-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">No listings yet</h3>
+                  <p className="text-gray-500 max-w-md mx-auto">
+                    This seller hasn&apos;t listed any items for sale yet. Check back later!
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {displayListings.map((listing) => (
+                    <ListingCard key={listing.uri} listing={listing} />
+                  ))}
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
     </div>
   );
