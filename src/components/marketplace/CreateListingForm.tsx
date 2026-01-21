@@ -654,7 +654,9 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
       // Handle Price if found
       if (data.price) {
-        setPriceInput(formatPrice(data.price));
+        // Convert to string in case the API returns a number
+        const priceStr = typeof data.price === 'string' ? data.price : String(data.price);
+        setPriceInput(formatPrice(priceStr));
       }
 
       // Set External URL
