@@ -64,7 +64,7 @@ const ListingCard = React.memo(({ listing, showDebug = false }: ListingCardProps
           listing={listing}
           size="thumbnail"
           height="100%"
-          className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-full object-contain transform group-hover:scale-105 transition-transform duration-500"
           fallbackText="No image"
         />
 
