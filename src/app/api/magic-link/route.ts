@@ -3,6 +3,30 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic'; // No caching
 
+// Different user agents for different strategies
+const USER_AGENTS = {
+    // Googlebot - most sites allow this for SEO
+    googlebot: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+    // Chrome browser
+    chrome: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    // Mobile Chrome - sometimes gets different treatment
+    mobile: 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36',
+};
+
+// Sites that block regular browsers but allow crawlers
+const CRAWLER_PREFERRED_DOMAINS = ['etsy.com', 'poshmark.com', 'depop.com'];
+
+function selectUserAgent(hostname: string): string {
+    const normalizedHost = hostname.toLowerCase().replace(/^www\./, '');
+
+    // Use Googlebot for sites known to block regular requests
+    if (CRAWLER_PREFERRED_DOMAINS.some(domain => normalizedHost.includes(domain))) {
+        return USER_AGENTS.googlebot;
+    }
+
+    return USER_AGENTS.chrome;
+}
+
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const url = searchParams.get('url');
@@ -14,24 +38,41 @@ export async function GET(request: NextRequest) {
     try {
         // validate URL
         const targetUrl = new URL(url);
+        const userAgent = selectUserAgent(targetUrl.hostname);
+        const isGooglebot = userAgent.includes('Googlebot');
 
         // Fetch HTML
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
-        const response = await fetch(targetUrl.toString(), {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        // Use simpler headers for Googlebot, full browser headers otherwise
+        const headers: Record<string, string> = isGooglebot
+            ? {
+                'User-Agent': userAgent,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+            }
+            : {
+                'User-Agent': userAgent,
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
                 'Accept-Language': 'en-US,en;q=0.9',
-                'Referer': 'https://www.google.com/',
-                'Upgrade-Insecure-Requests': '1',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache',
+                'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+                'Sec-Ch-Ua-Mobile': '?0',
+                'Sec-Ch-Ua-Platform': '"macOS"',
                 'Sec-Fetch-Dest': 'document',
                 'Sec-Fetch-Mode': 'navigate',
-                'Sec-Fetch-Site': 'cross-site',
-                'Sec-Fetch-User': '?1'
-            },
-            signal: controller.signal
+                'Sec-Fetch-Site': 'none',
+                'Sec-Fetch-User': '?1',
+                'Upgrade-Insecure-Requests': '1',
+            };
+
+        const response = await fetch(targetUrl.toString(), {
+            headers,
+            signal: controller.signal,
+            redirect: 'follow',
         });
 
         clearTimeout(timeoutId);
