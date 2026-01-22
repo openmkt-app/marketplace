@@ -125,7 +125,7 @@ export async function getAuthorizationUrl(handle: string): Promise<{
             client_id: clientId,
             redirect_uri: redirectUri,
             response_type: 'code',
-            scope: 'atproto',
+            scope: 'atproto transition:generic',
             state,
             code_challenge: codeChallenge,
             code_challenge_method: 'S256',
