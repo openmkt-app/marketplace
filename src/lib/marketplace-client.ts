@@ -4,7 +4,9 @@ import type { AtpSessionData } from '@atproto/api';
 import { generateImageUrls, compressImage } from './image-utils';
 import logger from './logger';
 import { getKnownMarketplaceDIDs, addMarketplaceDID, ensureVerifiedSellersLoaded } from './marketplace-dids';
+
 import { MARKETPLACE_COLLECTION } from './constants';
+import { createRequestDPoPProof, OAuthTokens } from './oauth-client';
 
 // Define types for our marketplace listings
 export type ListingLocation = {
@@ -97,11 +99,52 @@ export class MarketplaceClient {
   private lastApiCall: number;
   private cacheTTL: number; // cache time-to-live in milliseconds
   private rateLimitInterval: number; // minimum time between API calls in milliseconds
+  private oauthTokens: OAuthTokens | null = null;
 
   constructor(serviceUrl: string = 'https://bsky.social') {
+    // enhanced fetch handler to support DPoP
+    const customFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      // If we have DPoP tokens, we need to sign the request
+      if (this.oauthTokens && (this.oauthTokens.token_type === 'DPoP' || this.oauthTokens.token_type === 'dpop')) {
+        try {
+          const method = init?.method || 'GET';
+          const url = input.toString();
+
+          // Generate DPoP proof
+          const proof = await createRequestDPoPProof(method, url);
+
+          // Clone init to avoid mutating original
+          const newInit = { ...init } as any;
+          newInit.headers = new Headers(newInit.headers);
+
+          // Add DPoP header
+          newInit.headers.set('DPoP', proof);
+
+          // Fix Authorization header if needed (Agent sets 'Bearer', we need 'DPoP')
+          const auth = newInit.headers.get('Authorization');
+          if (auth && auth.startsWith('Bearer ')) {
+            newInit.headers.set('Authorization', `DPoP ${auth.slice(7)}`);
+          }
+
+          return fetch(input, newInit);
+        } catch (error) {
+          console.error('Error generating DPoP proof:', error);
+          // Fallback to normal fetch if proof generation fails
+          return fetch(input, init);
+        }
+      }
+
+      return fetch(input, init);
+    };
+
+    // Initialize agent with custom fetch
+    // Note: BskyAgent constructor might not expose 'fetch' in all versions, 
+    // but AtpBaseClient (base) does. We cast config to any to bypass strict type check if needed.
     this.agent = new BskyAgent({
       service: serviceUrl,
-    });
+      fetch: customFetch
+    } as any);
+
     this.isLoggedIn = false;
     // Initialize cache and rate limit properties
     this.listingsCache = null;
@@ -205,6 +248,52 @@ export class MarketplaceClient {
     } catch (error) {
       logger.error('Resume session failed', error as Error);
       this.isLoggedIn = false;
+      return { success: false, error: error as Error };
+    }
+  }
+
+  async resumeOAuthSession(tokens: OAuthTokens): Promise<{ success: boolean; data?: Record<string, unknown>; error?: Error }> {
+    try {
+      logger.info('Attempting to resume OAuth session');
+
+      this.oauthTokens = tokens;
+
+      // Construct session data for the agent
+      // We map oauth tokens to the session format the agent expects
+      const sessionData: SessionData = {
+        accessJwt: tokens.access_token,
+        refreshJwt: tokens.refresh_token,
+        handle: 'loading...', // We don't have handle yet, will resolve
+        did: tokens.sub,
+        email: undefined,
+        active: true
+      };
+
+      // Set the session on the agent
+      await this.agent.resumeSession(sessionData);
+
+      // Verify session and get profile (which also gets the real handle)
+      try {
+        const result = await this.agent.getProfile({
+          actor: tokens.sub,
+        });
+
+        this.isLoggedIn = true;
+        // Update handle in session
+        if (this.agent.session) {
+          this.agent.session.handle = result.data.handle;
+        }
+
+        logger.info('OAuth session resumed successfully');
+        return { success: true, data: { user: result.data } };
+      } catch (error) {
+        logger.error('Failed to verify OAuth session', error as Error);
+        this.isLoggedIn = false;
+        this.oauthTokens = null;
+        return { success: false, error: error as Error };
+      }
+    } catch (error) {
+      logger.error('Error resuming OAuth session', error as Error);
       return { success: false, error: error as Error };
     }
   }
