@@ -15,6 +15,11 @@ export default function robots(): MetadataRoute.Robots {
           '/create-listing',
           '/edit-listing/',
           '/profile',
+          // Prevent indexing filtered/parameterized versions of pages
+          '/browse?*',
+          '/mall?*',
+          '/listing/*?*',
+          '/store/*?*',
         ],
       },
     ],

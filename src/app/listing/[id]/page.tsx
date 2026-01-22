@@ -31,14 +31,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .filter(Boolean)
     .join(', ');
 
+  const canonicalUrl = `https://openmkt.app/listing/${encodeURIComponent(id)}`;
+
   return {
     title,
     description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
       title,
       description,
       type: 'website',
-      url: `https://openmkt.app/listing/${encodeURIComponent(id)}`,
+      url: canonicalUrl,
       images: imageUrl ? [{ url: imageUrl, alt: listing.title }] : [],
       siteName: 'Open Market',
     },
