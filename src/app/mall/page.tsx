@@ -23,6 +23,12 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://openmkt.app/mall',
     siteName: 'Open Market',
+    images: [{
+      url: '/images/mall-og.png',
+      width: 1200,
+      height: 630,
+      alt: 'The Open Mall Preview'
+    }]
   },
 };
 
