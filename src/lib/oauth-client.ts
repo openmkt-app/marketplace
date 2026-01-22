@@ -115,10 +115,7 @@ export async function getAuthorizationUrl(handle: string): Promise<{
         const clientId = 'https://openmkt.app/.well-known/oauth-client-metadata.json';
         let redirectUri = `${window.location.origin}/oauth/callback`;
 
-        // RFC 8252: localhost is not allowed for redirect URIs, must use 127.0.0.1
-        if (redirectUri.includes('localhost')) {
-            redirectUri = redirectUri.replace('localhost', '127.0.0.1');
-        }
+
 
         // Build authorization URL
         const params = new URLSearchParams({
