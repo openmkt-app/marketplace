@@ -290,14 +290,81 @@ export class MarketplaceClient {
     }
   }
 
-  async resumeOAuthSession(tokens: OAuthTokens): Promise<{ success: boolean; data?: Record<string, unknown>; error?: Error }> {
+  async resumeOAuthSession(tokens: OAuthTokens, pdsUrl?: string): Promise<{ success: boolean; data?: Record<string, unknown>; error?: Error }> {
     try {
       logger.info('Attempting to resume OAuth session');
+
+      // Resolve the user's PDS if not provided
+      let serviceUrl = pdsUrl;
+      if (!serviceUrl) {
+        serviceUrl = await this.resolvePDS(tokens.sub) || 'https://bsky.social';
+        logger.info(`Resolved PDS for OAuth session: ${serviceUrl}`);
+      }
+
+      // Recreate agent with custom fetch handler for the correct PDS
+      const customFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+        if (this.oauthTokens && (this.oauthTokens.token_type === 'DPoP' || this.oauthTokens.token_type === 'dpop')) {
+          try {
+            const method = init?.method || (input instanceof Request ? input.method : 'GET');
+            let url: string;
+            if (input instanceof Request) {
+              url = input.url;
+            } else if (input instanceof URL) {
+              url = input.toString();
+            } else {
+              url = input as string;
+            }
+
+            const performRequest = async (nonce?: string) => {
+              const proof = await createRequestDPoPProof(method, url, nonce);
+              const newInit = { ...init } as any;
+              newInit.headers = new Headers(newInit.headers);
+              newInit.headers.set('DPoP', proof);
+              const auth = newInit.headers.get('Authorization');
+              if (auth && auth.startsWith('Bearer ')) {
+                newInit.headers.set('Authorization', `DPoP ${auth.slice(7)}`);
+              }
+              return fetch(input, newInit);
+            };
+
+            let response = await performRequest();
+
+            if (response.status === 401) {
+              const checkResponse = response.clone();
+              try {
+                const errorHeader = checkResponse.headers.get('WWW-Authenticate');
+                const errorJson = await checkResponse.json().catch(() => ({}));
+                const isNonceError = errorJson.error === 'use_dpop_nonce' ||
+                  (errorHeader && errorHeader.includes('use_dpop_nonce'));
+                if (isNonceError) {
+                  const nonce = response.headers.get('DPoP-Nonce');
+                  if (nonce) {
+                    response = await performRequest(nonce);
+                  }
+                }
+              } catch (e) {
+                // Ignore parsing errors
+              }
+            }
+
+            return response;
+          } catch (error) {
+            console.error('Error generating DPoP proof:', error);
+            return fetch(input, init);
+          }
+        }
+        return fetch(input, init);
+      };
+
+      // Create new agent pointed at the user's PDS
+      this.agent = new BskyAgent({
+        service: serviceUrl,
+        fetch: customFetch
+      } as any);
 
       this.oauthTokens = tokens;
 
       // Construct session data for the agent
-      // We map oauth tokens to the session format the agent expects
       const sessionData: SessionData = {
         accessJwt: tokens.access_token,
         refreshJwt: tokens.refresh_token,
