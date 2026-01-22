@@ -49,14 +49,15 @@ function OAuthCallbackContent() {
                 // Exchange code for tokens
                 const tokens = await exchangeCodeForTokens(code, storedCodeVerifier, storedAuthServer);
 
-                // Store tokens in localStorage
+                // Store tokens in localStorage (include authServer for session resume)
                 const tokenData = {
                     accessToken: tokens.access_token,
                     refreshToken: tokens.refresh_token,
                     tokenType: tokens.token_type,
                     expiresAt: Date.now() + (tokens.expires_in * 1000),
                     scope: tokens.scope,
-                    did: tokens.sub
+                    did: tokens.sub,
+                    authServer: storedAuthServer
                 };
 
                 localStorage.setItem('oauth_tokens', JSON.stringify(tokenData));

@@ -22,6 +22,7 @@ type OAuthTokenData = {
   expiresAt: number;
   scope: string;
   did: string;
+  authServer?: string; // The auth server URL for token refresh and DPoP
 };
 
 // Define the context state
@@ -172,12 +173,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (storedOAuthTokens) {
             const tokens = JSON.parse(storedOAuthTokens) as OAuthTokenData;
-            // Map OAuthTokenData to OAuthTokens (interface in marketplace-client needs to match or we cast)
-            // The types are compatible enough for what we need, but let's be safe
-            // marketplace-client expects OAuthTokens from oauth-client.ts
-            // We defined OAuthTokenData locally in AuthContext, let's just cast or map
 
-            // Resume session
+            // Resume session with stored authServer (PDS URL) if available
             const result = await newClient.resumeOAuthSession({
               access_token: tokens.accessToken,
               refresh_token: tokens.refreshToken,
@@ -185,7 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               expires_in: 3600, // Approximate, we use expiresAt usually
               scope: tokens.scope,
               sub: tokens.did
-            });
+            }, tokens.authServer);
 
             if (result.success) {
               setIsLoggedIn(true);
@@ -408,9 +405,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoggedIn(false);
     setUser(null);
 
-    // Clear session from localStorage
+    // Clear session from localStorage (both legacy and OAuth)
     if (typeof window !== 'undefined') {
       localStorage.removeItem(SESSION_STORAGE_KEY);
+      localStorage.removeItem(OAUTH_TOKENS_KEY);
     }
   };
 
