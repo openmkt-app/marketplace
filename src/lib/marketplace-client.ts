@@ -117,23 +117,54 @@ export class MarketplaceClient {
             url = input as string;
           }
 
-          // Generate DPoP proof
-          const proof = await createRequestDPoPProof(method, url);
+          // Helper to perform the request, optionally with a nonce
+          const performRequest = async (nonce?: string) => {
+            // Generate DPoP proof
+            const proof = await createRequestDPoPProof(method, url, nonce);
 
-          // Clone init to avoid mutating original
-          const newInit = { ...init } as any;
-          newInit.headers = new Headers(newInit.headers);
+            // Clone init to avoid mutating original
+            const newInit = { ...init } as any;
+            newInit.headers = new Headers(newInit.headers);
 
-          // Add DPoP header
-          newInit.headers.set('DPoP', proof);
+            // Add DPoP header
+            newInit.headers.set('DPoP', proof);
 
-          // Fix Authorization header if needed (Agent sets 'Bearer', we need 'DPoP')
-          const auth = newInit.headers.get('Authorization');
-          if (auth && auth.startsWith('Bearer ')) {
-            newInit.headers.set('Authorization', `DPoP ${auth.slice(7)}`);
+            // Fix Authorization header if needed (Agent sets 'Bearer', we need 'DPoP')
+            const auth = newInit.headers.get('Authorization');
+            if (auth && auth.startsWith('Bearer ')) {
+              newInit.headers.set('Authorization', `DPoP ${auth.slice(7)}`);
+            }
+
+            return fetch(input, newInit);
+          };
+
+          // Initial request
+          let response = await performRequest();
+
+          // Handle DPoP nonce error (use_dpop_nonce)
+          if (response.status === 401) {
+            const checkResponse = response.clone();
+            try {
+              // Try to parse error to see if it's a DPoP nonce error
+              const errorHeader = checkResponse.headers.get('WWW-Authenticate');
+              const errorJson = await checkResponse.json().catch(() => ({}));
+
+              const isNonceError = errorJson.error === 'use_dpop_nonce' ||
+                (errorHeader && errorHeader.includes('use_dpop_nonce'));
+
+              if (isNonceError) {
+                const nonce = response.headers.get('DPoP-Nonce');
+                if (nonce) {
+                  // logger.debug('Retrying request with new DPoP nonce');
+                  response = await performRequest(nonce);
+                }
+              }
+            } catch (e) {
+              // Ignore parsing errors
+            }
           }
 
-          return fetch(input, newInit);
+          return response;
         } catch (error) {
           console.error('Error generating DPoP proof:', error);
           // Fallback to normal fetch if proof generation fails

@@ -350,8 +350,9 @@ export async function refreshAccessToken(
  */
 export async function createRequestDPoPProof(
     method: string,
-    url: string
+    url: string,
+    nonce?: string
 ): Promise<string> {
     const dpopKeyPair = await getDPoPKeyPair();
-    return createDPoPProof(dpopKeyPair.privateKey, dpopKeyPair.jwk, method, url);
+    return createDPoPProof(dpopKeyPair.privateKey, dpopKeyPair.jwk, method, url, nonce);
 }
