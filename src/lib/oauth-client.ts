@@ -184,36 +184,60 @@ export async function exchangeCodeForTokens(
             throw new Error('No token_endpoint found in auth server metadata');
         }
 
-        // Create DPoP proof for token request
-        const dpopProof = await createDPoPProof(
-            dpopKeyPair.privateKey,
-            dpopKeyPair.jwk,
-            'POST',
-            tokenEndpoint
-        );
+        // Helper to perform the request, optionally with a nonce
+        const performRequest = async (nonce?: string) => {
+            // Create DPoP proof for token request
+            const dpopProof = await createDPoPProof(
+                dpopKeyPair.privateKey,
+                dpopKeyPair.jwk,
+                'POST',
+                tokenEndpoint,
+                nonce
+            );
 
-        // Prepare token request
-        // ALWAYS use production values to match what we expect
-        const clientId = 'https://openmkt.app/.well-known/oauth-client-metadata.json';
-        const redirectUri = 'https://openmkt.app/oauth/callback';
+            // Prepare token request
+            // ALWAYS use production values to match what we expect
+            const clientId = 'https://openmkt.app/.well-known/oauth-client-metadata.json';
+            const redirectUri = 'https://openmkt.app/oauth/callback';
 
-        const body = new URLSearchParams({
-            grant_type: 'authorization_code',
-            code,
-            redirect_uri: redirectUri,
-            client_id: clientId,
-            code_verifier: codeVerifier
-        });
+            const body = new URLSearchParams({
+                grant_type: 'authorization_code',
+                code,
+                redirect_uri: redirectUri,
+                client_id: clientId,
+                code_verifier: codeVerifier
+            });
 
-        // Exchange code for tokens
-        const response = await fetch(tokenEndpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'DPoP': dpopProof
-            },
-            body: body.toString()
-        });
+            return fetch(tokenEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'DPoP': dpopProof
+                },
+                body: body.toString()
+            });
+        };
+
+        // Initial request
+        let response = await performRequest();
+
+        // Handle DPoP nonce error (use_dpop_nonce)
+        if (!response.ok) {
+            // Clone response to read body without consuming the original if we need to throw later
+            const checkResponse = response.clone();
+            try {
+                const errorJson = await checkResponse.json();
+                if (errorJson.error === 'use_dpop_nonce') {
+                    const nonce = response.headers.get('DPoP-Nonce');
+                    if (nonce) {
+                        logger.info('Retrying token exchange with new DPoP nonce');
+                        response = await performRequest(nonce);
+                    }
+                }
+            } catch (e) {
+                // Not a JSON error or other issue, ignore and let standard error handling take over
+            }
+        }
 
         if (!response.ok) {
             const error = await response.text();
@@ -255,32 +279,55 @@ export async function refreshAccessToken(
         const metadata = await metadataResponse.json();
         const tokenEndpoint = metadata.token_endpoint;
 
-        // Create DPoP proof
-        const dpopProof = await createDPoPProof(
-            dpopKeyPair.privateKey,
-            dpopKeyPair.jwk,
-            'POST',
-            tokenEndpoint
-        );
+        // Helper to perform the request, optionally with a nonce
+        const performRequest = async (nonce?: string) => {
+            // Create DPoP proof
+            const dpopProof = await createDPoPProof(
+                dpopKeyPair.privateKey,
+                dpopKeyPair.jwk,
+                'POST',
+                tokenEndpoint,
+                nonce
+            );
 
-        // Prepare refresh request
-        const clientId = 'https://openmkt.app/.well-known/oauth-client-metadata.json';
+            // Prepare refresh request
+            const clientId = 'https://openmkt.app/.well-known/oauth-client-metadata.json';
 
-        const body = new URLSearchParams({
-            grant_type: 'refresh_token',
-            refresh_token: refreshToken,
-            client_id: clientId
-        });
+            const body = new URLSearchParams({
+                grant_type: 'refresh_token',
+                refresh_token: refreshToken,
+                client_id: clientId
+            });
 
-        // Request new tokens
-        const response = await fetch(tokenEndpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'DPoP': dpopProof
-            },
-            body: body.toString()
-        });
+            return fetch(tokenEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'DPoP': dpopProof
+                },
+                body: body.toString()
+            });
+        };
+
+        // Initial request
+        let response = await performRequest();
+
+        // Handle DPoP nonce error (use_dpop_nonce)
+        if (!response.ok) {
+            const checkResponse = response.clone();
+            try {
+                const errorJson = await checkResponse.json();
+                if (errorJson.error === 'use_dpop_nonce') {
+                    const nonce = response.headers.get('DPoP-Nonce');
+                    if (nonce) {
+                        logger.info('Retrying token refresh with new DPoP nonce');
+                        response = await performRequest(nonce);
+                    }
+                }
+            } catch (e) {
+                // Ignore
+            }
+        }
 
         if (!response.ok) {
             const error = await response.text();
