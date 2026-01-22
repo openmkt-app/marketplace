@@ -350,12 +350,14 @@ export async function refreshAccessToken(
 
 /**
  * Create DPoP proof for authenticated requests
+ * @param accessToken Optional access token - when provided, includes ath (token hash) in proof
  */
 export async function createRequestDPoPProof(
     method: string,
     url: string,
-    nonce?: string
+    nonce?: string,
+    accessToken?: string
 ): Promise<string> {
     const dpopKeyPair = await getDPoPKeyPair();
-    return createDPoPProof(dpopKeyPair.privateKey, dpopKeyPair.jwk, method, url, nonce);
+    return createDPoPProof(dpopKeyPair.privateKey, dpopKeyPair.jwk, method, url, nonce, accessToken);
 }
