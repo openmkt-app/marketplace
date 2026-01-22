@@ -192,56 +192,69 @@ export async function retrieveDPoPKeyPair(): Promise<{
 } | null> {
     if (typeof window === 'undefined') return null;
 
-    const db = await openDB();
+    try {
+        const db = await openDB();
 
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction('keys', 'readonly');
-        const store = tx.objectStore('keys');
-        const request = store.get('dpop-keypair');
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('keys', 'readonly');
+            const store = tx.objectStore('keys');
+            const request = store.get('dpop-keypair');
 
-        request.onsuccess = async () => {
-            const data = request.result;
-            if (!data) {
-                resolve(null);
-                return;
-            }
+            request.onsuccess = async () => {
+                const data = request.result;
+                if (!data) {
+                    console.log('[DPoP IndexedDB] No key pair found in store');
+                    resolve(null);
+                    return;
+                }
 
-            try {
-                // Import keys from stored JWKs
-                const privateKey = await crypto.subtle.importKey(
-                    'jwk',
-                    data.privateKey,
-                    {
-                        name: 'ECDSA',
-                        namedCurve: 'P-256'
-                    },
-                    true,
-                    ['sign']
-                );
+                console.log('[DPoP IndexedDB] Found stored key pair, importing...');
 
-                const publicKey = await crypto.subtle.importKey(
-                    'jwk',
-                    data.publicKey,
-                    {
-                        name: 'ECDSA',
-                        namedCurve: 'P-256'
-                    },
-                    true,
-                    ['verify']
-                );
+                try {
+                    // Import keys from stored JWKs
+                    const privateKey = await crypto.subtle.importKey(
+                        'jwk',
+                        data.privateKey,
+                        {
+                            name: 'ECDSA',
+                            namedCurve: 'P-256'
+                        },
+                        true,
+                        ['sign']
+                    );
 
-                resolve({
-                    privateKey,
-                    publicKey,
-                    jwk: data.jwk
-                });
-            } catch (err) {
-                reject(err);
-            }
-        };
+                    const publicKey = await crypto.subtle.importKey(
+                        'jwk',
+                        data.publicKey,
+                        {
+                            name: 'ECDSA',
+                            namedCurve: 'P-256'
+                        },
+                        true,
+                        ['verify']
+                    );
 
-        request.onerror = () => reject(request.error);
-    });
+                    console.log('[DPoP IndexedDB] Keys imported successfully');
+                    resolve({
+                        privateKey,
+                        publicKey,
+                        jwk: data.jwk
+                    });
+                } catch (err) {
+                    console.error('[DPoP IndexedDB] Failed to import keys:', err);
+                    reject(err);
+                }
+            };
+
+            request.onerror = () => {
+                console.error('[DPoP IndexedDB] Request error:', request.error);
+                reject(request.error);
+            };
+        });
+    } catch (err) {
+        console.error('[DPoP IndexedDB] Failed to open database:', err);
+        return null;
+    }
 }
 
 /**
@@ -249,12 +262,20 @@ export async function retrieveDPoPKeyPair(): Promise<{
  */
 function openDB(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
+        console.log('[DPoP IndexedDB] Opening database...');
         const request = indexedDB.open('openmkt-oauth', 1);
 
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => {
+            console.error('[DPoP IndexedDB] Failed to open:', request.error);
+            reject(request.error);
+        };
+        request.onsuccess = () => {
+            console.log('[DPoP IndexedDB] Database opened successfully');
+            resolve(request.result);
+        };
 
         request.onupgradeneeded = (event) => {
+            console.log('[DPoP IndexedDB] Upgrading database schema...');
             const db = (event.target as IDBOpenDBRequest).result;
             if (!db.objectStoreNames.contains('keys')) {
                 db.createObjectStore('keys', { keyPath: 'id' });

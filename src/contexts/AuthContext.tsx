@@ -174,7 +174,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (storedOAuthTokens) {
             const tokens = JSON.parse(storedOAuthTokens) as OAuthTokenData;
 
-            // Resume session with stored authServer (PDS URL) if available
+            // Resume session - let it resolve the PDS from the DID
+            // Note: authServer is for token refresh, not for API calls
             const result = await newClient.resumeOAuthSession({
               access_token: tokens.accessToken,
               refresh_token: tokens.refreshToken,
@@ -182,9 +183,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               expires_in: 3600, // Approximate, we use expiresAt usually
               scope: tokens.scope,
               sub: tokens.did
-            }, tokens.authServer);
+            });
 
             if (result.success) {
+              console.log('OAuth session resumed successfully');
               setIsLoggedIn(true);
               // User data is in result.data.user
               if (result.data?.user) {
@@ -204,7 +206,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               return;
             } else {
               // If failed (e.g. expired), clear tokens
-              console.warn('OAuth session resume failed, clearing tokens');
+              console.error('OAuth session resume failed:', result.error);
+              console.error('Error details:', result.error?.message, result.error?.stack);
               localStorage.removeItem(OAUTH_TOKENS_KEY);
               // Fallthrough to check legacy session
             }

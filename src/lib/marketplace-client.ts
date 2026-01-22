@@ -292,14 +292,13 @@ export class MarketplaceClient {
 
   async resumeOAuthSession(tokens: OAuthTokens, pdsUrl?: string): Promise<{ success: boolean; data?: Record<string, unknown>; error?: Error }> {
     try {
-      logger.info('Attempting to resume OAuth session');
+      logger.info('Attempting to resume OAuth session', { meta: { did: tokens.sub, tokenType: tokens.token_type } });
+      console.log('[OAuth Resume] Starting with DID:', tokens.sub, 'Token type:', tokens.token_type);
 
-      // Resolve the user's PDS if not provided
-      let serviceUrl = pdsUrl;
-      if (!serviceUrl) {
-        serviceUrl = await this.resolvePDS(tokens.sub) || 'https://bsky.social';
-        logger.info(`Resolved PDS for OAuth session: ${serviceUrl}`);
-      }
+      // Resolve the user's PDS (always resolve from DID for reliability)
+      const serviceUrl = await this.resolvePDS(tokens.sub) || 'https://bsky.social';
+      console.log('[OAuth Resume] Resolved PDS:', serviceUrl);
+      logger.info(`Resolved PDS for OAuth session: ${serviceUrl}`);
 
       // Recreate agent with custom fetch handler for the correct PDS
       const customFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -379,6 +378,7 @@ export class MarketplaceClient {
 
       // Verify session and get profile (which also gets the real handle)
       try {
+        console.log('[OAuth Resume] Fetching profile for:', tokens.sub);
         const result = await this.agent.getProfile({
           actor: tokens.sub,
         });
@@ -389,15 +389,18 @@ export class MarketplaceClient {
           this.agent.session.handle = result.data.handle;
         }
 
+        console.log('[OAuth Resume] Success! Handle:', result.data.handle);
         logger.info('OAuth session resumed successfully');
         return { success: true, data: { user: result.data } };
       } catch (error) {
+        console.error('[OAuth Resume] Profile fetch failed:', error);
         logger.error('Failed to verify OAuth session', error as Error);
         this.isLoggedIn = false;
         this.oauthTokens = null;
         return { success: false, error: error as Error };
       }
     } catch (error) {
+      console.error('[OAuth Resume] General error:', error);
       logger.error('Error resuming OAuth session', error as Error);
       return { success: false, error: error as Error };
     }
