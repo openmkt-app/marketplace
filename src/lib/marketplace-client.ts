@@ -802,7 +802,7 @@ export class MarketplaceClient {
       if (isOnlineStore) {
         // Online store format
         embedAction = "Shop";
-        text = `New in the shop: ${listingData.title} ✨\n\n${priceStr}\n\nAvailable now on my Open Market storefront. 👇\n\n#OpenMarket ${categoryTag}`.trim();
+        text = `New in the shop: ${listingData.title} ✨\n\n${priceStr}\n\nAvailable now on my @openmkt.app storefront. 👇\n\n#OpenMarket ${categoryTag}`.trim();
       } else {
         // Personal listing format
         const askingLine = isFree ? "It's Free! 🎁" : `Asking ${priceStr}.`;
