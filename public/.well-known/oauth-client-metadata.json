@@ -4,7 +4,7 @@
     "client_uri": "https://openmkt.app",
     "logo_uri": "https://openmkt.app/icon.png",
     "redirect_uris": [
-        "https://openmkt.app/oauth/callback",
+        "https://openmkt.app/oauth/callback"
     ],
     "scope": "atproto transition:generic",
     "grant_types": [
