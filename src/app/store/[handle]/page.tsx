@@ -36,14 +36,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ? `${profile.description.substring(0, 150)}${profile.description.length > 150 ? '...' : ''}`
     : `Shop ${listingsCount} item${listingsCount !== 1 ? 's' : ''} from ${displayName} on Open Market.`;
 
+  const canonicalUrl = `https://openmkt.app/store/${handle}`;
+
   return {
     title,
     description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
       title,
       description,
       type: 'profile',
-      url: `https://openmkt.app/store/${handle}`,
+      url: canonicalUrl,
       images: profile.avatar ? [{ url: profile.avatar, alt: displayName }] : [],
       siteName: 'Open Market',
     },

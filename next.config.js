@@ -10,6 +10,15 @@ const nextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/browse',
+        permanent: true, // 308 redirect - tells search engines this is permanent
+      },
+    ];
+  },
 }
 
 export default nextConfig

@@ -14,6 +14,9 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'The Mall | Open Market',
   description: 'Browse online storefronts on Open Market. Discover verified sellers linking to Etsy, Amazon, Shopify and more.',
+  alternates: {
+    canonical: 'https://openmkt.app/mall',
+  },
   openGraph: {
     title: 'The Mall | Open Market',
     description: 'Browse online storefronts on Open Market. Discover verified sellers linking to Etsy, Amazon, Shopify and more.',
