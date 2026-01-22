@@ -1,0 +1,21 @@
+{
+    "client_id": "https://openmkt.app/.well-known/oauth-client-metadata.json",
+    "client_name": "Open Market",
+    "client_uri": "https://openmkt.app",
+    "logo_uri": "https://openmkt.app/icon.png",
+    "redirect_uris": [
+        "https://openmkt.app/oauth/callback",
+        "http://localhost:3000/oauth/callback"
+    ],
+    "scope": "atproto transition:generic",
+    "grant_types": [
+        "authorization_code",
+        "refresh_token"
+    ],
+    "response_types": [
+        "code"
+    ],
+    "token_endpoint_auth_method": "none",
+    "application_type": "web",
+    "dpop_bound_access_tokens": true
+}
