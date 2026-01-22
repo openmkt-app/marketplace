@@ -225,7 +225,46 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
     return total;
   };
 
-  // Attempt 1: Use service auth directly with api.bsky.chat (most reliable)
+  // Helper to process a list of convos
+  const processConvos = async (
+    convos: any[],
+    fetchMessages: (convoId: string, limit: number) => Promise<any[]>
+  ): Promise<number | null> => {
+    let total = 0;
+    for (const convo of convos) {
+      total += await countUnreadFromOpenMkt(convo, fetchMessages);
+      if (total > 0) return total; // Optimization: return early if we found *any* (since we just show a dot usually?) 
+      // check code: returning total. The loop accumulates? 
+      // Original code returned on first > 0? "if (total > 0) return total;" inside loop?
+      // Yes, seems to just return early. 
+    }
+    return total > 0 ? total : null;
+  };
+
+  // Attempt 0: Direct OAuth Access (for DPoP/OAuth sessions)
+  // This expects the agent to handle the request signing and the PDS to proxy or handle it
+  try {
+    // @ts-ignore - access internal api definition if needed, or assume typed
+    if (agent.api.chat && agent.api.chat.bsky && agent.api.chat.bsky.convo) {
+      const response = await agent.api.chat.bsky.convo.listConvos({ limit: 50 });
+
+      if (response.success) {
+        const fetchMessages = async (convoId: string, limit: number) => {
+          const msgRes = await agent.api.chat.bsky.convo.getMessages({ convoId, limit });
+          return msgRes.success ? msgRes.data.messages : [];
+        };
+
+        const result = await processConvos(response.data.convos, fetchMessages);
+        if (result !== null) return result;
+        return 0; // If success but 0, return 0
+      }
+    }
+  } catch (error) {
+    // console.warn('getUnreadChatCount: Direct OAuth attempt failed, trying fallbacks...', error);
+    // Fallthrough to legacy methods
+  }
+
+  // Attempt 1: Use service auth directly with api.bsky.chat (Legacy Password Flow)
   try {
     const chatAgent = new BskyAgent({ service: 'https://api.bsky.chat' });
     const boundAuth = await agent.api.com.atproto.server.getServiceAuth({
@@ -248,11 +287,8 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
           return messagesResponse.success ? messagesResponse.data.messages : [];
         };
 
-        let total = 0;
-        for (const convo of response.data.convos) {
-          total += await countUnreadFromOpenMkt(convo, fetchMessages);
-          if (total > 0) return total;
-        }
+        const result = await processConvos(response.data.convos, fetchMessages);
+        if (result !== null) return result;
       }
     }
   } catch (error) {
@@ -319,11 +355,8 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
           return msgData.messages || [];
         };
 
-        let total = 0;
-        for (const convo of convos) {
-          total += await countUnreadFromOpenMkt(convo, fetchMessages);
-          if (total > 0) return total;
-        }
+        const result = await processConvos(convos, fetchMessages);
+        if (result !== null) return result;
       }
     } catch (err) {
       console.warn('getUnreadChatCount: Server fallback failed', err);
@@ -348,11 +381,8 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
           return messagesResponse.success ? messagesResponse.data.messages : [];
         };
 
-        let total = 0;
-        for (const convo of convos) {
-          total += await countUnreadFromOpenMkt(convo, fetchMessages);
-          if (total > 0) return total;
-        }
+        const result = await processConvos(convos, fetchMessages);
+        if (result !== null) return result;
       }
     } else {
 
