@@ -151,15 +151,37 @@ export async function exchangeCodeForTokens(
     authServer: string
 ): Promise<OAuthTokens> {
     try {
-        logger.info('Exchanging authorization code for tokens');
+        logger.info('Exchanging authorization code for tokens', { meta: { authServer } });
+
+        if (!authServer || !authServer.startsWith('http')) {
+            throw new Error(`Invalid auth server URL: ${authServer}`);
+        }
 
         // Get DPoP key pair
         const dpopKeyPair = await getDPoPKeyPair();
 
         // Get token endpoint from auth server metadata
-        const metadataResponse = await fetch(`${authServer}/.well-known/oauth-authorization-server`);
-        const metadata = await metadataResponse.json();
+        const metadataUrl = `${authServer}/.well-known/oauth-authorization-server`;
+        const metadataResponse = await fetch(metadataUrl);
+
+        if (!metadataResponse.ok) {
+            throw new Error(`Failed to fetch auth server metadata: ${metadataResponse.status} ${metadataResponse.statusText}`);
+        }
+
+        let metadata;
+        try {
+            metadata = await metadataResponse.json();
+        } catch (e) {
+            const text = await metadataResponse.text();
+            console.error('Failed to parse metadata JSON:', text.substring(0, 100));
+            throw new Error(`Invalid JSON from auth server metadata: ${e}`);
+        }
+
         const tokenEndpoint = metadata.token_endpoint;
+
+        if (!tokenEndpoint) {
+            throw new Error('No token_endpoint found in auth server metadata');
+        }
 
         // Create DPoP proof for token request
         const dpopProof = await createDPoPProof(
@@ -170,8 +192,9 @@ export async function exchangeCodeForTokens(
         );
 
         // Prepare token request
-        const clientId = `${window.location.origin}/.well-known/oauth-client-metadata.json`;
-        const redirectUri = `${window.location.origin}/oauth/callback`;
+        // ALWAYS use production values to match what we expect
+        const clientId = 'https://openmkt.app/.well-known/oauth-client-metadata.json';
+        const redirectUri = 'https://openmkt.app/oauth/callback';
 
         const body = new URLSearchParams({
             grant_type: 'authorization_code',
@@ -221,7 +244,13 @@ export async function refreshAccessToken(
         const dpopKeyPair = await getDPoPKeyPair();
 
         // Get token endpoint
-        const metadataResponse = await fetch(`${authServer}/.well-known/oauth-authorization-server`);
+        const metadataUrl = `${authServer}/.well-known/oauth-authorization-server`;
+        const metadataResponse = await fetch(metadataUrl);
+
+        if (!metadataResponse.ok) {
+            throw new Error(`Failed to fetch auth server metadata: ${metadataResponse.status}`);
+        }
+
         const metadata = await metadataResponse.json();
         const tokenEndpoint = metadata.token_endpoint;
 
@@ -234,7 +263,7 @@ export async function refreshAccessToken(
         );
 
         // Prepare refresh request
-        const clientId = `${window.location.origin}/.well-known/oauth-client-metadata.json`;
+        const clientId = 'https://openmkt.app/.well-known/oauth-client-metadata.json';
 
         const body = new URLSearchParams({
             grant_type: 'refresh_token',
