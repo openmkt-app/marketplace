@@ -16,7 +16,7 @@ function BlueskyLogo({ className }: { className?: string }) {
 
 function LoginPageContent() {
   const searchParams = useSearchParams();
-  const enableNewLogin = searchParams.get('newlogin') === 'true';
+  const enableNewLogin = searchParams.get('nl') === 'true';
   const [handle, setHandle] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
