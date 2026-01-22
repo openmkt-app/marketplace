@@ -123,8 +123,8 @@ export class MarketplaceClient {
 
           // Helper to perform the request, optionally with a nonce
           const performRequest = async (nonce?: string) => {
-            // Generate DPoP proof
-            const proof = await createRequestDPoPProof(method, url, nonce);
+            // Generate DPoP proof with access token hash for authenticated requests
+            const proof = await createRequestDPoPProof(method, url, nonce, this.oauthTokens?.access_token);
 
             // Build headers, starting with original headers
             let originalHeaders: HeadersInit | undefined;
@@ -340,7 +340,8 @@ export class MarketplaceClient {
             console.log('[DPoP Request]', method, url);
 
             const performRequest = async (nonce?: string) => {
-              const proof = await createRequestDPoPProof(method, url, nonce);
+              // Generate DPoP proof with access token hash for authenticated requests
+              const proof = await createRequestDPoPProof(method, url, nonce, this.oauthTokens?.access_token);
 
               // Build headers, starting with original headers
               let originalHeaders: HeadersInit | undefined;

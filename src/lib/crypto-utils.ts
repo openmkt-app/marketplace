@@ -94,13 +94,15 @@ export async function generateDPoPKeyPair(): Promise<{
  * @param htm HTTP method (e.g., 'GET', 'POST')
  * @param htu HTTP URI (the target URL)
  * @param nonce Optional server-provided nonce
+ * @param accessToken Optional access token (required for authenticated requests to include ath claim)
  */
 export async function createDPoPProof(
     privateKey: CryptoKey,
     publicJwk: JsonWebKey,
     htm: string,
     htu: string,
-    nonce?: string
+    nonce?: string,
+    accessToken?: string
 ): Promise<string> {
     // Create header
     const header = {
@@ -119,6 +121,14 @@ export async function createDPoPProof(
 
     if (nonce) {
         payload.nonce = nonce;
+    }
+
+    // Add access token hash (ath) for authenticated requests
+    if (accessToken) {
+        const encoder = new TextEncoder();
+        const tokenData = encoder.encode(accessToken);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', tokenData);
+        payload.ath = base64urlEncode(hashBuffer);
     }
 
     // Encode header and payload
