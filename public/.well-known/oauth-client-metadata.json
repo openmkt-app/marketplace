@@ -6,7 +6,7 @@
     "redirect_uris": [
         "https://openmkt.app/oauth/callback"
     ],
-    "scope": "atproto transition:generic",
+    "scope": "atproto",
     "grant_types": [
         "authorization_code",
         "refresh_token"
