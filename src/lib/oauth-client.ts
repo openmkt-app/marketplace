@@ -84,8 +84,11 @@ async function getDPoPKeyPair() {
 
     if (!keyPair) {
         // Generate new key pair
+        console.log('[DPoP] No existing key pair found, generating new one');
         keyPair = await generateDPoPKeyPair();
         await storeDPoPKeyPair(keyPair.privateKey, keyPair.publicKey, keyPair.jwk);
+    } else {
+        console.log('[DPoP] Retrieved existing key pair from IndexedDB');
     }
 
     return keyPair;
