@@ -26,8 +26,13 @@ function LoginPageContent() {
   // Default to legacy login UNLESS newlogin=true is present
   const [showLegacyLogin, setShowLegacyLogin] = useState(!enableNewLogin);
 
-  const { login, loginWithOAuth, isLoading } = useAuth();
+  const { login, loginWithOAuth, isLoggedIn, isLoading } = useAuth();
   const router = useRouter();
+
+  // Redirect if already logged in
+  if (isLoggedIn && !isLoading) {
+    router.replace('/');
+  }
 
   const handleOAuthLogin = async (e: React.FormEvent) => {
     e.preventDefault();

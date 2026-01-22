@@ -326,7 +326,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       sessionStorage.setItem('oauth_verifier', codeVerifier);
       sessionStorage.setItem('oauth_state', state);
       sessionStorage.setItem('oauth_auth_server', authServer);
-      sessionStorage.setItem('oauth_return_to', window.location.pathname);
+      const currentPath = window.location.pathname;
+      sessionStorage.setItem('oauth_return_to', currentPath === '/login' ? '/' : currentPath);
 
       // Redirect to authorization URL
       window.location.href = authUrl;

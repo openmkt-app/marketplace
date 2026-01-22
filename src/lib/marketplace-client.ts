@@ -107,8 +107,15 @@ export class MarketplaceClient {
       // If we have DPoP tokens, we need to sign the request
       if (this.oauthTokens && (this.oauthTokens.token_type === 'DPoP' || this.oauthTokens.token_type === 'dpop')) {
         try {
-          const method = init?.method || 'GET';
-          const url = input.toString();
+          const method = init?.method || (input instanceof Request ? input.method : 'GET');
+          let url: string;
+          if (input instanceof Request) {
+            url = input.url;
+          } else if (input instanceof URL) {
+            url = input.toString();
+          } else {
+            url = input as string;
+          }
 
           // Generate DPoP proof
           const proof = await createRequestDPoPProof(method, url);
