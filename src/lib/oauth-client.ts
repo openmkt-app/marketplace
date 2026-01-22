@@ -98,6 +98,7 @@ export async function getAuthorizationUrl(handle: string): Promise<{
     authUrl: string;
     codeVerifier: string;
     state: string;
+    authServer: string;
 }> {
     try {
         logger.info('Starting OAuth authorization flow', { meta: { handle } });
@@ -114,7 +115,6 @@ export async function getAuthorizationUrl(handle: string): Promise<{
         // client_id must match the URL where the metadata is hosted
         const clientId = 'https://openmkt.app/.well-known/oauth-client-metadata.json';
         let redirectUri = `${window.location.origin}/oauth/callback`;
-
 
 
         // Build authorization URL
@@ -134,7 +134,8 @@ export async function getAuthorizationUrl(handle: string): Promise<{
         return {
             authUrl,
             codeVerifier,
-            state
+            state,
+            authServer
         };
     } catch (error) {
         logger.error('Failed to build authorization URL', error as Error);
