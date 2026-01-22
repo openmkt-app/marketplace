@@ -113,11 +113,11 @@ export class MarketplaceClient {
 
           if (input instanceof Request) {
             // When input is a Request object, get method and url from it
-            method = input.method;
+            method = input.method.toUpperCase(); // DPoP requires uppercase HTTP methods
             url = input.url;
           } else {
             // When input is URL or string, method comes from init (defaults to GET)
-            method = init?.method || 'GET';
+            method = (init?.method || 'GET').toUpperCase(); // DPoP requires uppercase HTTP methods
             url = input instanceof URL ? input.toString() : input as string;
           }
 
@@ -329,11 +329,11 @@ export class MarketplaceClient {
 
             if (input instanceof Request) {
               // When input is a Request object, get method and url from it
-              method = input.method;
+              method = input.method.toUpperCase(); // DPoP requires uppercase HTTP methods
               url = input.url;
             } else {
               // When input is URL or string, method comes from init (defaults to GET)
-              method = init?.method || 'GET';
+              method = (init?.method || 'GET').toUpperCase(); // DPoP requires uppercase HTTP methods
               url = input instanceof URL ? input.toString() : input as string;
             }
 
