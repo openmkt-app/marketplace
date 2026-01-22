@@ -5,8 +5,7 @@
     "logo_uri": "https://openmkt.app/icon.png",
     "redirect_uris": [
         "https://openmkt.app/oauth/callback",
-        "http://127.0.0.1:3000/oauth/callback",
-        "http://localhost:3000/oauth/callback"
+        "http://127.0.0.1:3000/oauth/callback"
     ],
     "scope": "atproto transition:generic",
     "grant_types": [
