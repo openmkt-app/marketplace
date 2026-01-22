@@ -107,14 +107,18 @@ export class MarketplaceClient {
       // If we have DPoP tokens, we need to sign the request
       if (this.oauthTokens && (this.oauthTokens.token_type === 'DPoP' || this.oauthTokens.token_type === 'dpop')) {
         try {
-          const method = init?.method || (input instanceof Request ? input.method : 'GET');
+          // Extract method - be very careful about the order of checks
+          let method: string;
           let url: string;
+
           if (input instanceof Request) {
+            // When input is a Request object, get method and url from it
+            method = input.method;
             url = input.url;
-          } else if (input instanceof URL) {
-            url = input.toString();
           } else {
-            url = input as string;
+            // When input is URL or string, method comes from init (defaults to GET)
+            method = init?.method || 'GET';
+            url = input instanceof URL ? input.toString() : input as string;
           }
 
           // Helper to perform the request, optionally with a nonce
@@ -122,20 +126,36 @@ export class MarketplaceClient {
             // Generate DPoP proof
             const proof = await createRequestDPoPProof(method, url, nonce);
 
-            // Clone init to avoid mutating original
-            const newInit = { ...init } as any;
-            newInit.headers = new Headers(newInit.headers);
-
-            // Add DPoP header
-            newInit.headers.set('DPoP', proof);
+            // Build headers, starting with original headers
+            let originalHeaders: HeadersInit | undefined;
+            if (input instanceof Request) {
+              originalHeaders = input.headers;
+            } else {
+              originalHeaders = init?.headers;
+            }
+            const headers = new Headers(originalHeaders);
+            headers.set('DPoP', proof);
 
             // Fix Authorization header if needed (Agent sets 'Bearer', we need 'DPoP')
-            const auth = newInit.headers.get('Authorization');
+            const auth = headers.get('Authorization');
             if (auth && auth.startsWith('Bearer ')) {
-              newInit.headers.set('Authorization', `DPoP ${auth.slice(7)}`);
+              headers.set('Authorization', `DPoP ${auth.slice(7)}`);
             }
 
-            return fetch(input, newInit);
+            // Build new init, preserving the method and body explicitly
+            const newInit: RequestInit = {
+              method,
+              headers,
+              body: init?.body,
+              credentials: init?.credentials,
+              cache: init?.cache,
+              redirect: init?.redirect,
+              referrer: init?.referrer,
+              integrity: init?.integrity,
+              signal: init?.signal,
+            };
+
+            return fetch(url, newInit);
           };
 
           // Initial request
@@ -155,7 +175,6 @@ export class MarketplaceClient {
               if (isNonceError) {
                 const nonce = response.headers.get('DPoP-Nonce');
                 if (nonce) {
-                  // logger.debug('Retrying request with new DPoP nonce');
                   response = await performRequest(nonce);
                 }
               }
@@ -304,26 +323,54 @@ export class MarketplaceClient {
       const customFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
         if (this.oauthTokens && (this.oauthTokens.token_type === 'DPoP' || this.oauthTokens.token_type === 'dpop')) {
           try {
-            const method = init?.method || (input instanceof Request ? input.method : 'GET');
+            // Extract method - be very careful about the order of checks
+            let method: string;
             let url: string;
+
             if (input instanceof Request) {
+              // When input is a Request object, get method and url from it
+              method = input.method;
               url = input.url;
-            } else if (input instanceof URL) {
-              url = input.toString();
             } else {
-              url = input as string;
+              // When input is URL or string, method comes from init (defaults to GET)
+              method = init?.method || 'GET';
+              url = input instanceof URL ? input.toString() : input as string;
             }
+
+            console.log('[DPoP Request]', method, url);
 
             const performRequest = async (nonce?: string) => {
               const proof = await createRequestDPoPProof(method, url, nonce);
-              const newInit = { ...init } as any;
-              newInit.headers = new Headers(newInit.headers);
-              newInit.headers.set('DPoP', proof);
-              const auth = newInit.headers.get('Authorization');
-              if (auth && auth.startsWith('Bearer ')) {
-                newInit.headers.set('Authorization', `DPoP ${auth.slice(7)}`);
+
+              // Build headers, starting with original headers
+              let originalHeaders: HeadersInit | undefined;
+              if (input instanceof Request) {
+                originalHeaders = input.headers;
+              } else {
+                originalHeaders = init?.headers;
               }
-              return fetch(input, newInit);
+              const headers = new Headers(originalHeaders);
+              headers.set('DPoP', proof);
+
+              const auth = headers.get('Authorization');
+              if (auth && auth.startsWith('Bearer ')) {
+                headers.set('Authorization', `DPoP ${auth.slice(7)}`);
+              }
+
+              // Build new init, preserving the method and body explicitly
+              const newInit: RequestInit = {
+                method,
+                headers,
+                body: init?.body,
+                credentials: init?.credentials,
+                cache: init?.cache,
+                redirect: init?.redirect,
+                referrer: init?.referrer,
+                integrity: init?.integrity,
+                signal: init?.signal,
+              };
+
+              return fetch(url, newInit);
             };
 
             let response = await performRequest();
