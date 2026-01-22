@@ -319,17 +319,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithOAuth = async (handle: string): Promise<void> => {
     try {
       // Get authorization URL with PKCE
-      const { authUrl, codeVerifier, state } = await getAuthorizationUrl(handle);
-
-      // Resolve auth server for storage
-      const cleanHandle = handle.startsWith('@') ? handle.slice(1) : handle;
-      const didResponse = await fetch(`https://bsky.social/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(cleanHandle)}`);
-      const { did } = await didResponse.json();
-
-      const didDocResponse = await fetch(`https://plc.directory/${did}`);
-      const didDoc = await didDocResponse.json();
-      const pdsService = didDoc.service?.find((s: any) => s.type === 'AtprotoPersonalDataServer');
-      const authServer = pdsService?.serviceEndpoint || 'https://bsky.social';
+      // Now returns the correctly resolved authServer
+      const { authUrl, codeVerifier, state, authServer } = await getAuthorizationUrl(handle);
 
       // Store OAuth state in sessionStorage
       sessionStorage.setItem('oauth_verifier', codeVerifier);
