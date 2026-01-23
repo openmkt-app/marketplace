@@ -68,7 +68,7 @@ export async function sendMessageToSeller(
     }
 
     // OAuth sessions can't use chat API due to scope limitations
-    if (isOAuthSession()) {
+    if (isOAuthSessionWithoutChatScope()) {
       return {
         success: false,
         error: 'Direct messaging is not available with OAuth login. Please use Bluesky to message the seller.',
@@ -194,13 +194,26 @@ export async function sendMessageToSeller(
 }
 
 /**
- * Check if current session is OAuth-based (which doesn't support chat)
- * OAuth sessions store tokens in localStorage under 'oauth_tokens'
+ * Check if current session is OAuth-based and lacks chat permissions
+ * OAuth sessions with transition:chat.bsky scope CAN use chat
  */
-function isOAuthSession(): boolean {
+function isOAuthSessionWithoutChatScope(): boolean {
   if (typeof window === 'undefined') return false;
-  const oauthTokens = localStorage.getItem('oauth_tokens');
-  return !!oauthTokens;
+  const oauthTokensStr = localStorage.getItem('oauth_tokens');
+  if (!oauthTokensStr) return false; // Not OAuth, so chat is allowed (legacy auth)
+
+  try {
+    const tokens = JSON.parse(oauthTokensStr);
+    const scope = tokens.scope || '';
+    // If the OAuth token has chat scope, allow chat
+    if (scope.includes('transition:chat.bsky')) {
+      return false; // Has chat scope, so chat IS allowed
+    }
+  } catch {
+    // Parse error, assume no chat scope
+  }
+
+  return true; // OAuth without chat scope, chat NOT allowed
 }
 
 /**
@@ -213,7 +226,7 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
   if (!session || !session.accessJwt) return 0;
 
   // OAuth sessions don't have chat permissions - silently return 0
-  if (isOAuthSession()) {
+  if (isOAuthSessionWithoutChatScope()) {
     return 0;
   }
 
