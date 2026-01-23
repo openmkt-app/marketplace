@@ -190,11 +190,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setIsLoggedIn(true);
               // User data is in result.data.user
               if (result.data?.user) {
+                // The avatar from getProfile() is already a full URL, not a blob CID
+                // Extract the blob CID from the URL if present
+                // URL format: https://cdn.bsky.app/img/avatar/plain/did:xxx/BLOB_CID@jpeg
+                let avatarCid: string | undefined;
+                const avatarUrl = (result.data.user as any).avatar;
+                if (avatarUrl && typeof avatarUrl === 'string') {
+                  // Extract CID from URL using regex
+                  const cidMatch = avatarUrl.match(/\/(bafkrei[a-z0-9]+)@/i);
+                  if (cidMatch && cidMatch[1]) {
+                    avatarCid = cidMatch[1];
+                  }
+                }
+
                 setUser({
                   did: tokens.did,
                   handle: (result.data.user as any).handle,
                   displayName: (result.data.user as any).displayName,
-                  avatarCid: (result.data.user as any).avatar
+                  avatarCid
                 });
               }
 
