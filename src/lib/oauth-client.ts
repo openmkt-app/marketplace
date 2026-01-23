@@ -116,7 +116,7 @@ export async function getAuthorizationUrl(handle: string): Promise<{
 
         // Get client metadata
         // client_id must match the URL where the metadata is hosted
-        const clientId = 'https://openmkt.app/.well-known/oauth-client-metadata.json';
+        const clientId = `${window.location.origin}/.well-known/oauth-client-metadata.json`;
         let redirectUri = `${window.location.origin}/oauth/callback`;
 
 
