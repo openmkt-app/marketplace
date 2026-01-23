@@ -194,6 +194,15 @@ export async function sendMessageToSeller(
 }
 
 /**
+ * Check if current session is OAuth-based (any OAuth session)
+ * Used to skip service-auth attempts which don't work with OAuth
+ */
+function isOAuthSession(): boolean {
+  if (typeof window === 'undefined') return false;
+  return !!localStorage.getItem('oauth_tokens');
+}
+
+/**
  * Check if current session is OAuth-based and lacks chat permissions
  * OAuth sessions with transition:chat.bsky scope CAN use chat
  */
@@ -303,35 +312,38 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
     // Fallthrough to legacy methods
   }
 
-  // Attempt 1: Use service auth directly with api.bsky.chat (Legacy Password Flow)
-  try {
-    const chatAgent = new BskyAgent({ service: 'https://api.bsky.chat' });
-    const boundAuth = await agent.api.com.atproto.server.getServiceAuth({
-      aud: 'did:web:api.bsky.chat',
-      lxm: 'chat.bsky.convo.listConvos',
-    });
+  // Attempt 1: Use service auth directly with api.bsky.chat (Legacy Password Flow ONLY)
+  // Service auth does NOT work with OAuth - skip entirely for OAuth sessions
+  if (!isOAuthSession()) {
+    try {
+      const chatAgent = new BskyAgent({ service: 'https://api.bsky.chat' });
+      const boundAuth = await agent.api.com.atproto.server.getServiceAuth({
+        aud: 'did:web:api.bsky.chat',
+        lxm: 'chat.bsky.convo.listConvos',
+      });
 
-    if (boundAuth.success) {
-      const response = await chatAgent.api.chat.bsky.convo.listConvos(
-        { limit: 50 },
-        { headers: { Authorization: `Bearer ${boundAuth.data.token}` } }
-      );
+      if (boundAuth.success) {
+        const response = await chatAgent.api.chat.bsky.convo.listConvos(
+          { limit: 50 },
+          { headers: { Authorization: `Bearer ${boundAuth.data.token}` } }
+        );
 
-      if (response.success) {
-        const fetchMessages = async (convoId: string, limit: number) => {
-          const messagesResponse = await chatAgent.api.chat.bsky.convo.getMessages(
-            { convoId, limit },
-            { headers: { Authorization: `Bearer ${boundAuth.data.token}` } }
-          );
-          return messagesResponse.success ? messagesResponse.data.messages : [];
-        };
+        if (response.success) {
+          const fetchMessages = async (convoId: string, limit: number) => {
+            const messagesResponse = await chatAgent.api.chat.bsky.convo.getMessages(
+              { convoId, limit },
+              { headers: { Authorization: `Bearer ${boundAuth.data.token}` } }
+            );
+            return messagesResponse.success ? messagesResponse.data.messages : [];
+          };
 
-        const result = await processConvos(response.data.convos, fetchMessages);
-        if (result !== null) return result;
+          const result = await processConvos(response.data.convos, fetchMessages);
+          if (result !== null) return result;
+        }
       }
+    } catch (error) {
+      console.warn('getUnreadChatCount: service auth failed, trying proxy...', error);
     }
-  } catch (error) {
-    console.warn('getUnreadChatCount: service auth failed, trying proxy...', error);
   }
 
   // Helper to run the server-side proxy fallback
@@ -403,31 +415,31 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
     return 0;
   };
 
-  // Attempt 2: Try `agent.withProxy` if available (User Request)
-  try {
-    if (typeof (agent as any).withProxy === 'function') {
+  // Attempt 2: Try `agent.withProxy` if available (Legacy Password Flow ONLY)
+  // withProxy uses PDS-level proxying which doesn't work reliably with OAuth
+  if (!isOAuthSession()) {
+    try {
+      if (typeof (agent as any).withProxy === 'function') {
+        const proxyAgent = (agent as any).withProxy('bsky_chat', 'did:web:api.bsky.chat');
+        const response = await proxyAgent.api.chat.bsky.convo.listConvos({ limit: 50 });
 
-      const proxyAgent = (agent as any).withProxy('bsky_chat', 'did:web:api.bsky.chat');
-      const response = await proxyAgent.api.chat.bsky.convo.listConvos({ limit: 50 });
+        if (response.success) {
+          const convos = response.data.convos;
+          const fetchMessages = async (convoId: string, limit: number) => {
+            const messagesResponse = await proxyAgent.api.chat.bsky.convo.getMessages({
+              convoId,
+              limit,
+            });
+            return messagesResponse.success ? messagesResponse.data.messages : [];
+          };
 
-      if (response.success) {
-        const convos = response.data.convos;
-        const fetchMessages = async (convoId: string, limit: number) => {
-          const messagesResponse = await proxyAgent.api.chat.bsky.convo.getMessages({
-            convoId,
-            limit,
-          });
-          return messagesResponse.success ? messagesResponse.data.messages : [];
-        };
-
-        const result = await processConvos(convos, fetchMessages);
-        if (result !== null) return result;
+          const result = await processConvos(convos, fetchMessages);
+          if (result !== null) return result;
+        }
       }
-    } else {
-
+    } catch (error) {
+      console.warn('getUnreadChatCount: agent.withProxy failed, switching to fallback...', error);
     }
-  } catch (error) {
-    console.warn('getUnreadChatCount: agent.withProxy failed, switching to fallback...', error);
   }
 
   // Attempt 3: Fallback to Server Proxy (if withProxy didn't exist OR failed/threw error)
