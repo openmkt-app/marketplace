@@ -116,7 +116,7 @@ export async function getAuthorizationUrl(handle: string): Promise<{
 
         // Get client metadata
         // client_id must match the URL where the metadata is hosted
-        const clientId = 'https://openmkt.app/.well-known/oauth-client-metadata.json';
+        const clientId = `${window.location.origin}/.well-known/oauth-client-metadata.json`;
         let redirectUri = `${window.location.origin}/oauth/callback`;
 
 
@@ -199,9 +199,9 @@ export async function exchangeCodeForTokens(
             );
 
             // Prepare token request
-            // ALWAYS use production values to match what we expect
-            const clientId = 'https://openmkt.app/.well-known/oauth-client-metadata.json';
-            const redirectUri = 'https://openmkt.app/oauth/callback';
+            // Use dynamic values to match the authorization request
+            const clientId = `${window.location.origin}/.well-known/oauth-client-metadata.json`;
+            const redirectUri = `${window.location.origin}/oauth/callback`;
 
             const body = new URLSearchParams({
                 grant_type: 'authorization_code',
@@ -294,7 +294,7 @@ export async function refreshAccessToken(
             );
 
             // Prepare refresh request
-            const clientId = 'https://openmkt.app/.well-known/oauth-client-metadata.json';
+            const clientId = `${window.location.origin}/.well-known/oauth-client-metadata.json`;
 
             const body = new URLSearchParams({
                 grant_type: 'refresh_token',
