@@ -7,6 +7,7 @@
 export const EXCLUDED_SELLERS: string[] = [
   // Add handles below, one per line:
   // 'example.bsky.social',
+  'icegov.bsky.social' //It's a government agency
 ];
 
 /**
