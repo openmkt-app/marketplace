@@ -321,6 +321,11 @@ export class MarketplaceClient {
 
       // Recreate agent with custom fetch handler for the correct PDS
       const customFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+        const urlStr = input instanceof Request ? input.url : (input instanceof URL ? input.toString() : input);
+        console.log('[customFetch] Called for:', urlStr);
+        console.log('[customFetch] oauthTokens exists:', !!this.oauthTokens);
+        console.log('[customFetch] token_type:', this.oauthTokens?.token_type);
+
         if (this.oauthTokens && (this.oauthTokens.token_type === 'DPoP' || this.oauthTokens.token_type === 'dpop')) {
           try {
             // Extract method - be very careful about the order of checks
@@ -400,6 +405,7 @@ export class MarketplaceClient {
             return fetch(input, init);
           }
         }
+        console.log('[customFetch] DPoP condition NOT met, using regular fetch');
         return fetch(input, init);
       };
 

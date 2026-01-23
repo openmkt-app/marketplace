@@ -7,7 +7,9 @@ import { createRequestDPoPProof } from './oauth-client';
  */
 function isOAuthSession(): boolean {
   if (typeof window === 'undefined') return false;
-  return !!localStorage.getItem('oauth_tokens');
+  const hasTokens = !!localStorage.getItem('oauth_tokens');
+  console.log('[isOAuthSession] oauth_tokens exists:', hasTokens);
+  return hasTokens;
 }
 
 /**
