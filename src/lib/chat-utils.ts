@@ -55,15 +55,25 @@ export function contactSellerViaBluesky(
 
 /**
  * Send a message to a seller using the Bluesky Chat API
+ * Note: This only works with legacy password auth, not OAuth
  */
 export async function sendMessageToSeller(
   agent: BskyAgent,
   sellerDid: string,
   message: string
-): Promise<{ success: boolean; error?: string; errorCode?: 'REQUIRES_FOLLOW' | 'UNKNOWN' }> {
+): Promise<{ success: boolean; error?: string; errorCode?: 'REQUIRES_FOLLOW' | 'OAUTH_NOT_SUPPORTED' | 'UNKNOWN' }> {
   try {
     if (!agent.session) {
       return { success: false, error: 'User is not logged in' };
+    }
+
+    // OAuth sessions can't use chat API due to scope limitations
+    if (isOAuthSession()) {
+      return {
+        success: false,
+        error: 'Direct messaging is not available with OAuth login. Please use Bluesky to message the seller.',
+        errorCode: 'OAUTH_NOT_SUPPORTED'
+      };
     }
 
     // 1. Get a service auth token for getConvoForMembers
@@ -184,12 +194,28 @@ export async function sendMessageToSeller(
 }
 
 /**
+ * Check if current session is OAuth-based (which doesn't support chat)
+ * OAuth sessions store tokens in localStorage under 'oauth_tokens'
+ */
+function isOAuthSession(): boolean {
+  if (typeof window === 'undefined') return false;
+  const oauthTokens = localStorage.getItem('oauth_tokens');
+  return !!oauthTokens;
+}
+
+/**
  * Get unread chat message count using the Bluesky Chat API
  * This uses chat.bsky.convo.listConvos proxied through the user's PDS
+ * Note: Chat functionality is not available for OAuth sessions due to scope limitations
  */
 export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
   const session = agent.session;
   if (!session || !session.accessJwt) return 0;
+
+  // OAuth sessions don't have chat permissions - silently return 0
+  if (isOAuthSession()) {
+    return 0;
+  }
 
   const OPENMKT_HANDLE = 'openmkt.app';
 
