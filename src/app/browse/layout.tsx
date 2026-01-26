@@ -3,9 +3,9 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Browse Listings | Open Market',
   description: 'Browse local listings on Open Market. Find great deals on items for sale in your area without fees or middlemen.',
-  alternates: {
-    canonical: 'https://openmkt.app/browse',
-  },
+  // alternates: {
+  //   canonical: 'https://openmkt.app/browse',
+  // },
   openGraph: {
     title: 'Browse Listings | Open Market',
     description: 'Browse local listings on Open Market. Find great deals on items for sale in your area.',
