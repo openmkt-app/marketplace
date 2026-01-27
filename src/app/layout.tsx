@@ -18,6 +18,19 @@ export const metadata = {
     description: 'Buy, sell, and trade locally without fees. Open Market is a community-owned marketplace built on the open web.',
     type: 'website',
     url: 'https://openmkt.app',
+    images: [
+      {
+        url: 'https://openmkt.app/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Open Market - Buy, Sell, and Trade Locally',
+      }
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Open Market - Buy, Sell, and Trade Locally',
+    description: 'Buy, sell, and trade locally without fees. Open Market is a community-owned marketplace built on the open web.',
     images: ['https://openmkt.app/og-image.png'],
   },
 }
