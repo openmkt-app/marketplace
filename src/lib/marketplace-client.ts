@@ -1023,11 +1023,14 @@ export class MarketplaceClient {
         'pets': '#PetSky #Pets',
         'sporting': '#Sports #Outdoors',
         'video_games': '#Gaming #RetroGaming',
-        'other': '#Misc #OpenMarket'
+        'other': '#Misc'
       };
 
-      // Get hashtags for the category, fallback to generic if not found
-      const categoryTag = listingData.category ? categoryHashtags[listingData.category] : '#OpenMarket';
+      // Get hashtags for the category
+      const tags = ['#OpenMarket'];
+      if (listingData.category && categoryHashtags[listingData.category]) {
+        tags.push(categoryHashtags[listingData.category]);
+      }
 
       // Handle Price and Text Logic
       const priceVal = parseFloat(listingData.price || '0');
@@ -1047,7 +1050,7 @@ export class MarketplaceClient {
       if (isOnlineStore) {
         // Online store format
         embedAction = "Shop";
-        text = `New in the shop: ${listingData.title} ✨\n\n${priceStr}\n\nAvailable now on my @openmkt.app storefront. 👇\n\n#OpenMarket ${categoryTag}`.trim();
+        text = `New in the shop: ${listingData.title} ✨\n\n${priceStr}\n\nAvailable now on my @openmkt.app storefront. 👇\n\n${tags.join(' ')}`;
       } else {
         // Personal listing format
         const askingLine = isFree ? "It's Free! 🎁" : `Asking ${priceStr}.`;
@@ -1055,13 +1058,17 @@ export class MarketplaceClient {
         const introLine = isFree ? `Giving away my ${listingData.title} 🎁` : `Selling my ${listingData.title} 📦`;
         embedAction = isFree ? "Giving Away" : "Selling";
 
+        if (forSaleTag) {
+          tags.push(forSaleTag);
+        }
+
         // Format:
         // {IntroLine}
         // {AskingLine}
         // Listed it on @openmkt.app for the community. Link below! 👇
         // {Hashtags} {ForSaleTag}
 
-        text = `${introLine}\n\n${askingLine}\n\nListed it on @openmkt.app for the community. Link below! 👇\n\n${categoryTag} ${forSaleTag}`.trim();
+        text = `${introLine}\n\n${askingLine}\n\nListed it on @openmkt.app for the community. Link below! 👇\n\n${tags.join(' ')}`;
       }
 
       // Create RichText to handle facets (links, mentions, tags)
