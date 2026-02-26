@@ -168,8 +168,24 @@ async function getVerifiedSellers(): Promise<SellerWithListings[]> {
       }
     }
 
-    // Sort by listings count (most listings first), then by followers
+    // Sort Demo stores last, then by newest listings first
     sellers.sort((a, b) => {
+      // 1. Demo stores go last
+      const aIsDemo = a.displayName?.includes('(Demo Store)') || a.handle.includes('demo');
+      const bIsDemo = b.displayName?.includes('(Demo Store)') || b.handle.includes('demo');
+
+      if (aIsDemo && !bIsDemo) return 1;
+      if (!aIsDemo && bIsDemo) return -1;
+
+      // 2. Newest stores/listings first (based on most recent listing)
+      const aLatest = a.listings?.[0]?.createdAt || '';
+      const bLatest = b.listings?.[0]?.createdAt || '';
+
+      if (aLatest !== bLatest) {
+        return bLatest.localeCompare(aLatest); // Descending order (newest first)
+      }
+
+      // 3. Fallback to listing count and followers
       if (b.listingsCount !== a.listingsCount) {
         return b.listingsCount - a.listingsCount;
       }
