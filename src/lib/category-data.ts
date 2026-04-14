@@ -149,6 +149,17 @@ export const CATEGORIES: Category[] = [
       { id: 'other_computers', name: 'Other Computer Items' }
     ]
   },
+  {
+    id: 'digital_arts',
+    name: 'Digital Arts & Commissions',
+    subcategories: [
+      { id: 'commissions', name: 'Commissions' },
+      { id: 'graphic_design', name: 'Graphic Design' },
+      { id: '3d_animation', name: '3D Art & Animation' },
+      { id: 'web_design', name: 'Web & UI Design' },
+      { id: 'other_digital', name: 'Other Digital Art' }
+    ]
+  },
   { 
     id: 'electronics', 
     name: 'Electronics',

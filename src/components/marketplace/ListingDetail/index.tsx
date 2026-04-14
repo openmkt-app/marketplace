@@ -416,11 +416,13 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
           )}
 
           {/* Condition and Listed Date Grid */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">Condition</p>
-              <p className="font-medium text-gray-900">{formatConditionForDisplay(listing.condition)}</p>
-            </div>
+          <div className={`grid ${listing.condition && listing.category !== 'digital_arts' ? 'grid-cols-2' : 'grid-cols-1'} gap-3 mb-4`}>
+            {listing.condition && listing.category !== 'digital_arts' && (
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-500 mb-1">Condition</p>
+                <p className="font-medium text-gray-900">{formatConditionForDisplay(listing.condition)}</p>
+              </div>
+            )}
             <div className="p-3 bg-gray-50 rounded-lg">
               <p className="text-xs text-gray-500 mb-1">Listed</p>
               <div className="flex items-center gap-1.5">

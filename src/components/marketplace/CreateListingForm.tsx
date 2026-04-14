@@ -597,6 +597,12 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       if (categoryId === 'free') {
         setPriceInput('0.00');
       }
+
+      // Auto-configure for digital arts commissions
+      if (categoryId === 'digital_arts') {
+        setIsOnlineStore(true);
+        setIsLocationExpanded(false);
+      }
     }
   };
 
@@ -608,6 +614,11 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
     } else {
       // Revert to the previous category or empty if there was none
       setSelectedCategory(previousCategory || '');
+      // Auto-configure for digital arts commissions if reverting
+      if (previousCategory === 'digital_arts') {
+        setIsOnlineStore(true);
+        setIsLocationExpanded(false);
+      }
     }
 
     setShowFreeConfirmation(false);
@@ -1198,6 +1209,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                     </select>
                   </div>
 
+                  {selectedCategory !== 'digital_arts' && (
                   <div>
                     <label htmlFor="condition" className="block text-sm font-medium text-text-secondary mb-1">
                       Condition <span className="text-red-500">*</span>
@@ -1218,6 +1230,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                       ))}
                     </select>
                   </div>
+                  )}
 
                   <div>
                     <label htmlFor="description" className="block text-sm font-medium text-text-secondary mb-1">

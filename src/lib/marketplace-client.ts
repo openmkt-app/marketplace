@@ -295,15 +295,23 @@ export class MarketplaceClient {
           logger.info('Session resumed successfully (profile verification failed but session is valid)');
 
           return { success: true, data: { user: { did: sessionData.did, handle: sessionData.handle } } };
-        } catch (sessionError) {
+        } catch (sessionError: any) {
           // If even basic session validation fails, then the session is truly invalid
-          logger.error('Session validation failed completely:', sessionError as unknown as Error);
+          if (sessionError?.message && sessionError.message.includes('Token has expired')) {
+            logger.warn('Session verification: Token expired. User must log in again.');
+          } else {
+            logger.error('Session validation failed completely:', sessionError as Error);
+          }
           this.isLoggedIn = false;
-          return { success: false, error: sessionError as unknown as Error };
+          return { success: false, error: sessionError as Error };
         }
       }
-    } catch (error) {
-      logger.error('Resume session failed', error as Error);
+    } catch (error: any) {
+      if (error?.message && error.message.includes('Token has expired')) {
+        logger.warn('Resume session check: Token expired. User must log in again.');
+      } else {
+        logger.error('Resume session failed', error as Error);
+      }
       this.isLoggedIn = false;
       return { success: false, error: error as Error };
     }
