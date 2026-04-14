@@ -1051,7 +1051,8 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                   <span className="bg-amber-600 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-full tracking-wide">Beta</span>
                 </div>
                 <p className="text-sm text-gray-600 mb-4">
-                  Paste a link from Amazon, Shopify, or other stores to auto-fill details.
+                  Paste a link from Amazon, Shopify, or other stores to auto-fill details.<br />
+                  <span className="text-xs font-medium text-amber-700/80 tracking-wide">* Note: Etsy is currently not supported by this importer.</span>
                 </p>
 
                 <div className="flex gap-2">
