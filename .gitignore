@@ -165,3 +165,6 @@ src/app/test-listing/
 
 #publish lexicon script
 /scripts/publish-lexicon.js
+
+# Moderation data (local file store)
+/data/

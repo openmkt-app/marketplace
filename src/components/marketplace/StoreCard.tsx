@@ -4,7 +4,7 @@ import { ShoppingBag, Globe, MapPin } from 'lucide-react';
 import { MarketplaceListing } from '@/lib/marketplace-client';
 import { formatLocationShort, isOnlineStore } from '@/lib/location-utils';
 import { detectPlatform, AFFILIATE_CONFIG } from '@/lib/external-link-utils';
-import { hasNsfwLabel } from '@/lib/content-labels';
+import { hasNsfwLabel, shouldBlurListing } from '@/lib/content-labels';
 
 export type SellerWithListings = {
     did: string;
@@ -20,6 +20,7 @@ export type SellerWithListings = {
 
 interface StoreCardProps {
     seller: SellerWithListings;
+    flaggedUris?: Set<string>;
 }
 
 // Platform badge configuration with colors and display letters
@@ -75,7 +76,7 @@ function detectSellerPlatforms(seller: SellerWithListings): string[] {
     return Array.from(platforms);
 }
 
-export default function StoreCard({ seller }: StoreCardProps) {
+export default function StoreCard({ seller, flaggedUris }: StoreCardProps) {
     const displayName = seller.displayName || seller.handle;
     const shortHandle = seller.handle.replace('.bsky.social', '');
 
@@ -210,7 +211,7 @@ export default function StoreCard({ seller }: StoreCardProps) {
                                                         fill
                                                         className="object-cover hover:opacity-80 transition-opacity cursor-pointer"
                                                     />
-                                                    {hasNsfwLabel(listing.labels) && (
+                                                    {shouldBlurListing(listing.labels, listing.uri, flaggedUris) && (
                                                         <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/10 backdrop-blur-xl">
                                                             <span className="text-white text-[8px] font-bold bg-red-500/80 px-1.5 py-0.5 rounded-full">NSFW</span>
                                                         </div>

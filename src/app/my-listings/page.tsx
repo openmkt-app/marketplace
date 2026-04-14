@@ -9,7 +9,7 @@ import ListingImageDisplay from '@/components/marketplace/ListingImageDisplay';
 import { Trash2, ExternalLink, AlertCircle, Edit } from 'lucide-react';
 import { formatPrice } from '@/lib/price-utils';
 import ConfirmationModal from '@/components/common/ConfirmationModal';
-import { hasNsfwLabel } from '@/lib/content-labels';
+import { shouldBlurListing } from '@/lib/content-labels';
 
 export default function MyListingsPage() {
   const { user, client, isLoggedIn, isLoading: authLoading } = useAuth();
@@ -23,6 +23,15 @@ export default function MyListingsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [listingToDelete, setListingToDelete] = useState<{ uri: string; title: string } | null>(null);
   const [revealedNsfw, setRevealedNsfw] = useState<Set<string>>(new Set());
+  const [flaggedUris, setFlaggedUris] = useState<Set<string>>(new Set());
+
+  // Fetch moderation flagged URIs
+  useEffect(() => {
+    fetch('/api/admin/moderate/flagged')
+      .then(res => res.json())
+      .then(data => { if (data.uris) setFlaggedUris(new Set(data.uris)); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     // Redirect if not logged in
@@ -155,7 +164,7 @@ export default function MyListingsPage() {
                   </div>
                 )}
 
-                {hasNsfwLabel(listing.labels) && !revealedNsfw.has(listing.uri) && (
+                {shouldBlurListing(listing.labels, listing.uri, flaggedUris) && !revealedNsfw.has(listing.uri) && (
                   <div
                     className="absolute inset-0 z-10 flex items-center justify-center bg-black/10 backdrop-blur-xl cursor-pointer"
                     onClick={() => setRevealedNsfw(prev => new Set(prev).add(listing.uri))}

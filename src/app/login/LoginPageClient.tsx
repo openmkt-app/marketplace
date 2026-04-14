@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -30,9 +30,11 @@ export default function LoginPageClient() {
     const router = useRouter();
 
     // Redirect if already logged in
-    if (isLoggedIn && !isLoading) {
-        router.replace('/');
-    }
+    useEffect(() => {
+        if (isLoggedIn && !isLoading) {
+            router.replace('/');
+        }
+    }, [isLoggedIn, isLoading, router]);
 
     const handleOAuthLogin = async (e: React.FormEvent) => {
         e.preventDefault();

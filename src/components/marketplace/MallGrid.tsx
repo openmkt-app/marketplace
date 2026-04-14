@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { Store, Plus, ShoppingBag } from 'lucide-react';
 import StoreCard, { SellerWithListings } from './StoreCard';
@@ -19,6 +19,15 @@ const CATEGORIES = [
 
 export default function MallGrid({ sellers }: MallGridProps) {
     const [activeCategory, setActiveCategory] = useState('all');
+    const [flaggedUris, setFlaggedUris] = useState<Set<string>>(new Set());
+
+    // Fetch moderation flagged URIs
+    useEffect(() => {
+        fetch('/api/admin/moderate/flagged')
+            .then(res => res.json())
+            .then(data => { if (data.uris) setFlaggedUris(new Set(data.uris)); })
+            .catch(() => {});
+    }, []);
 
     const filteredSellers = useMemo(() => {
         if (activeCategory === 'all') return sellers;
@@ -64,7 +73,7 @@ export default function MallGrid({ sellers }: MallGridProps) {
             {/* Grid Layout Updated to match request: gap-8, responsive cols */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-12">
                 {filteredSellers.map((seller) => (
-                    <StoreCard key={seller.did} seller={seller} />
+                    <StoreCard key={seller.did} seller={seller} flaggedUris={flaggedUris} />
                 ))}
 
                 {/* Call to Action Card - Updated Design */}

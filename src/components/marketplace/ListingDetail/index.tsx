@@ -31,7 +31,7 @@ import {
 import { isOnlineStore, formatLocationShort } from '@/lib/location-utils';
 import { getPlatformDisplayName } from '@/lib/external-link-utils';
 import { trackListingView, trackInterest } from '@/lib/analytics';
-import { hasNsfwLabel } from '@/lib/content-labels';
+import { hasNsfwLabel, shouldBlurListing } from '@/lib/content-labels';
 
 interface ListingDetailProps {
   listing: MarketplaceListing & {
@@ -82,8 +82,22 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
   const [reportDescription, setReportDescription] = useState('');
 
   // NSFW blur state
-  const isNsfw = hasNsfwLabel(listing.labels);
+  const [isModFlagged, setIsModFlagged] = useState(false);
+  const [isTogglingFlag, setIsTogglingFlag] = useState(false);
+  const isNsfw = shouldBlurListing(listing.labels, listing.uri, isModFlagged ? new Set([listing.uri!]) : new Set());
   const [nsfwRevealed, setNsfwRevealed] = useState(false);
+
+  // Admin check
+  const isAdmin = user?.handle === 'openmkt.app';
+
+  // Fetch moderation status on mount
+  React.useEffect(() => {
+    if (!listing.uri) return;
+    fetch(`/api/admin/moderate?uri=${encodeURIComponent(listing.uri)}`)
+      .then(res => res.json())
+      .then(data => { if (data.flagged) setIsModFlagged(true); })
+      .catch(() => {});
+  }, [listing.uri]);
 
   // Check if this is the user's own listing
   const isOwnListing = user?.did && listing.authorDid && user.did === listing.authorDid;
@@ -704,6 +718,48 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
               Report this listing
             </button>
           </div>
+
+          {/* Admin Moderation */}
+          {isAdmin && (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <button
+                onClick={async () => {
+                  if (!listing.uri) return;
+                  setIsTogglingFlag(true);
+                  try {
+                    const action = isModFlagged ? 'unflag' : 'flag';
+                    const res = await fetch('/api/admin/moderate', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ uri: listing.uri, action, handle: user?.handle })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                      setIsModFlagged(data.flagged);
+                      if (data.flagged) setNsfwRevealed(false);
+                    }
+                  } catch (e) {
+                    console.error('Moderation error:', e);
+                  } finally {
+                    setIsTogglingFlag(false);
+                  }
+                }}
+                disabled={isTogglingFlag}
+                className={`text-xs font-medium flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors ${
+                  isModFlagged
+                    ? 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
+                    : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
+                } disabled:opacity-50`}
+              >
+                {isTogglingFlag ? (
+                  <span className="inline-block h-3 w-3 border-2 border-current border-r-transparent rounded-full animate-spin" />
+                ) : (
+                  <ShieldCheck size={14} />
+                )}
+                {isModFlagged ? 'Remove NSFW Flag' : 'Flag as NSFW (Admin)'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

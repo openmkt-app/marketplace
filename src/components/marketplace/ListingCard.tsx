@@ -14,7 +14,7 @@ import { isOnlineStore } from '@/lib/location-utils';
 import { extractSubcategoryFromDescription, getCategoryName } from '@/lib/category-utils';
 import { generateAvatarUrl } from '@/lib/image-utils';
 import { getSellerDisplayName } from '@/lib/chat-utils';
-import { hasNsfwLabel } from '@/lib/content-labels';
+import { shouldBlurListing } from '@/lib/content-labels';
 
 interface ListingCardProps {
   listing: MarketplaceListing & {
@@ -25,11 +25,12 @@ interface ListingCardProps {
     authorAvatarCid?: string;
   };
   showDebug?: boolean;
+  flaggedUris?: Set<string>;
 }
 
-const ListingCard = React.memo(({ listing, showDebug = false }: ListingCardProps) => {
+const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris }: ListingCardProps) => {
   // NSFW blur state
-  const isNsfw = hasNsfwLabel(listing.labels);
+  const isNsfw = shouldBlurListing(listing.labels, listing.uri, flaggedUris);
   const [blurDismissed, setBlurDismissed] = useState(false);
 
   // Get clean description

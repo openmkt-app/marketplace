@@ -442,6 +442,15 @@ const BrowsePageClient = () => {
   const [filteredListings, setFilteredListings] = useState<MarketplaceListing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [flaggedUris, setFlaggedUris] = useState<Set<string>>(new Set());
+
+  // Fetch moderation flagged URIs
+  useEffect(() => {
+    fetch('/api/admin/moderate/flagged')
+      .then(res => res.json())
+      .then(data => { if (data.uris) setFlaggedUris(new Set(data.uris)); })
+      .catch(() => {});
+  }, []);
 
   // Listing type filter: 'all' | 'community' | 'online'
   const [listingTypeFilter, setListingTypeFilter] = useState<'all' | 'community' | 'online'>('all');
@@ -1086,6 +1095,7 @@ const BrowsePageClient = () => {
                         authorDid: listing.authorDid || auth.user?.did || 'did:plc:oyhgprn7edb3dpdaq4mlgfkv'
                       }}
                       showDebug={debugMode}
+                      flaggedUris={flaggedUris}
                     />
                   </div>
                 ))}

@@ -37,3 +37,15 @@ export function hasNsfwLabel(labels: any): boolean {
 
   return false;
 }
+
+/**
+ * Check if a listing should be blurred — either by self-labels OR by admin moderation.
+ * @param labels  The listing's ATProto labels object
+ * @param uri     The listing URI
+ * @param flaggedUris  Set of URIs flagged by admin moderation
+ */
+export function shouldBlurListing(labels: any, uri?: string, flaggedUris?: Set<string>): boolean {
+  if (hasNsfwLabel(labels)) return true;
+  if (uri && flaggedUris && flaggedUris.has(uri)) return true;
+  return false;
+}

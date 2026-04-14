@@ -36,6 +36,15 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'store' | 'local'>('store');
+  const [flaggedUris, setFlaggedUris] = useState<Set<string>>(new Set());
+
+  // Fetch moderation flagged URIs
+  useEffect(() => {
+    fetch('/api/admin/moderate/flagged')
+      .then(res => res.json())
+      .then(data => { if (data.uris) setFlaggedUris(new Set(data.uris)); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     async function fetchStoreData() {
@@ -380,7 +389,7 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {displayListings.map((listing) => (
-                    <ListingCard key={listing.uri} listing={listing} />
+                    <ListingCard key={listing.uri} listing={listing} flaggedUris={flaggedUris} />
                   ))}
                 </div>
               )}
