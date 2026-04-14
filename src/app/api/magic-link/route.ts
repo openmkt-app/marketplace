@@ -227,36 +227,67 @@ export async function GET(request: NextRequest) {
             try {
                 const json = JSON.parse(match[1]);
                 const data = Array.isArray(json) ? json : [json];
-                const product = data.find((item: any) =>
-                    item['@type'] === 'Product' || item['@type'] === 'http://schema.org/Product'
-                );
+                let products: any[] = [];
+                const targetVariant = targetUrl.searchParams.get('variant');
 
-                if (product) {
-                    if (Array.isArray(product.image)) {
-                        product.image.forEach((img: any) => {
-                            const url = typeof img === 'string' ? img : (img.url || img.contentUrl);
+                data.forEach((item: any) => {
+                    if (item['@type'] === 'Product' || item['@type'] === 'http://schema.org/Product') {
+                        if (targetVariant) {
+                            if ((item['@id'] && item['@id'].includes(`variant=${targetVariant}`)) ||
+                                (item.offers && item.offers.url && item.offers.url.includes(`variant=${targetVariant}`))) {
+                                products.push(item);
+                            }
+                        } else {
+                            products.push(item);
+                        }
+                    } else if (item['@type'] === 'ProductGroup' || item['@type'] === 'http://schema.org/ProductGroup') {
+                        if (targetVariant) {
+                            if (Array.isArray(item.hasVariant)) {
+                                const variant = item.hasVariant.find((v: any) => 
+                                    (v['@id'] && v['@id'].includes(`variant=${targetVariant}`)) ||
+                                    (v.offers && v.offers.url && v.offers.url.includes(`variant=${targetVariant}`))
+                                );
+                                if (variant) products.push(variant);
+                            }
+                        } else {
+                            products.push(item);
+                            if (Array.isArray(item.hasVariant)) {
+                                products.push(...item.hasVariant);
+                            }
+                        }
+                    }
+                });
+
+                if (products.length > 0) {
+                    products.forEach(product => {
+                        if (Array.isArray(product.image)) {
+                            product.image.forEach((img: any) => {
+                                const url = typeof img === 'string' ? img : (img.url || img.contentUrl);
+                                if (url) images.add(url);
+                            });
+                        } else if (typeof product.image === 'string') {
+                            images.add(product.image);
+                        } else if (typeof product.image === 'object' && product.image !== null) {
+                            const url = product.image.url || product.image.contentUrl;
                             if (url) images.add(url);
-                        });
-                        if (!image && images.size > 0) image = Array.from(images)[0];
-                    } else if (typeof product.image === 'string') {
-                        images.add(product.image);
-                        if (!image) image = product.image;
-                    } else if (typeof product.image === 'object' && product.image !== null) {
-                        const url = product.image.url || product.image.contentUrl;
-                        if (url) {
-                            images.add(url);
-                            if (!image) image = url;
                         }
-                    }
+                    });
+                    
+                    if (!image && images.size > 0) image = Array.from(images)[0];
 
-                    if (!price && product.offers) {
-                        const offers = Array.isArray(product.offers) ? product.offers : [product.offers];
-                        const offer = offers[0];
-                        if (offer) {
-                            price = offer.price || offer.highPrice || offer.lowPrice;
+                    if (!price) {
+                        // Find first valid price among all products/variants
+                        for (const product of products) {
+                            if (product.offers) {
+                                const offers = Array.isArray(product.offers) ? product.offers : [product.offers];
+                                const offer = offers[0];
+                                if (offer && (offer.price || offer.highPrice || offer.lowPrice)) {
+                                    price = offer.price || offer.highPrice || offer.lowPrice;
+                                    break;
+                                }
+                            }
                         }
                     }
-                    break;
                 }
             } catch (e) { /* ignore */ }
         }
