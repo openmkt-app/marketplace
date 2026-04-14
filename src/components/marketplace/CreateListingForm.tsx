@@ -1025,54 +1025,52 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
             )}
 
             <form id="listing-form" onSubmit={handleSubmit} className="space-y-8">
-              {/* Magic Link Section (Hidden unless ?ml=true) */}
-              {searchParams.get('ml') === 'true' && (
-                <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-2xl p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="p-1.5 bg-indigo-100 rounded-lg text-indigo-600">
-                      <Wand2 size={18} />
-                    </div>
-                    <h3 className="font-bold text-indigo-900">Magic Import</h3>
-                    <span className="bg-indigo-600 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-full tracking-wide">Beta</span>
+              {/* Magic Link Section */}
+              <div className="bg-gradient-to-r from-amber-100 to-yellow-100 border-2 border-amber-300 rounded-2xl p-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1.5 bg-amber-200 rounded-lg text-amber-700">
+                    <Wand2 size={18} />
                   </div>
-                  <p className="text-sm text-indigo-700/80 mb-4">
-                    Paste a link from Amazon, Shopify, or other stores to auto-fill details.
-                  </p>
-
-                  <div className="flex gap-2">
-                    <input
-                      type="url"
-                      placeholder="https://amazon.com/dp/..."
-                      value={magicLinkUrl}
-                      onChange={(e) => setMagicLinkUrl(e.target.value)}
-                      className="flex-1 rounded-xl border-indigo-200 focus:border-indigo-500 focus:ring-indigo-500 bg-white"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleMagicFill}
-                      disabled={isMagicLoading || !magicLinkUrl}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
-                    >
-                      {isMagicLoading ? (
-                        <>
-                          <Loader2 size={16} className="animate-spin" />
-                          Fetching...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles size={16} />
-                          Auto-Fill
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  {magicError && (
-                    <p className="text-red-600 text-sm mt-2 flex items-center gap-1">
-                      ⚠️ {magicError}
-                    </p>
-                  )}
+                  <h3 className="font-bold text-gray-900">Magic Import</h3>
+                  <span className="bg-amber-600 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-full tracking-wide">Beta</span>
                 </div>
-              )}
+                <p className="text-sm text-gray-600 mb-4">
+                  Paste a link from Amazon, Shopify, or other stores to auto-fill details.
+                </p>
+
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    placeholder="https://amazon.com/dp/..."
+                    value={magicLinkUrl}
+                    onChange={(e) => setMagicLinkUrl(e.target.value)}
+                    className="flex-1 rounded-xl border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white text-gray-900 placeholder-gray-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleMagicFill}
+                    disabled={isMagicLoading || !magicLinkUrl}
+                    className="bg-gray-900 hover:bg-gray-800 text-amber-300 px-5 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap shadow-sm"
+                  >
+                    {isMagicLoading ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        Fetching...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={16} />
+                        Auto-Fill
+                      </>
+                    )}
+                  </button>
+                </div>
+                {magicError && (
+                  <p className="text-red-600 text-sm mt-2 flex items-center gap-1">
+                    ⚠️ {magicError}
+                  </p>
+                )}
+              </div>
               {/* Photos Section */}
 
               {/* Error Message */}
