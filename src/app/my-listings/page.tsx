@@ -9,6 +9,7 @@ import ListingImageDisplay from '@/components/marketplace/ListingImageDisplay';
 import { Trash2, ExternalLink, AlertCircle, Edit } from 'lucide-react';
 import { formatPrice } from '@/lib/price-utils';
 import ConfirmationModal from '@/components/common/ConfirmationModal';
+import { hasNsfwLabel } from '@/lib/content-labels';
 
 export default function MyListingsPage() {
   const { user, client, isLoggedIn, isLoading: authLoading } = useAuth();
@@ -21,6 +22,7 @@ export default function MyListingsPage() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [listingToDelete, setListingToDelete] = useState<{ uri: string; title: string } | null>(null);
+  const [revealedNsfw, setRevealedNsfw] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     // Redirect if not logged in
@@ -150,6 +152,17 @@ export default function MyListingsPage() {
                   <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-md font-medium flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-yellow-400"></span>
                     Hidden from Friends
+                  </div>
+                )}
+
+                {hasNsfwLabel(listing.labels) && !revealedNsfw.has(listing.uri) && (
+                  <div
+                    className="absolute inset-0 z-10 flex items-center justify-center bg-black/10 backdrop-blur-xl cursor-pointer"
+                    onClick={() => setRevealedNsfw(prev => new Set(prev).add(listing.uri))}
+                  >
+                    <span className="text-white text-xs font-bold bg-red-500/80 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg">
+                      NSFW — Click to reveal
+                    </span>
                   </div>
                 )}
               </div>

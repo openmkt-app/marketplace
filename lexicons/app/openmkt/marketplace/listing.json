@@ -24,7 +24,11 @@
           },
           "location": { "type": "ref", "ref": "#locationObj" },
           "metadata": { "type": "ref", "ref": "#metadataObj" },
-          "externalUrl": { "type": "string", "maxLength": 2000, "description": "Optional external URL for purchasing the item (e.g., Amazon, eBay link)" }
+          "externalUrl": { "type": "string", "maxLength": 2000, "description": "Optional external URL for purchasing the item (e.g., Amazon, eBay link)" },
+          "labels": {
+            "type": "union",
+            "refs": ["com.atproto.label.defs#selfLabels"]
+          }
         }
       }
     },

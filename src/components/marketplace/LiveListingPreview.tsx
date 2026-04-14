@@ -17,6 +17,7 @@ interface LiveListingPreviewProps {
         state: string;
     };
     imageUrls: string[];
+    isNsfw?: boolean;
 }
 
 const LiveListingPreview = ({
@@ -27,7 +28,8 @@ const LiveListingPreview = ({
     condition,
     location,
     imageUrls,
-    currency
+    currency,
+    isNsfw
 }: LiveListingPreviewProps) => {
 
     const displayPrice = formatPrice(price, currency);
@@ -70,6 +72,15 @@ const LiveListingPreview = ({
                                     {condition ? formatConditionForDisplay(condition) : 'Condition'}
                                 </span>
                             </div>
+
+                            {/* NSFW Preview Overlay */}
+                            {isNsfw && (
+                              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/10 backdrop-blur-xl">
+                                <span className="text-white text-xs font-bold bg-red-500/80 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg">
+                                  NSFW Content
+                                </span>
+                              </div>
+                            )}
                         </div>
 
                         {/* Content Area */}

@@ -19,5 +19,6 @@ export function formatConditionForDisplay(condition: string): string {
     'poor': 'Poor' // Include for backward compatibility but should not be used
   };
 
+  if (!condition) return 'N/A';
   return conditionMap[condition] || condition.charAt(0).toUpperCase() + condition.slice(1);
 } 

@@ -4,6 +4,7 @@ import { ShoppingBag, Globe, MapPin } from 'lucide-react';
 import { MarketplaceListing } from '@/lib/marketplace-client';
 import { formatLocationShort, isOnlineStore } from '@/lib/location-utils';
 import { detectPlatform, AFFILIATE_CONFIG } from '@/lib/external-link-utils';
+import { hasNsfwLabel } from '@/lib/content-labels';
 
 export type SellerWithListings = {
     did: string;
@@ -202,12 +203,19 @@ export default function StoreCard({ seller }: StoreCardProps) {
                                     return (
                                         <div key={`${listing.uri}-${idx}`} className="aspect-square rounded-lg bg-gray-100 overflow-hidden relative group/item">
                                             {thumbnail ? (
-                                                <Image
-                                                    src={thumbnail}
-                                                    alt={listing.title}
-                                                    fill
-                                                    className="object-cover hover:opacity-80 transition-opacity cursor-pointer"
-                                                />
+                                                <>
+                                                    <Image
+                                                        src={thumbnail}
+                                                        alt={listing.title}
+                                                        fill
+                                                        className="object-cover hover:opacity-80 transition-opacity cursor-pointer"
+                                                    />
+                                                    {hasNsfwLabel(listing.labels) && (
+                                                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/10 backdrop-blur-xl">
+                                                            <span className="text-white text-[8px] font-bold bg-red-500/80 px-1.5 py-0.5 rounded-full">NSFW</span>
+                                                        </div>
+                                                    )}
+                                                </>
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center">
                                                     <ShoppingBag size={14} className="text-slate-300" />

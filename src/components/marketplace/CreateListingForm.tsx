@@ -40,6 +40,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [hideFromFriends, setHideFromFriends] = useState(false);
+  const [isNsfw, setIsNsfw] = useState(false);
   const [postToBluesky, setPostToBluesky] = useState(true);
 
   // Bot Following State
@@ -214,6 +215,10 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       setCondition(initialData.condition);
       setSelectedCategory(initialData.category);
       setHideFromFriends(initialData.hideFromFriends || false);
+      const hasNsfwLabel = initialData.labels?.values?.some((l: any) => 
+        ['nsfw', 'porn', 'sexual', 'nudity', 'graphic-media'].includes(l.val)
+      ) || false;
+      setIsNsfw(hasNsfwLabel);
 
       // Handle External URL
       if (initialData.externalUrl) {
@@ -884,6 +889,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         condition: formData.get('condition') as string,
         images: images as any, // The client handles mixed types now
         hideFromFriends: hideFromFriends,
+        isNsfw: isNsfw,
         metadata: metadata,
         ...(processedExternalUrl && { externalUrl: processedExternalUrl })
       };
@@ -1519,6 +1525,26 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                     <div className="relative w-11 h-6 bg-neutral-light peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-color"></div>
                   </label>
                 </div>
+
+                <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-100">
+                  <div>
+                    <span className="font-medium text-text-secondary items-center flex gap-2">
+                      Mark as NSFW
+                    </span>
+                    <p className="text-sm text-text-secondary max-w-[85%]">
+                      Label this listing as containing graphic, sexual, or mature content. The images will be explicitly blurred for viewers until clicked.
+                    </p>
+                  </div>
+                  <label className="inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={isNsfw}
+                      onChange={() => setIsNsfw(!isNsfw)}
+                    />
+                    <div className="relative w-11 h-6 bg-neutral-light peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
+                  </label>
+                </div>
               </div>
 
               {/* Post to Bluesky Checkbox (Create Mode Only) */}
@@ -1578,6 +1604,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
               state: locationState
             }}
             imageUrls={previewUrls}
+            isNsfw={isNsfw}
           />
         </div>
       </div>

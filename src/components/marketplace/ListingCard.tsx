@@ -1,7 +1,7 @@
 // src/components/marketplace/ListingCard.tsx
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { MapPin, ShoppingCart, Globe } from 'lucide-react';
@@ -14,6 +14,7 @@ import { isOnlineStore } from '@/lib/location-utils';
 import { extractSubcategoryFromDescription, getCategoryName } from '@/lib/category-utils';
 import { generateAvatarUrl } from '@/lib/image-utils';
 import { getSellerDisplayName } from '@/lib/chat-utils';
+import { hasNsfwLabel } from '@/lib/content-labels';
 
 interface ListingCardProps {
   listing: MarketplaceListing & {
@@ -27,6 +28,10 @@ interface ListingCardProps {
 }
 
 const ListingCard = React.memo(({ listing, showDebug = false }: ListingCardProps) => {
+  // NSFW blur state
+  const isNsfw = hasNsfwLabel(listing.labels);
+  const [blurDismissed, setBlurDismissed] = useState(false);
+
   // Get clean description
   const { cleanDescription } = extractSubcategoryFromDescription(listing.description);
 
@@ -91,6 +96,22 @@ const ListingCard = React.memo(({ listing, showDebug = false }: ListingCardProps
             Quick View
           </span>
         </div>
+
+        {/* NSFW Blur Overlay */}
+        {isNsfw && !blurDismissed && (
+          <div
+            className="absolute inset-0 z-30 flex flex-col items-center justify-center cursor-pointer bg-black/10 backdrop-blur-xl"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setBlurDismissed(true);
+            }}
+          >
+            <span className="text-white text-xs font-bold bg-red-500/80 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg">
+              NSFW — Click to reveal
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Content */}

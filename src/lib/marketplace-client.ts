@@ -65,6 +65,9 @@ export type MarketplaceListing = {
   lastViewed?: string;
   // Added for privacy
   hideFromFriends?: boolean;
+  // Content moderation
+  labels?: any;
+  isNsfw?: boolean;
 };
 
 export type CreateListingParams = Omit<MarketplaceListing, 'createdAt'>;
@@ -506,9 +509,15 @@ export class MarketplaceClient {
         hideFromFriends: listingDataWithoutImages.hideFromFriends || false
       });
 
+      // Construct labels if NSFW is checked
+      const labels = listingDataWithoutImages.isNsfw ? {
+        $type: 'com.atproto.label.defs#selfLabels',
+        values: [{ val: 'nsfw' }]
+      } : undefined;
+
       // Construct the record with ONLY the fields defined in the lexicon
       // This prevents 'authorHandle' or other hydrated fields from polluting the PDS record
-      const recordToCreate = {
+      const recordToCreate: Record<string, any> = {
         title: listingDataWithoutImages.title,
         price: listingDataWithoutImages.price,
         currency: listingDataWithoutImages.currency,
@@ -523,6 +532,10 @@ export class MarketplaceClient {
         externalUrl: listingDataWithoutImages.externalUrl,
         $type: MARKETPLACE_COLLECTION
       };
+
+      if (labels) {
+        recordToCreate.labels = labels;
+      }
 
       const result = await this.agent.api.com.atproto.repo.createRecord({
         repo: this.agent.session.did,
@@ -659,8 +672,14 @@ export class MarketplaceClient {
         }
       });
 
+      // Construct labels if NSFW is checked
+      const labels = listingDataWithoutImages.isNsfw ? {
+        $type: 'com.atproto.label.defs#selfLabels',
+        values: [{ val: 'nsfw' }]
+      } : undefined;
+
       // Construct the record with ONLY the fields defined in the lexicon
-      const recordToUpdate = {
+      const recordToUpdate: Record<string, any> = {
         title: listingDataWithoutImages.title,
         price: listingDataWithoutImages.price,
         currency: listingDataWithoutImages.currency,
@@ -675,6 +694,10 @@ export class MarketplaceClient {
         externalUrl: listingDataWithoutImages.externalUrl,
         $type: MARKETPLACE_COLLECTION
       };
+
+      if (labels) {
+        recordToUpdate.labels = labels;
+      }
 
       // Use putRecord to overwrite
       await this.agent.api.com.atproto.repo.putRecord({

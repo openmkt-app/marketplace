@@ -31,6 +31,7 @@ import {
 import { isOnlineStore, formatLocationShort } from '@/lib/location-utils';
 import { getPlatformDisplayName } from '@/lib/external-link-utils';
 import { trackListingView, trackInterest } from '@/lib/analytics';
+import { hasNsfwLabel } from '@/lib/content-labels';
 
 interface ListingDetailProps {
   listing: MarketplaceListing & {
@@ -79,6 +80,10 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const [reportReason, setReportReason] = useState('Spam');
   const [reportDescription, setReportDescription] = useState('');
+
+  // NSFW blur state
+  const isNsfw = hasNsfwLabel(listing.labels);
+  const [nsfwRevealed, setNsfwRevealed] = useState(false);
 
   // Check if this is the user's own listing
   const isOwnListing = user?.did && listing.authorDid && user.did === listing.authorDid;
@@ -308,10 +313,28 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
       <div className="lg:col-span-3 space-y-6">
         {/* Image Gallery */}
         {hasFormattedImages ? (
-          <ListingImageGallery
-            images={listing.formattedImages!}
-            title={listing.title}
-          />
+          <div className="relative">
+            <ListingImageGallery
+              images={listing.formattedImages!}
+              title={listing.title}
+            />
+            {/* NSFW Blur Overlay */}
+            {isNsfw && !nsfwRevealed && (
+              <div
+                className="absolute inset-0 z-30 flex flex-col items-center justify-center cursor-pointer bg-black/10 backdrop-blur-2xl rounded-xl"
+                onClick={() => setNsfwRevealed(true)}
+              >
+                <div className="flex flex-col items-center gap-3">
+                  <span className="text-white text-sm font-bold bg-red-500/80 backdrop-blur-sm px-5 py-2.5 rounded-full shadow-lg">
+                    NSFW Content
+                  </span>
+                  <span className="text-white/70 text-xs">
+                    Click to reveal
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="w-full h-[400px] bg-gray-100 flex items-center justify-center">
