@@ -197,24 +197,69 @@ export async function GET(request: NextRequest) {
         let image = imageMatches[0];
         let price = getMetaContent('price:amount') || getMetaContent('amount');
 
-        // Amazon Image Logic
-        if ((!image || image.includes('amazon_logo')) && (targetUrl.hostname.includes('amazon') || targetUrl.hostname.includes('amzn'))) {
-            const oldHiresRegex = /data-old-hires=["']([^"']+)["']/i;
-            const oldHiresMatch = html.match(oldHiresRegex);
-            if (oldHiresMatch && oldHiresMatch[1]) image = oldHiresMatch[1];
-            else {
-                const dynImgRegex = /data-a-dynamic-image=["']([^"']+)["']/i;
-                const dynImgMatch = html.match(dynImgRegex);
-                if (dynImgMatch && dynImgMatch[1]) {
+        // Amazon Image Logic — extract full product gallery (incl. hidden images)
+        if (targetUrl.hostname.includes('amazon') || targetUrl.hostname.includes('amzn')) {
+            // Strategy 1: colorImages JS variable — contains ALL product images including hidden ones
+            const colorImagesIdx = html.indexOf("'colorImages'");
+            if (colorImagesIdx !== -1) {
+                const blockStart = html.indexOf('[', colorImagesIdx);
+                if (blockStart !== -1) {
+                    // Walk the array to find its end
+                    let depth = 0, i = blockStart, inStr = false, escape = false;
+                    for (; i < html.length; i++) {
+                        const ch = html[i];
+                        if (escape) { escape = false; continue; }
+                        if (ch === '\\') { escape = true; continue; }
+                        if (ch === '"' && !inStr) inStr = true;
+                        else if (ch === '"' && inStr) inStr = false;
+                        if (!inStr) {
+                            if (ch === '[') depth++;
+                            if (ch === ']') { depth--; if (depth === 0) break; }
+                        }
+                    }
                     try {
-                        const decodedJson = decodeHtml(dynImgMatch[1]);
-                        if (decodedJson) {
-                            const json = JSON.parse(decodedJson);
-                            const urls = Object.keys(json);
-                            if (urls.length > 0) image = urls[0];
+                        const arr = JSON.parse(html.substring(blockStart, i + 1)) as { hiRes?: string; large?: string }[];
+                        arr.forEach(item => {
+                            const url = item.hiRes || item.large;
+                            if (url) images.add(url);
+                        });
+                    } catch (e) { /* ignore */ }
+                }
+            }
+
+            // Strategy 2 (fallback): data-old-hires — only on visible gallery items
+            if (images.size === 0) {
+                const oldHiresRegex = /data-old-hires=["']([^"']+)["']/gi;
+                let hiresMatch;
+                while ((hiresMatch = oldHiresRegex.exec(html)) !== null) {
+                    if (hiresMatch[1]) images.add(hiresMatch[1]);
+                }
+            }
+
+            // Strategy 3 (last resort): data-a-dynamic-image, m.media-amazon.com only
+            if (images.size === 0) {
+                const dynImgRegex = /data-a-dynamic-image=["']([^"']+)["']/gi;
+                let extMatch;
+                while ((extMatch = dynImgRegex.exec(html)) !== null) {
+                    try {
+                        const decodedJson = decodeHtml(extMatch[1]);
+                        if (decodedJson && decodedJson.startsWith('{')) {
+                            const json = JSON.parse(decodedJson) as Record<string, number[]>;
+                            const urls = Object.keys(json).filter(u => u.includes('m.media-amazon.com/images/I/'));
+                            if (urls.length > 0) {
+                                urls.sort((a,b) => (json[b][0] || 0) - (json[a][0] || 0));
+                                let bigImage = urls[0];
+                                bigImage = bigImage.replace(/\._[A-Za-z0-9_,]+_\./, '.');
+                                images.add(bigImage);
+                            }
                         }
                     } catch (e) { /* ignore */ }
                 }
+            }
+
+            // Update the primary image if needed
+            if (images.size > 0 && (!image || image.includes('amazon_logo') || image.includes('_.jpg'))) {
+                image = Array.from(images)[0];
             }
         }
 
