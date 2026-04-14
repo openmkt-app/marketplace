@@ -8,6 +8,7 @@ export type ListingData = {
   title: string;
   description: string;
   price: string;
+  currency?: string;
   images?: Array<{
     ref: { $link: string };
     mimeType: string;
@@ -150,6 +151,7 @@ export async function fetchListingById(id: string): Promise<ListingData | null> 
       title: value.title || 'Untitled Listing',
       description: value.description || '',
       price: value.price || '',
+      currency: value.currency,
       images: value.images,
       location: value.location || { state: '', county: '', locality: '' },
       category: value.category || '',

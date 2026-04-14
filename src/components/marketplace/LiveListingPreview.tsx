@@ -3,10 +3,12 @@ import Image from 'next/image';
 import { MapPin } from 'lucide-react';
 import { formatConditionForDisplay } from '@/lib/condition-utils';
 import { getCategoryName } from '@/lib/category-utils';
+import { formatPrice } from '@/lib/price-utils';
 
 interface LiveListingPreviewProps {
     title: string;
     price: string;
+    currency?: string;
     description: string;
     category: string;
     condition: string;
@@ -24,25 +26,11 @@ const LiveListingPreview = ({
     category,
     condition,
     location,
-    imageUrls
+    imageUrls,
+    currency
 }: LiveListingPreviewProps) => {
-    // Format price display with commas
-    const formatPrice = (priceStr: string) => {
-        if (!priceStr) return '$0.00';
-        // Remove any existing non-numeric chars except decimal
-        const cleanPrice = priceStr.replace(/[^0-9.]/g, '');
-        const numberVal = parseFloat(cleanPrice);
-        if (isNaN(numberVal)) return '$0.00';
 
-        if (numberVal === 0) return 'Free';
-
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-        }).format(numberVal);
-    };
-
-    const displayPrice = formatPrice(price);
+    const displayPrice = formatPrice(price, currency);
 
     // Format date (always today for preview)
     const today = new Date().toLocaleDateString();

@@ -1,42 +1,71 @@
 // src/lib/price-utils.ts
 // Utility functions for handling price values throughout the application
 
-const currencyFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+export const CURRENCIES = [
+  // Most popular / commonly used at the top
+  'USD', 'EUR', 'GBP', 'JPY', 'BRL', 'CAD', 'AUD', 'CHF', 'CNY', 'INR',
+  // Alphabetical list of other common/standard ISO 4217 codes
+  'AED', 'AFN', 'ALL', 'AMD', 'ANG', 'AOA', 'ARS', 'AWG', 'AZN', 'BAM', 
+  'BBD', 'BDT', 'BGN', 'BHD', 'BIF', 'BMD', 'BND', 'BOB', 'BOV', 'BSD', 
+  'BTN', 'BWP', 'BYN', 'BZD', 'CDF', 'CHE', 'CHW', 'CLF', 'CLP', 'COP', 
+  'COU', 'CRC', 'CUC', 'CUP', 'CVE', 'CZK', 'DJF', 'DKK', 'DOP', 'DZD', 
+  'EGP', 'ERN', 'ETB', 'FJD', 'FKP', 'GEL', 'GHS', 'GIP', 'GMD', 'GNF', 
+  'GTQ', 'GYD', 'HKD', 'HNL', 'HRK', 'HTG', 'HUF', 'IDR', 'ILS', 'IQD', 
+  'IRR', 'ISK', 'JMD', 'JOD', 'KES', 'KGS', 'KHR', 'KMF', 'KPW', 'KRW', 
+  'KWD', 'KYD', 'KZT', 'LAK', 'LBP', 'LKR', 'LRD', 'LSL', 'LYD', 'MAD', 
+  'MDL', 'MGA', 'MKD', 'MMK', 'MNT', 'MOP', 'MRU', 'MUR', 'MVR', 'MWK', 
+  'MXN', 'MXV', 'MYR', 'MZN', 'NAD', 'NGN', 'NIO', 'NOK', 'NPR', 'NZD', 
+  'OMR', 'PAB', 'PEN', 'PGK', 'PHP', 'PKR', 'PLN', 'PYG', 'QAR', 'RON', 
+  'RSD', 'RUB', 'RWF', 'SAR', 'SBD', 'SCR', 'SDG', 'SEK', 'SGD', 'SHP', 
+  'SLL', 'SOS', 'SRD', 'SSP', 'STN', 'SVC', 'SYP', 'SZL', 'THB', 'TJS', 
+  'TMT', 'TND', 'TOP', 'TRY', 'TTD', 'TWD', 'TZS', 'UAH', 'UGX', 'USN', 
+  'UYI', 'UYU', 'UZS', 'VEF', 'VND', 'VUV', 'WST', 'XAF', 'XCD', 'XOF', 
+  'XPF', 'YER', 'ZAR', 'ZMW', 'ZWL'
+];
 
 /**
- * Formats a price string with thousands separators
- * @param price The price string (with or without dollar sign)
- * @returns Formatted price string with dollar sign and thousands separators (e.g., "$10,000.00")
+ * Formats a price string with proper currency symbols and thousands separators
+ * @param price The price string (with or without currency symbols)
+ * @param currencyCode The ISO 4217 currency code (defaults to 'USD')
+ * @returns Formatted price string with currency symbol and thousands separators
  */
-export function formatPrice(price: string): string {
-  // Remove any existing dollar sign and commas, then parse
-  const cleanPrice = price.replace(/[$,]/g, '');
+export function formatPrice(price: string, currencyCode: string = 'USD'): string {
+  // Remove any non-numeric characters except dots and minus signs
+  const cleanPrice = price.replace(/[^\d.-]/g, '');
   const numericValue = parseFloat(cleanPrice);
 
-  if (isNaN(numericValue)) {
-    return price.startsWith('$') ? price : `$${price}`;
-  }
+  if (isNaN(numericValue)) return price;
 
   // Check for zero price (Free)
   if (numericValue === 0) {
     return 'Free';
   }
 
-  return currencyFormatter.format(numericValue);
+  const formatter = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currencyCode,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  return formatter.format(numericValue);
 }
 
 /**
  * Formats a numeric price value to a currency string with thousands separators
  * @param value The numeric price value
- * @returns Formatted price string with dollar sign, thousands separators, and 2 decimal places
+ * @param currencyCode The ISO 4217 currency code (defaults to 'USD')
+ * @returns Formatted price string with currency symbol, thousands separators, and 2 decimal places
  */
-export function formatNumericPrice(value: number): string {
-  return currencyFormatter.format(value);
+export function formatNumericPrice(value: number, currencyCode: string = 'USD'): string {
+  const formatter = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currencyCode,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  return formatter.format(value);
 }
 
 /**

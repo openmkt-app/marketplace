@@ -1159,7 +1159,7 @@ const BrowsePageClient = () => {
                               </h2>
                             </div>
                             <span className="text-2xl font-bold text-slate-900 flex-shrink-0 ml-4">
-                              {formatPrice(listing.price)}
+                              {formatPrice(listing.price, listing.currency)}
                             </span>
                           </div>
 

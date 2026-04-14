@@ -161,7 +161,7 @@ export default function MyListingsPage() {
                     {listing.title}
                   </h3>
                   <span className="font-bold text-gray-900 bg-gray-50 px-2 py-1 rounded-lg text-sm whitespace-nowrap">
-                    {formatPrice(listing.price)}
+                    {formatPrice(listing.price, listing.currency)}
                   </span>
                 </div>
 

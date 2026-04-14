@@ -105,7 +105,7 @@ const ListingCard = React.memo(({ listing, showDebug = false }: ListingCardProps
         </h3>
 
         <p className="text-xl font-bold text-slate-900 mb-2">
-          {formatPrice(listing.price)}
+          {formatPrice(listing.price, listing.currency)}
         </p>
 
         <p className="text-sm text-slate-500 line-clamp-2 mb-4 flex-grow">

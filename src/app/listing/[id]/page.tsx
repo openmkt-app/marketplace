@@ -55,7 +55,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     other: {
       'product:price:amount': listing.price.replace(/[^0-9.]/g, ''),
-      'product:price:currency': 'USD',
+      'product:price:currency': listing.currency || 'USD',
       ...(locationStr && { 'product:availability': 'in stock' }),
     },
   };
@@ -75,7 +75,7 @@ function generateJsonLd(listing: NonNullable<Awaited<ReturnType<typeof fetchList
     offers: {
       '@type': 'Offer',
       price: priceValue || '0',
-      priceCurrency: 'USD',
+      priceCurrency: listing.currency || 'USD',
       availability: 'https://schema.org/InStock',
       itemCondition: getSchemaCondition(listing.condition),
       seller: {

@@ -364,7 +364,7 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
 
           {/* Title and Price */}
           <h1 className="text-2xl font-bold text-gray-900 mb-2">{listing.title}</h1>
-          <p className="text-2xl font-bold text-blue-600 mb-6">{formatPrice(listing.price)}</p>
+          <p className="text-2xl font-bold text-blue-600 mb-6">{formatPrice(listing.price, listing.currency)}</p>
 
           {/* Seller Info */}
           {(sellerDisplayName || sellerHandle) && (

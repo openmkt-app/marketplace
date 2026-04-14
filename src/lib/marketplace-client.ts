@@ -34,6 +34,7 @@ export type MarketplaceListing = {
   title: string;
   description: string;
   price: string;
+  currency?: string;
   images?: ListingImage[];
   location: ListingLocation;
   category: string;
@@ -510,6 +511,7 @@ export class MarketplaceClient {
       const recordToCreate = {
         title: listingDataWithoutImages.title,
         price: listingDataWithoutImages.price,
+        currency: listingDataWithoutImages.currency,
         category: listingDataWithoutImages.category,
         condition: listingDataWithoutImages.condition,
         description: listingDataWithoutImages.description,
@@ -661,6 +663,7 @@ export class MarketplaceClient {
       const recordToUpdate = {
         title: listingDataWithoutImages.title,
         price: listingDataWithoutImages.price,
+        currency: listingDataWithoutImages.currency,
         category: listingDataWithoutImages.category,
         condition: listingDataWithoutImages.condition,
         description: listingDataWithoutImages.description,

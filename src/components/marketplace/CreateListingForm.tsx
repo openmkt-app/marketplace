@@ -13,6 +13,7 @@ import { trackCreateListing } from '@/lib/analytics';
 import { processExternalLink, getPlatformDisplayName } from '@/lib/external-link-utils';
 import { Wand2, Loader2, Sparkles } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
+import { CURRENCIES } from '@/lib/price-utils';
 
 // Define the SavedLocation type
 interface SavedLocation {
@@ -66,6 +67,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
   // Add state for price input
   const [priceInput, setPriceInput] = useState('');
+  const [currency, setCurrency] = useState('USD');
 
   // Add state for controlled inputs (Title, Description, Condition)
   const [title, setTitle] = useState('');
@@ -208,6 +210,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       setTitle(initialData.title);
       setDescription(initialData.description);
       setPriceInput(formatPrice(initialData.price));
+      setCurrency(initialData.currency || 'USD');
       setCondition(initialData.condition);
       setSelectedCategory(initialData.category);
       setHideFromFriends(initialData.hideFromFriends || false);
@@ -875,6 +878,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         title: formData.get('title') as string,
         description: description,
         price: formattedPrice,
+        currency: currency,
         location: locationData,
         category: categoryId,
         condition: formData.get('condition') as string,
@@ -1142,10 +1146,16 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                     <label htmlFor="price" className="block text-sm font-medium text-text-secondary mb-1">
                       Price <span className="text-red-500">*</span>
                     </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-text-secondary sm:text-sm">$</span>
-                      </div>
+                    <div className="flex rounded-md shadow-sm">
+                      <select
+                        value={currency}
+                        onChange={(e) => setCurrency(e.target.value)}
+                        className="w-24 pl-3 pr-2 py-2 bg-neutral-light/30 border border-neutral-light border-r-0 rounded-l-md focus:outline-none focus:ring-2 focus:ring-primary-light text-sm text-text-secondary cursor-pointer"
+                      >
+                        {CURRENCIES.map(code => (
+                          <option key={code} value={code}>{code}</option>
+                        ))}
+                      </select>
                       <input
                         type="text"
                         id="price"
@@ -1154,7 +1164,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                         placeholder="0.00"
                         value={priceInput}
                         onChange={handlePriceChange}
-                        className="w-full pl-7 pr-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
+                        className="flex-1 w-full pl-3 pr-3 py-2 border border-neutral-light rounded-r-md focus:outline-none focus:ring-2 focus:ring-primary-light"
                       />
                     </div>
                   </div>
@@ -1559,6 +1569,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
           <LiveListingPreview
             title={title}
             price={priceInput}
+            currency={currency}
             description={description}
             category={selectedCategory}
             condition={condition}
