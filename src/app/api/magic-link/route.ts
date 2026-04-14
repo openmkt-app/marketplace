@@ -376,19 +376,43 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        if (images.size === 0) {
-            const shopifyImgCdn = html.match(/https?:\/\/[^"'\s]+\.shopify\.com\/[^"'\s]+?\.(?:jpg|png|webp|jpeg)/gi);
-            if (shopifyImgCdn) {
-                shopifyImgCdn.forEach(img => images.add(img));
-                if (!image) image = shopifyImgCdn[0];
+        // Fix duplicate identical images by stripping query params & forcing https
+        const cleanImageUrl = (url: string) => {
+            let clean = url.startsWith('//') ? 'https:' + url : url.replace(/^http:/, 'https:');
+            clean = clean.split('?')[0]; // Strip ?v=... and &width=...
+            // Remove sizing heuristics like _100x100
+            clean = clean.replace(/_[0-9]+x[0-9]*[a-zA-Z_]*(\.(?:jpg|png|webp|jpeg))/i, '$1');
+            clean = clean.replace(/_(?:small|medium|large|grande|master|pico|icon|thumb|1024x1024|2048x2048)(\.(?:jpg|png|webp|jpeg))/i, '$1');
+            return clean;
+        };
+
+        // Aggressively capture any Shopify base images if we want to get the FULL gallery!
+        // This captures everything from the raw DOM, including unassigned gallery images
+        const targetVariant = targetUrl.searchParams.get('variant');
+        if (!targetVariant) {
+            // Unescape HTML (convert \/ back to / for robust regex matching)
+            const normalizedHtml = html.replace(/\\\//g, '/').replace(/\\u0026/g, '&');
+            const cdnRegex = /(?:https?:)?\/\/[^"'\s<>]+?(?:\.shopify\.com|\/cdn\/shop\/)[^"'\s<>;\\]+?\.(?:jpg|png|webp|jpeg)/gi;
+            
+            let match;
+            while ((match = cdnRegex.exec(normalizedHtml)) !== null) {
+                const url = cleanImageUrl(match[0]);
+                if (!url.includes('/assets/') && (url.includes('/files/') || url.includes('/products/'))) {
+                    images.add(url);
+                }
             }
         }
+
+        // Lastly, clean any existing images in the Set to ensure no duplicates!
+        const finalImages = new Set<string>();
+        images.forEach(img => finalImages.add(cleanImageUrl(img)));
+        if (!image && finalImages.size > 0) image = Array.from(finalImages)[0];
 
         return NextResponse.json({
             title: title || undefined,
             description: description || undefined,
             image: image || undefined,
-            images: Array.from(images), // Return all found images
+            images: Array.from(finalImages), // Return deduplicated, filtered images
             price: price || undefined,
             url: targetUrl.toString()
         });
