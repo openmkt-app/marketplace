@@ -177,7 +177,24 @@ export async function GET(request: NextRequest) {
         const title = getTitle();
         const description = getMetaContent('description')?.trim();
 
-        let image = getMetaContent('image');
+        const images = new Set<string>();
+
+        // Get all matching meta content
+        const getAllMetaContent = (prop: string) => {
+            const regex = new RegExp(`<meta[^>]+(?:property|name)=["'](?:og:|twitter:|product:)?${prop}["'][^>]+content=["']([^"']+)["']`, 'gi');
+            const matches: string[] = [];
+            let match;
+            while ((match = regex.exec(html)) !== null) {
+                const decoded = decodeHtml(match[1]);
+                if (decoded) matches.push(decoded);
+            }
+            return matches;
+        };
+
+        const imageMatches = getAllMetaContent('image');
+        imageMatches.forEach(img => images.add(img));
+        
+        let image = imageMatches[0];
         let price = getMetaContent('price:amount') || getMetaContent('amount');
 
         // Amazon Image Logic
@@ -215,13 +232,20 @@ export async function GET(request: NextRequest) {
                 );
 
                 if (product) {
-                    if (!image) {
-                        if (typeof product.image === 'string') image = product.image;
-                        else if (Array.isArray(product.image) && product.image.length > 0) {
-                            const img = product.image[0];
-                            image = typeof img === 'string' ? img : (img.url || img.contentUrl);
-                        } else if (typeof product.image === 'object') {
-                            image = product.image.url || product.image.contentUrl;
+                    if (Array.isArray(product.image)) {
+                        product.image.forEach((img: any) => {
+                            const url = typeof img === 'string' ? img : (img.url || img.contentUrl);
+                            if (url) images.add(url);
+                        });
+                        if (!image && images.size > 0) image = Array.from(images)[0];
+                    } else if (typeof product.image === 'string') {
+                        images.add(product.image);
+                        if (!image) image = product.image;
+                    } else if (typeof product.image === 'object' && product.image !== null) {
+                        const url = product.image.url || product.image.contentUrl;
+                        if (url) {
+                            images.add(url);
+                            if (!image) image = url;
                         }
                     }
 
@@ -264,9 +288,12 @@ export async function GET(request: NextRequest) {
                         // Usually these urls have unicode escapes like \u0026 -> &
                         //JSON.parse will clean them if we wrap in quotes
                         try {
-                            image = JSON.parse(`"${match[1]}"`);
+                            const urlStr = JSON.parse(`"${match[1]}"`);
+                            images.add(urlStr);
+                            if (!image) image = urlStr;
                         } catch (e) {
-                            image = match[1];
+                            images.add(match[1]);
+                            if (!image) image = match[1];
                         }
                     }
                 }
@@ -318,15 +345,19 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        if (!image) {
-            const shopifyImgCdn = html.match(/https?:\/\/[^"'\s]+\.shopify\.com\/[^"'\s]+?\.(?:jpg|png|webp|jpeg)/i);
-            if (shopifyImgCdn) image = shopifyImgCdn[0];
+        if (images.size === 0) {
+            const shopifyImgCdn = html.match(/https?:\/\/[^"'\s]+\.shopify\.com\/[^"'\s]+?\.(?:jpg|png|webp|jpeg)/gi);
+            if (shopifyImgCdn) {
+                shopifyImgCdn.forEach(img => images.add(img));
+                if (!image) image = shopifyImgCdn[0];
+            }
         }
 
         return NextResponse.json({
             title: title || undefined,
             description: description || undefined,
             image: image || undefined,
+            images: Array.from(images), // Return all found images
             price: price || undefined,
             url: targetUrl.toString()
         });

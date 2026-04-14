@@ -711,27 +711,43 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       }
       setDetectedPlatform(platform);
 
-      // 3. Handle Image (Fetch via proxy -> Blob -> File)
-      if (data.image) {
+      // 3. Handle Images (Fetch via proxy -> Blob -> File)
+      const imagesToFetch = data.images && data.images.length > 0 ? data.images : (data.image ? [data.image] : []);
+      
+      if (imagesToFetch.length > 0) {
         try {
-          const imageRes = await fetch(`/api/proxy-image?url=${encodeURIComponent(data.image)}`);
-          if (imageRes.ok) {
-            const blob = await imageRes.blob();
-            // Guess extension from MIME type or default to jpg
-            const mimeType = blob.type;
-            const ext = mimeType.split('/')[1] || 'jpg';
-            const filename = `imported-image.${ext}`;
-            const file = new File([blob], filename, { type: mimeType });
-
-            // Add to images if we have space
-            if (images.length < 10) {
-              setImages(prev => [...prev, file]);
-              setPreviewUrls(prev => [...prev, URL.createObjectURL(file)]);
+          const newFiles: File[] = [];
+          const newUrls: string[] = [];
+          
+          // Create a snapshot of current images length to enforce the 10 image limit
+          const currentCount = images.length;
+          const limit = Math.min(10 - currentCount, imagesToFetch.length, 10);
+          
+          for (let i = 0; i < limit; i++) {
+            const imgUrl = imagesToFetch[i];
+            try {
+              const imageRes = await fetch(`/api/proxy-image?url=${encodeURIComponent(imgUrl)}`);
+              if (imageRes.ok) {
+                const blob = await imageRes.blob();
+                const mimeType = blob.type;
+                const ext = mimeType.split('/')[1] || 'jpg';
+                const filename = `imported-image-${Date.now()}-${i + 1}.${ext}`;
+                const file = new File([blob], filename, { type: mimeType });
+                
+                newFiles.push(file);
+                newUrls.push(URL.createObjectURL(file));
+              }
+            } catch (imgErr) {
+              console.warn(`Failed to auto-import image ${i}:`, imgErr);
             }
           }
+
+          if (newFiles.length > 0) {
+            setImages(prev => [...prev, ...newFiles]);
+            setPreviewUrls(prev => [...prev, ...newUrls]);
+          }
         } catch (imgErr) {
-          console.warn('Failed to auto-import image:', imgErr);
-          // Non-blocking error
+          console.warn('Failed to auto-import images:', imgErr);
         }
       }
 
