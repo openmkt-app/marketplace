@@ -14,7 +14,7 @@ export default function Footer() {
               Open Market
             </h3>
             <p className="text-text-primary text-sm mb-4">
-              Reclaiming commerce for the community. Buy, sell, and trade freely on the open web—without the walled gardens.
+              Built on the AT Protocol, Open Market acts as a discovery engine, not a trap. We index your products for Bluesky users to find, but your listings, data, and reputation always belong to you.
             </p>
             <div className="flex space-x-4">
               <a href="https://bsky.app/profile/openmkt.app" target="_blank" rel="noopener noreferrer" className="text-text-secondary hover:text-primary-color transition-colors">
