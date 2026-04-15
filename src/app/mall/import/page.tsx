@@ -1,50 +1,140 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ShoppingBag, Check, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, Upload, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import { fetchEtsyListings, importListing } from '@/lib/etsy-client';
+import { importListing } from '@/lib/etsy-client';
 import { EtsyListing } from '@/lib/etsy-types';
 import ListingSelector from '@/components/marketplace/ImportWizard/ListingSelector';
 import { useAuth } from '@/contexts/AuthContext';
 
+// Parse Etsy CSV export into EtsyListing objects
+function parseEtsyCsv(text: string): EtsyListing[] {
+    let i = 0;
+
+    const parseField = (): string => {
+        if (text[i] === '"') {
+            i++;
+            let val = '';
+            while (i < text.length) {
+                if (text[i] === '"' && text[i + 1] === '"') { val += '"'; i += 2; }
+                else if (text[i] === '"') { i++; break; }
+                else { val += text[i++]; }
+            }
+            return val;
+        }
+        let val = '';
+        while (i < text.length && text[i] !== ',' && text[i] !== '\n' && text[i] !== '\r') val += text[i++];
+        return val;
+    };
+
+    const skipNewlines = () => { while (text[i] === '\n' || text[i] === '\r') i++; };
+
+    // Parse header row
+    const headers: string[] = [];
+    while (i < text.length && text[i] !== '\n' && text[i] !== '\r') {
+        headers.push(parseField().trim().toUpperCase());
+        if (text[i] === ',') i++;
+    }
+    skipNewlines();
+
+    const rows: EtsyListing[] = [];
+
+    while (i < text.length) {
+        const row: Record<string, string> = {};
+        let col = 0;
+        while (i < text.length && text[i] !== '\n' && text[i] !== '\r') {
+            if (headers[col] !== undefined) row[headers[col]] = parseField();
+            else parseField();
+            col++;
+            if (text[i] === ',') i++;
+        }
+        skipNewlines();
+
+        const listingId = parseInt(row['LISTING_ID'] || '');
+        const title = row['TITLE'] || '';
+        if (!listingId || !title) continue;
+
+        const priceRaw = parseFloat(row['PRICE'] || '0');
+        const images = [];
+        for (let n = 1; n <= 10; n++) {
+            const url = row[`IMAGE${n}`];
+            if (url && url.startsWith('http')) {
+                images.push({
+                    listing_image_id: n,
+                    rank: n,
+                    url_75x75: url,
+                    url_170x135: url,
+                    url_570xN: url,
+                    url_fullxfull: url,
+                    full_height: null,
+                    full_width: null,
+                });
+            }
+        }
+
+        const tags = (row['TAGS'] || '')
+            .split(',')
+            .map(t => t.trim())
+            .filter(Boolean);
+
+        rows.push({
+            listing_id: listingId,
+            title,
+            description: row['DESCRIPTION'] || '',
+            state: 'active',
+            price: {
+                amount: priceRaw,
+                divisor: 1,
+                currency_code: row['CURRENCY_CODE'] || 'USD',
+            },
+            quantity: parseInt(row['QUANTITY'] || '1') || 1,
+            tags,
+            url: `https://www.etsy.com/listing/${listingId}`,
+            images,
+        });
+    }
+
+    return rows;
+}
+
 export default function ImportPage() {
     const router = useRouter();
-    const { client, isLoggedIn, user } = useAuth(); // Get user for redirect
+    const { client, isLoggedIn, isLoading, user } = useAuth();
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [step, setStep] = useState<1 | 2 | 3>(1);
-    const [shopId, setShopId] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [isParsing, setIsParsing] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [warning, setWarning] = useState<string | null>(null);
     const [listings, setListings] = useState<EtsyListing[]>([]);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
 
-    const handleFetchListings = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!shopId.trim()) return;
+    const handleCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
 
-        setIsLoading(true);
+        setIsParsing(true);
         setError(null);
-        setWarning(null);
+
         try {
-            const { results, warning } = await fetchEtsyListings(shopId);
-            setListings(results);
-            if (warning) {
-                setWarning(warning);
-                setStep(2);
-            } else if (results.length === 0) {
-                setError('No active listings found for this shop (or shop is private).');
-            } else {
-                setStep(2);
+            const text = await file.text();
+            const parsed = parseEtsyCsv(text);
+
+            if (parsed.length === 0) {
+                setError('No listings found in this file. Make sure you uploaded the correct Etsy export CSV.');
+                return;
             }
+
+            setListings(parsed);
+            setStep(2);
         } catch (err: any) {
-            setError(err.message || 'Failed to fetch listings. Please check the Shop ID.');
+            setError(err.message || 'Failed to read the CSV file.');
         } finally {
-            setIsLoading(false);
+            setIsParsing(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 
@@ -58,29 +148,27 @@ export default function ImportPage() {
         setStep(3);
         setImportProgress({ current: 0, total: selectedListings.length });
 
-        let successCount = 0;
-
         for (let i = 0; i < selectedListings.length; i++) {
-            const listing = selectedListings[i];
             try {
-                await importListing(client, listing);
-                successCount++;
+                await importListing(client, selectedListings[i]);
             } catch (err) {
-                console.error('Failed to import listing', listing.listing_id, err);
-                // Verify if we should stop or continue. For now, we continue.
+                console.error('Failed to import listing', selectedListings[i].listing_id, err);
             }
             setImportProgress(prev => ({ ...prev, current: i + 1 }));
         }
 
-        // Finished
         setTimeout(() => {
-            if (user?.handle) {
-                router.push(`/store/${user.handle}`);
-            } else {
-                router.push('/mall');
-            }
+            router.push(user?.handle ? `/store/${user.handle}` : '/mall');
         }, 1000);
     };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+                <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-600 rounded-full animate-spin" />
+            </div>
+        );
+    }
 
     if (!isLoggedIn) {
         return (
@@ -88,7 +176,9 @@ export default function ImportPage() {
                 <div className="text-center">
                     <h1 className="text-2xl font-bold mb-4">Please Login</h1>
                     <p className="text-slate-500 mb-6">You need to be logged in to import products.</p>
-                    <Link href="/login" className="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition-colors">Go to Login</Link>
+                    <Link href="/login" className="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition-colors">
+                        Go to Login
+                    </Link>
                 </div>
             </div>
         );
@@ -96,7 +186,6 @@ export default function ImportPage() {
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 p-6 pb-24">
-            {/* Header */}
             <div className="max-w-6xl mx-auto mb-8 flex items-center gap-4">
                 <Link href="/mall" className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-600">
                     <ArrowLeft className="w-6 h-6" />
@@ -116,69 +205,67 @@ export default function ImportPage() {
                             </div>
                         </div>
 
-                        <h2 className="text-xl font-bold text-center mb-2">Connect Your Shop</h2>
-                        <p className="text-slate-500 text-center mb-6 text-sm">
-                            Enter your Etsy Shop Name or Shop ID.
-                            <br />
-                            <span className="text-xs text-slate-400">e.g. "MyVintageStore" or "12345678"</span>
+                        <h2 className="text-xl font-bold text-center mb-2">Upload Your Etsy Listings</h2>
+                        <p className="text-slate-500 text-center text-sm mb-6">
+                            Export your listings from Etsy and upload the file here to import them all at once.
                         </p>
 
-                        <form onSubmit={handleFetchListings} className="space-y-4">
-                            <div>
-                                <input
-                                    type="text"
-                                    placeholder="Shop Name or ID"
-                                    value={shopId}
-                                    onChange={(e) => setShopId(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-400"
-                                />
+                        <ol className="text-sm text-slate-600 list-decimal list-inside space-y-1.5 mb-6 bg-slate-50 rounded-xl p-4">
+                            <li>Go to <strong>Etsy Shop Manager → Listings</strong></li>
+                            <li>Click <strong>Download Data</strong> (top right corner)</li>
+                            <li>Upload the downloaded CSV file below</li>
+                        </ol>
+
+                        {error && (
+                            <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg border border-red-100 mb-4">
+                                <AlertCircle className="w-4 h-4 shrink-0" />
+                                {error}
                             </div>
+                        )}
 
-                            {error && (
-                                <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg border border-red-100">
-                                    <AlertCircle className="w-4 h-4" />
-                                    {error}
-                                </div>
-                            )}
-
-                            <button
-                                type="submit"
-                                disabled={isLoading}
-                                className="w-full bg-slate-900 text-white font-medium py-3 rounded-xl hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
-                                {isLoading ? 'Fetching...' : 'Find Listings'}
-                            </button>
-                        </form>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".csv"
+                            className="hidden"
+                            onChange={handleCsvUpload}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isParsing}
+                            className="w-full bg-slate-900 text-white font-medium py-3 rounded-xl hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                        >
+                            <Upload className="w-4 h-4" />
+                            {isParsing ? 'Reading file...' : 'Upload Etsy Export CSV'}
+                        </button>
                     </div>
                 )}
 
                 {step === 2 && (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        {warning && (
-                            <div className="mb-6 bg-yellow-50 border border-yellow-200 p-4 rounded-xl flex items-start gap-3">
-                                <AlertCircle className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
-                                <div>
-                                    <h3 className="font-bold text-yellow-700 text-sm">Demo Mode Active</h3>
-                                    <p className="text-sm text-yellow-800/80">{warning}</p>
-                                </div>
-                            </div>
-                        )}
-
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-semibold">Select Products ({selectedIds.size})</h2>
-                            <div className="flex gap-3">
+                            <div>
+                                <h2 className="text-xl font-semibold">Select Listings ({selectedIds.size} selected)</h2>
+                                <p className="text-slate-500 text-sm">{listings.length} listings found in your export</p>
+                            </div>
+                            <div className="flex gap-3 items-center">
                                 <button
-                                    onClick={() => setSelectedIds(new Set(listings.map(l => l.listing_id)))}
+                                    onClick={() => setSelectedIds(
+                                        selectedIds.size === listings.length
+                                            ? new Set()
+                                            : new Set(listings.map(l => l.listing_id))
+                                    )}
                                     className="text-sm text-slate-500 hover:text-slate-900 font-medium"
                                 >
-                                    Select All
+                                    {selectedIds.size === listings.length ? 'Deselect All' : 'Select All'}
                                 </button>
                                 <button
                                     onClick={handleImport}
                                     disabled={selectedIds.size === 0}
                                     className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 >
-                                    Import Selected
+                                    Import {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
                                 </button>
                             </div>
                         </div>
@@ -200,18 +287,18 @@ export default function ImportPage() {
                     <div className="max-w-md mx-auto text-center py-12 bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
                         <div className="mb-6 relative w-20 h-20 mx-auto">
                             <svg className="animate-spin w-full h-full text-blue-600" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                             </svg>
                         </div>
-                        <h2 className="text-2xl font-bold mb-2">Importing Products...</h2>
+                        <h2 className="text-2xl font-bold mb-2">Importing Listings...</h2>
                         <p className="text-slate-500 mb-8">
                             Processing {importProgress.current} of {importProgress.total} items
                         </p>
                         <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                             <div
                                 className="bg-blue-600 h-full transition-all duration-300"
-                                style={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
+                                style={{ width: `${importProgress.total > 0 ? (importProgress.current / importProgress.total) * 100 : 0}%` }}
                             />
                         </div>
                         <p className="mt-4 text-xs text-slate-400">Please do not close this window.</p>

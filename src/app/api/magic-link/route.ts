@@ -11,13 +11,18 @@ const USER_AGENTS = {
     chrome: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
     // Mobile Chrome - sometimes gets different treatment
     mobile: 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36',
+    // Slackbot - messaging bots are whitelisted by sites like Etsy for link preview generation
+    slackbot: 'Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)',
 };
 
 // Sites that block regular browsers but allow crawlers
 const CRAWLER_PREFERRED_DOMAINS = ['poshmark.com', 'depop.com'];
 
+// Sites that only respond to messaging bot UAs (e.g. Slackbot) — limited to OG data only
+const MESSAGING_BOT_DOMAINS = ['etsy.com'];
+
 // Sites that are very aggressive with rate limiting - use special handling
-const AGGRESSIVE_RATE_LIMIT_DOMAINS = ['etsy.com'];
+const AGGRESSIVE_RATE_LIMIT_DOMAINS: string[] = [];
 
 function selectUserAgent(hostname: string): string {
     const normalizedHost = hostname.toLowerCase().replace(/^www\./, '');
@@ -35,6 +40,11 @@ function isAggressiveRateLimitSite(hostname: string): boolean {
     return AGGRESSIVE_RATE_LIMIT_DOMAINS.some(domain => normalizedHost.includes(domain));
 }
 
+function isMessagingBotDomain(hostname: string): boolean {
+    const normalizedHost = hostname.toLowerCase().replace(/^www\./, '');
+    return MESSAGING_BOT_DOMAINS.some(domain => normalizedHost.includes(domain));
+}
+
 // Helper to add random delay for rate-limited sites
 function randomDelay(min: number, max: number): Promise<void> {
     const delay = Math.floor(Math.random() * (max - min + 1)) + min;
@@ -46,6 +56,31 @@ async function fetchWithRetry(
     url: URL,
     maxRetries: number = 3
 ): Promise<{ response: Response | null; error: string | null }> {
+    // Etsy and similar sites only allow messaging bot UAs — use Slackbot directly, no retry cycling
+    if (isMessagingBotDomain(url.hostname)) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
+        try {
+            const response = await fetch(url.toString(), {
+                headers: {
+                    'User-Agent': USER_AGENTS.slackbot,
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5',
+                },
+                signal: controller.signal,
+                redirect: 'follow',
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                return { response: null, error: `Failed to fetch URL: ${response.status} ${response.statusText}` };
+            }
+            return { response, error: null };
+        } catch (err: any) {
+            clearTimeout(timeoutId);
+            return { response: null, error: err.message || 'Request failed' };
+        }
+    }
+
     const isAggressiveSite = isAggressiveRateLimitSite(url.hostname);
     const userAgents = isAggressiveSite
         ? [USER_AGENTS.mobile, USER_AGENTS.chrome, USER_AGENTS.googlebot] // Try different UAs
@@ -171,11 +206,19 @@ export async function GET(request: NextRequest) {
                 decodedTitle = decodedTitle.replace('Amazon.com :', '').trim();
             }
 
+            // Etsy appends " - Etsy" to titles
+            if (decodedTitle?.endsWith(' - Etsy')) {
+                decodedTitle = decodedTitle.slice(0, -' - Etsy'.length).trim();
+            }
+
             return decodedTitle?.trim();
         };
 
+        const isEtsyUrl = isMessagingBotDomain(targetUrl.hostname);
+
         const title = getTitle();
-        const description = getMetaContent('description')?.trim();
+        // Etsy's og:description is generic metadata (favorites, location, date) — not the product description
+        const description = isEtsyUrl ? undefined : getMetaContent('description')?.trim();
 
         const images = new Set<string>();
 
@@ -459,7 +502,8 @@ export async function GET(request: NextRequest) {
             image: image || undefined,
             images: Array.from(finalImages), // Return deduplicated, filtered images
             price: price || undefined,
-            url: targetUrl.toString()
+            url: targetUrl.toString(),
+            ...(isEtsyUrl && { note: 'Etsy limits importing to 1 image (platform restriction)' }),
         });
 
     } catch (error: any) {

@@ -290,6 +290,12 @@ export default async function MallPage() {
                 Create a Listing
               </Link>
               <Link
+                href="/mall/import"
+                className="px-6 py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 transition-colors"
+              >
+                Import from Etsy
+              </Link>
+              <Link
                 href="/community/seller-guide"
                 className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
               >
