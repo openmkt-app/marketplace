@@ -211,6 +211,11 @@ export async function GET(request: NextRequest) {
                 decodedTitle = decodedTitle.slice(0, -' - Etsy'.length).trim();
             }
 
+            // eBay appends " | eBay" to titles
+            if (decodedTitle?.endsWith(' | eBay')) {
+                decodedTitle = decodedTitle.slice(0, -' | eBay'.length).trim();
+            }
+
             return decodedTitle?.trim();
         };
 
@@ -303,6 +308,51 @@ export async function GET(request: NextRequest) {
             // Update the primary image if needed
             if (images.size > 0 && (!image || image.includes('amazon_logo') || image.includes('_.jpg'))) {
                 image = Array.from(images)[0];
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // eBay Image + Price Extraction
+        // ------------------------------------------------------------------
+        if (targetUrl.hostname.includes('ebay.')) {
+            // Drop any low-res OG images that snuck in before this block
+            images.forEach(u => { if (u.includes('ebayimg.com')) images.delete(u); });
+
+            // Images: collect unique hashes from both "imageURL" JSON and gallery thumbnails in DOM
+            const seenHashes = new Set<string>();
+            const addEbayHash = (hash: string) => {
+                if (!seenHashes.has(hash)) {
+                    seenHashes.add(hash);
+                    images.add(`https://i.ebayimg.com/images/g/${hash}/s-l1600.jpg`);
+                }
+            };
+
+            // Strategy 1: "imageURL" JSON property (covers main + alternate formats)
+            const ebayImgUrlRegex = /"imageURL"\s*:\s*"https:\/\/i\.ebayimg\.com\/(?:images\/g\/([^/]+)\/|00\/s\/[^/]+\/z\/([^/]+)\/)[^"]+"/gi;
+            let ebayMatch;
+            while ((ebayMatch = ebayImgUrlRegex.exec(html)) !== null) {
+                const hash = ebayMatch[1] || ebayMatch[2];
+                if (hash) addEbayHash(hash);
+            }
+
+            // Strategy 2: all /images/g/ URLs — recommendations use /thumbs/images/g/ so this is safe
+            const ebayThumbRegex = /i\.ebayimg\.com\/images\/g\/([A-Za-z0-9~_-]+)\/s-l\d+\.jpg/gi;
+            while ((ebayMatch = ebayThumbRegex.exec(html)) !== null) {
+                addEbayHash(ebayMatch[1]);
+            }
+
+            if (images.size > 0) image = Array.from(images)[0];
+
+            // Price: first occurrence of "price":"NNN" in eBay's JSON data
+            if (!price) {
+                const ebayPriceMatch = html.match(/"price"\s*:\s*"([\d]+\.[\d]{1,2})"/);
+                if (ebayPriceMatch) price = ebayPriceMatch[1];
+            }
+
+            // Fallback: itemprop="price"
+            if (!price) {
+                const itemPropPrice = html.match(/itemprop="price"[^>]+content="([\d\.]+)"/);
+                if (itemPropPrice) price = itemPropPrice[1];
             }
         }
 
