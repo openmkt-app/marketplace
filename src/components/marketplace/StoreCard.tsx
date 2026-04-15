@@ -105,6 +105,7 @@ export default function StoreCard({ seller, flaggedUris }: StoreCardProps) {
                         src={bannerImage}
                         alt={`${displayName}'s banner`}
                         fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         className="object-cover transition-transform duration-700 group-hover:scale-105"
                     />
                 )}
@@ -209,6 +210,7 @@ export default function StoreCard({ seller, flaggedUris }: StoreCardProps) {
                                                         src={thumbnail}
                                                         alt={listing.title}
                                                         fill
+                                                        sizes="(max-width: 640px) 30vw, 120px"
                                                         className="object-cover hover:opacity-80 transition-opacity cursor-pointer"
                                                     />
                                                     {shouldBlurListing(listing.labels, listing.uri, flaggedUris) && (

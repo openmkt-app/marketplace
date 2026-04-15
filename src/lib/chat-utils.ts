@@ -217,221 +217,70 @@ function isOAuthSessionWithoutChatScope(): boolean {
 }
 
 /**
- * Get unread chat message count using the Bluesky Chat API
- * This uses chat.bsky.convo.listConvos proxied through the user's PDS
- * Note: Chat functionality is not available for OAuth sessions due to scope limitations
+ * Get unread chat message count for messages from openmkt.app via the server-side proxy.
+ * Uses the user's PDS endpoint to proxy the Bluesky Chat API request.
+ * OAuth sessions without chat scope are skipped silently.
  */
 export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
   const session = agent.session;
   if (!session || !session.accessJwt) return 0;
 
-  // OAuth sessions don't have chat permissions - silently return 0
-  if (isOAuthSessionWithoutChatScope()) {
-    return 0;
-  }
+  if (isOAuthSessionWithoutChatScope()) return 0;
 
   const OPENMKT_HANDLE = 'openmkt.app';
 
-  const getOpenMktDid = (convo: any) => {
-    const members = Array.isArray(convo.members) ? convo.members : [];
-    const openMktMember = members.find(
-      (member: any) => member?.handle?.toLowerCase() === OPENMKT_HANDLE
+  // Determine PDS endpoint from DID Doc (most reliable), then agent properties
+  let pdsEndpoint = '';
+  const sessionAny = session as any;
+  if (sessionAny.didDoc?.service) {
+    const pdsService = sessionAny.didDoc.service.find(
+      (s: any) => s.id === '#atproto_pds' || s.type === 'AtprotoPersonalDataServer'
     );
-    return openMktMember?.did as string | undefined;
-  };
-
-  const countUnreadFromOpenMkt = async (
-    convo: any,
-    fetchMessages: (convoId: string, limit: number) => Promise<any[]>
-  ) => {
-    const unreadCount = convo.unreadCount || 0;
-    if (!unreadCount) return 0;
-
-    const openMktDid = getOpenMktDid(convo);
-    if (!openMktDid || !convo.id) return 0;
-
-    const limit = Math.min(unreadCount, 50);
-    const messages = await fetchMessages(convo.id, limit);
-
-    let total = 0;
-    for (const message of messages) {
-      const senderDid = message?.sender?.did;
-      if (senderDid === openMktDid) {
-        total += 1;
-      }
+    if (pdsService?.serviceEndpoint) {
+      pdsEndpoint = pdsService.serviceEndpoint;
     }
+  }
+  if (!pdsEndpoint) {
+    pdsEndpoint = agent.pdsUrl?.toString() || agent.service?.toString() || 'https://bsky.social';
+  }
+  pdsEndpoint = pdsEndpoint.replace(/\/$/, '');
 
-    return total;
-  };
+  const proxyUrl = `/api/proxy/chat/unread?pdsEndpoint=${encodeURIComponent(pdsEndpoint)}`;
+  const messagesUrl = `/api/proxy/chat/messages?pdsEndpoint=${encodeURIComponent(pdsEndpoint)}`;
+  const authHeaders = { Authorization: `Bearer ${session.accessJwt}` };
 
-  // Helper to process a list of convos
-  const processConvos = async (
-    convos: any[],
-    fetchMessages: (convoId: string, limit: number) => Promise<any[]>
-  ): Promise<number | null> => {
-    let total = 0;
+  try {
+    const response = await fetch(proxyUrl, { headers: authHeaders });
+    if (!response.ok) return 0;
+
+    const { convos } = await response.json() as { convos: any[] };
+
     for (const convo of convos) {
-      total += await countUnreadFromOpenMkt(convo, fetchMessages);
-      if (total > 0) return total; // Optimization: return early if we found *any* (since we just show a dot usually?) 
-      // check code: returning total. The loop accumulates? 
-      // Original code returned on first > 0? "if (total > 0) return total;" inside loop?
-      // Yes, seems to just return early. 
-    }
-    return total > 0 ? total : null;
-  };
+      const unreadCount = convo.unreadCount || 0;
+      if (!unreadCount) continue;
 
-  // Attempt 0: Direct OAuth Access (for DPoP/OAuth sessions)
-  // This expects the agent to handle the request signing and the PDS to proxy or handle it
-  try {
-    // @ts-ignore - access internal api definition if needed, or assume typed
-    if (agent.api.chat && agent.api.chat.bsky && agent.api.chat.bsky.convo) {
-      const response = await agent.api.chat.bsky.convo.listConvos({ limit: 50 });
-
-      if (response.success) {
-        const fetchMessages = async (convoId: string, limit: number) => {
-          const msgRes = await agent.api.chat.bsky.convo.getMessages({ convoId, limit });
-          return msgRes.success ? msgRes.data.messages : [];
-        };
-
-        const result = await processConvos(response.data.convos, fetchMessages);
-        if (result !== null) return result;
-        return 0; // If success but 0, return 0
-      }
-    }
-  } catch (error) {
-    // console.warn('getUnreadChatCount: Direct OAuth attempt failed, trying fallbacks...', error);
-    // Fallthrough to legacy methods
-  }
-
-  // Attempt 1: Use service auth directly with api.bsky.chat (Legacy Password Flow)
-  try {
-    const chatAgent = new BskyAgent({ service: 'https://api.bsky.chat' });
-    const boundAuth = await agent.api.com.atproto.server.getServiceAuth({
-      aud: 'did:web:api.bsky.chat',
-      lxm: 'chat.bsky.convo.listConvos',
-    });
-
-    if (boundAuth.success) {
-      const response = await chatAgent.api.chat.bsky.convo.listConvos(
-        { limit: 50 },
-        { headers: { Authorization: `Bearer ${boundAuth.data.token}` } }
+      const members = Array.isArray(convo.members) ? convo.members : [];
+      const openMktMember = members.find(
+        (m: any) => m?.handle?.toLowerCase() === OPENMKT_HANDLE
       );
+      if (!openMktMember || !convo.id) continue;
 
-      if (response.success) {
-        const fetchMessages = async (convoId: string, limit: number) => {
-          const messagesResponse = await chatAgent.api.chat.bsky.convo.getMessages(
-            { convoId, limit },
-            { headers: { Authorization: `Bearer ${boundAuth.data.token}` } }
-          );
-          return messagesResponse.success ? messagesResponse.data.messages : [];
-        };
+      const limit = Math.min(unreadCount, 50);
+      const msgResponse = await fetch(
+        `${messagesUrl}&convoId=${encodeURIComponent(convo.id)}&limit=${limit}`,
+        { headers: authHeaders }
+      );
+      if (!msgResponse.ok) continue;
 
-        const result = await processConvos(response.data.convos, fetchMessages);
-        if (result !== null) return result;
-      }
+      const { messages } = await msgResponse.json() as { messages: any[] };
+      const count = messages.filter((m: any) => m?.sender?.did === openMktMember.did).length;
+      if (count > 0) return count;
     }
-  } catch (error) {
-    console.warn('getUnreadChatCount: service auth failed, trying proxy...', error);
+  } catch (err) {
+    console.warn('getUnreadChatCount failed', err);
   }
 
-  // Helper to run the server-side proxy fallback
-  const runServerFallback = async () => {
-
-    try {
-      // Determine PDS endpoint from DID Doc if available (most reliable)
-      let pdsEndpoint = '';
-      const sessionAny = session as any;
-
-      if (sessionAny.didDoc && sessionAny.didDoc.service) {
-        const pdsService = sessionAny.didDoc.service.find(
-          (s: any) => s.id === '#atproto_pds' || s.type === 'AtprotoPersonalDataServer'
-        );
-        if (pdsService && pdsService.serviceEndpoint) {
-          pdsEndpoint = pdsService.serviceEndpoint;
-        }
-      }
-
-      // Fallback to agent properties if DID Doc lookup failed
-      if (!pdsEndpoint) {
-        if (agent.pdsUrl) {
-          pdsEndpoint = agent.pdsUrl.toString();
-        } else if (agent.service) {
-          pdsEndpoint = agent.service.toString();
-        } else {
-          pdsEndpoint = 'https://bsky.social';
-        }
-      }
-
-      // Ensure no trailing slash
-      pdsEndpoint = pdsEndpoint.replace(/\/$/, '');
-
-      const proxyUrl = `/api/proxy/chat/unread?pdsEndpoint=${encodeURIComponent(pdsEndpoint)}`;
-      const messagesUrl = `/api/proxy/chat/messages?pdsEndpoint=${encodeURIComponent(pdsEndpoint)}`;
-
-      const response = await fetch(proxyUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${session.accessJwt}`,
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const convos = data.convos as any[];
-
-        const fetchMessages = async (convoId: string, limit: number) => {
-          const msgResponse = await fetch(
-            `${messagesUrl}&convoId=${encodeURIComponent(convoId)}&limit=${limit}`,
-            {
-              method: 'GET',
-              headers: {
-                Authorization: `Bearer ${session.accessJwt}`,
-              },
-            }
-          );
-          if (!msgResponse.ok) return [];
-          const msgData = await msgResponse.json();
-          return msgData.messages || [];
-        };
-
-        const result = await processConvos(convos, fetchMessages);
-        if (result !== null) return result;
-      }
-    } catch (err) {
-      console.warn('getUnreadChatCount: Server fallback failed', err);
-    }
-    return 0;
-  };
-
-  // Attempt 2: Try `agent.withProxy` if available (User Request)
-  try {
-    if (typeof (agent as any).withProxy === 'function') {
-
-      const proxyAgent = (agent as any).withProxy('bsky_chat', 'did:web:api.bsky.chat');
-      const response = await proxyAgent.api.chat.bsky.convo.listConvos({ limit: 50 });
-
-      if (response.success) {
-        const convos = response.data.convos;
-        const fetchMessages = async (convoId: string, limit: number) => {
-          const messagesResponse = await proxyAgent.api.chat.bsky.convo.getMessages({
-            convoId,
-            limit,
-          });
-          return messagesResponse.success ? messagesResponse.data.messages : [];
-        };
-
-        const result = await processConvos(convos, fetchMessages);
-        if (result !== null) return result;
-      }
-    } else {
-
-    }
-  } catch (error) {
-    console.warn('getUnreadChatCount: agent.withProxy failed, switching to fallback...', error);
-  }
-
-  // Attempt 3: Fallback to Server Proxy (if withProxy didn't exist OR failed/threw error)
-  return await runServerFallback();
+  return 0;
 }
 
 /**

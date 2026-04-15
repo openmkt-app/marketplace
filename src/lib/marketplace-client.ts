@@ -217,6 +217,9 @@ export class MarketplaceClient {
   private async resolvePdsEndpoint(handle: string): Promise<string | null> {
     const cleanHandle = handle.startsWith('@') ? handle.slice(1) : handle;
 
+    // Emails are not valid AT Protocol handles — skip resolution and use the default PDS
+    if (cleanHandle.includes('@')) return null;
+
     try {
       const resolved = await this.agent.resolveHandle({ handle: cleanHandle });
       const did = resolved.data.did;
@@ -266,6 +269,12 @@ export class MarketplaceClient {
   async resumeSession(sessionData: SessionData): Promise<{ success: boolean; data?: Record<string, unknown>; error?: Error }> {
     try {
       logger.info('Attempting to resume session');
+
+      // Point the agent at the user's actual PDS before resuming, so getSession calls hit the right endpoint
+      const userPds = await this.resolvePDS(sessionData.did);
+      if (userPds) {
+        this.agent = new BskyAgent({ service: userPds });
+      }
 
       // Instead of directly setting the session property, use the agent's resumeSession method
       await this.agent.resumeSession({
@@ -903,26 +912,25 @@ export class MarketplaceClient {
    */
   private async resolvePDS(did: string): Promise<string | null> {
     try {
-      // Use the DID PLC directory to resolve the PDS
-      const response = await fetch(`https://plc.directory/${did}`);
-      if (!response.ok) {
-        return null;
+      let didDocUrl: string;
+      if (did.startsWith('did:web:')) {
+        const domain = did.slice('did:web:'.length);
+        didDocUrl = `https://${domain}/.well-known/did.json`;
+      } else {
+        didDocUrl = `https://plc.directory/${did}`;
       }
 
-      const didDoc = await response.json();
+      const response = await fetch(didDocUrl);
+      if (!response.ok) return null;
 
-      // Find the PDS service endpoint
+      const didDoc = await response.json();
       const pdsService = didDoc.service?.find((s: any) =>
         s.type === 'AtprotoPersonalDataServer'
       );
 
-      if (pdsService?.serviceEndpoint) {
-        return pdsService.serviceEndpoint;
-      }
-
-      return null;
+      return pdsService?.serviceEndpoint || null;
     } catch (error) {
-      logger.warn(`Failed to resolve PDS for ${did}`, error as Error);
+      logger.warn(`Could not resolve PDS for ${did}, using default agent`, error as Error);
       return null;
     }
   }
@@ -1843,7 +1851,15 @@ export async function fetchPublicListings(): Promise<(MarketplaceListing & {
   // Helper to resolve PDS for a DID
   const resolvePDS = async (did: string): Promise<string | null> => {
     try {
-      const response = await fetch(`https://plc.directory/${did}`);
+      let didDocUrl: string;
+      if (did.startsWith('did:web:')) {
+        const domain = did.slice('did:web:'.length);
+        didDocUrl = `https://${domain}/.well-known/did.json`;
+      } else {
+        didDocUrl = `https://plc.directory/${did}`;
+      }
+
+      const response = await fetch(didDocUrl);
       if (!response.ok) return null;
 
       const didDoc = await response.json();

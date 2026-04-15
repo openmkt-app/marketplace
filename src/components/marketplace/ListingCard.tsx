@@ -158,6 +158,7 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris }: Lis
                     src={generateAvatarUrl(listing.authorDid, listing.authorAvatarCid) || ''}
                     alt="User"
                     fill
+                    sizes="20px"
                     className="object-cover"
                   />
                 </div>
