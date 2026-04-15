@@ -376,23 +376,27 @@ export async function GET(request: NextRequest) {
             if (poshIdMatch) {
                 const listingId = poshIdMatch[1];
 
-                // Collect all medium (m_) images for this listing from the posts CDN
-                const seenHashes = new Set<string>();
-                const poshImgRegex = new RegExp(
-                    `https://di2ponv0v5otw\\.cloudfront\\.net/posts/[^/]+/[^/]+/[^/]+/${listingId}/m_([a-f0-9]+)\\.jpg`,
-                    'gi'
-                );
-                // Clear the low-res OG image that got picked up first
+                // Clear the low-res OG image picked up earlier
                 images.forEach(u => { if (u.includes('cloudfront.net/posts')) images.delete(u); });
 
+                const seenHashes = new Set<string>();
+                const basePath = `https://di2ponv0v5otw.cloudfront.net/posts/[^/]+/[^/]+/[^/]+/${listingId}`;
+
+                // Pass 1: prefer m_ (medium) images — match both .jpg and .jpeg
+                const mRegex = new RegExp(`${basePath}/m_([a-f0-9]+)\\.(jpe?g)`, 'gi');
                 let pm;
-                while ((pm = poshImgRegex.exec(html)) !== null) {
+                while ((pm = mRegex.exec(html)) !== null) {
                     const hash = pm[1];
-                    if (!seenHashes.has(hash)) {
-                        seenHashes.add(hash);
-                        images.add(pm[0]); // Use the full URL as-is
-                    }
+                    if (!seenHashes.has(hash)) { seenHashes.add(hash); images.add(pm[0]); }
                 }
+
+                // Pass 2: fall back to s_ for any hashes not covered by m_
+                const sRegex = new RegExp(`${basePath}/s_([a-f0-9]+)\\.(jpe?g)`, 'gi');
+                while ((pm = sRegex.exec(html)) !== null) {
+                    const hash = pm[1];
+                    if (!seenHashes.has(hash)) { seenHashes.add(hash); images.add(pm[0]); }
+                }
+
                 if (images.size > 0) image = Array.from(images)[0];
             }
         }
