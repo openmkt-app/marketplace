@@ -534,8 +534,15 @@ export async function GET(request: NextRequest) {
             
             let match;
             while ((match = cdnRegex.exec(normalizedHtml)) !== null) {
-                const url = cleanImageUrl(match[0]);
-                if (!url.includes('/assets/') && (url.includes('/files/') || url.includes('/products/'))) {
+                const raw = match[0];
+                // Skip Shopify responsive image templates (e.g. image_{width}x.jpg)
+                if (raw.includes('{width}')) continue;
+                const url = cleanImageUrl(raw);
+                // Skip site assets and logo/icon files
+                const filename = url.split('/').pop()?.toLowerCase() || '';
+                if (url.includes('/assets/')) continue;
+                if (/logo|icon/.test(filename)) continue;
+                if (url.includes('/files/') || url.includes('/products/')) {
                     images.add(url);
                 }
             }
