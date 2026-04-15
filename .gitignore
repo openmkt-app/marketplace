@@ -168,3 +168,7 @@ src/app/test-listing/
 
 # Moderation data (local file store)
 /data/
+# Local test/scratch files
+test-*.cjs
+test-*.csv
+scratch-*.html
