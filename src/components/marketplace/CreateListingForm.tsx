@@ -1079,6 +1079,16 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       // Extract the URI from the result for redirection
       const listingUri = result?.uri ? String(result.uri) : undefined;
 
+      // If this is a new online store listing, clear the seller from the empty-seller cache
+      // so they appear on the Mall page immediately on next load.
+      if (mode === 'create' && isOnlineStore && client.agent?.session?.did) {
+        fetch('/api/mall/invalidate-seller', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ did: client.agent.session.did }),
+        }).catch(() => {}); // fire-and-forget, non-critical
+      }
+
       // Pass the listing URI to the onSuccess callback
       if (onSuccess) onSuccess(listingUri);
 

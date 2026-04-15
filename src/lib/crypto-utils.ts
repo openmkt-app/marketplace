@@ -213,12 +213,9 @@ export async function retrieveDPoPKeyPair(): Promise<{
             request.onsuccess = async () => {
                 const data = request.result;
                 if (!data) {
-                    console.log('[DPoP IndexedDB] No key pair found in store');
                     resolve(null);
                     return;
                 }
-
-                console.log('[DPoP IndexedDB] Found stored key pair, importing...');
 
                 try {
                     // Import keys from stored JWKs
@@ -244,7 +241,6 @@ export async function retrieveDPoPKeyPair(): Promise<{
                         ['verify']
                     );
 
-                    console.log('[DPoP IndexedDB] Keys imported successfully');
                     resolve({
                         privateKey,
                         publicKey,
@@ -272,7 +268,6 @@ export async function retrieveDPoPKeyPair(): Promise<{
  */
 function openDB(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
-        console.log('[DPoP IndexedDB] Opening database...');
         const request = indexedDB.open('openmkt-oauth', 1);
 
         request.onerror = () => {
@@ -280,12 +275,10 @@ function openDB(): Promise<IDBDatabase> {
             reject(request.error);
         };
         request.onsuccess = () => {
-            console.log('[DPoP IndexedDB] Database opened successfully');
             resolve(request.result);
         };
 
         request.onupgradeneeded = (event) => {
-            console.log('[DPoP IndexedDB] Upgrading database schema...');
             const db = (event.target as IDBOpenDBRequest).result;
             if (!db.objectStoreNames.contains('keys')) {
                 db.createObjectStore('keys', { keyPath: 'id' });

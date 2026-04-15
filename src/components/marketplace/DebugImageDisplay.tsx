@@ -13,9 +13,6 @@ export default function DebugImageDisplay({ listing }: DebugImageDisplayProps) {
   const hasImages = listing.images && listing.images.length > 0;
   const authorDid = listing.authorDid || '';
   
-  // Log the raw listing for debugging
-  console.log('Debug Image Display - Raw listing:', listing);
-  
   if (!hasImages) {
     return (
       <div className="bg-red-100 p-4 rounded-md mb-4">
@@ -45,8 +42,6 @@ export default function DebugImageDisplay({ listing }: DebugImageDisplayProps) {
       mimeType: image.mimeType
     };
   });
-  
-  console.log('Debug Image Display - Generated URLs:', imageUrls);
   
   return (
     <div className="bg-blue-50 p-4 rounded-md mb-6">

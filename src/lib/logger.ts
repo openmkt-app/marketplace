@@ -9,7 +9,9 @@ const logger = {
   },
 
   info(message: string, data?: any): void {
-    console.info(`[INFO] ${message}`, data || '');
+    if (process.env.NODE_ENV === 'development') {
+      console.info(`[INFO] ${message}`, data || '');
+    }
   },
 
   warn(message: string, data?: any): void {

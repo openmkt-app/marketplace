@@ -131,7 +131,6 @@ async function fetchWithRetry(
 
             // If rate limited, retry with backoff
             if (response.status === 429 || response.status === 403) {
-                console.log(`Attempt ${attempt + 1} failed with ${response.status}, retrying...`);
                 continue;
             }
 

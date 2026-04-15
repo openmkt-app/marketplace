@@ -255,7 +255,6 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
         });
       } catch (err) {
         // User cancelled or error
-        console.log('Share cancelled or failed');
       }
     } else {
       // Fallback: copy to clipboard

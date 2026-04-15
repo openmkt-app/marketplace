@@ -186,7 +186,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
 
             if (result.success) {
-              console.log('OAuth session resumed successfully');
               setIsLoggedIn(true);
               // User data is in result.data.user
               if (result.data?.user) {
@@ -237,7 +236,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               if (result.data && result.data.user) {
                 const profileView = result.data.user as any;
                 if (profileView.handle && profileView.handle !== sessionData.handle) {
-                  console.log(`Handle changed from ${sessionData.handle} to ${profileView.handle}, updating session...`);
                   sessionData.handle = profileView.handle;
                   // Update localStorage with new handle
                   localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));

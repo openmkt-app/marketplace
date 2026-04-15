@@ -8,8 +8,9 @@ import { generateImageUrls } from '@/lib/image-utils';
 import MallGrid from '@/components/marketplace/MallGrid';
 import type { SellerWithListings } from '@/components/marketplace/StoreCard';
 import type { MarketplaceListing } from '@/lib/marketplace-client';
+import { isSellerCachedEmpty, markSellerEmpty, invalidateSeller } from '@/lib/mall-cache';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60; // revalidate at most once per minute
 
 export const metadata: Metadata = {
   title: 'The Mall | Open Market',
@@ -59,102 +60,76 @@ async function getVerifiedSellers(): Promise<SellerWithListings[]> {
       limit: 100,
     });
 
-    const sellers: SellerWithListings[] = [];
+    // Filter excluded sellers up front
+    const followProfiles = response.data.follows.filter(
+      p => !isSellerExcluded(p.handle)
+    );
 
-    // Fetch profile and listing count for each seller
-    for (const followProfile of response.data.follows) {
-      // Skip excluded sellers
-      if (isSellerExcluded(followProfile.handle)) {
-        continue;
-      }
-
-      // Fetch full profile to get follower count
-      let fullProfile;
-      try {
-        const profileResult = await agent.getProfile({ actor: followProfile.did });
-        fullProfile = profileResult.data;
-      } catch {
-        // Use basic profile from follows if full profile fetch fails
-        fullProfile = followProfile;
-      }
-
-      // Fetch listing count for this seller
-      let listings: MarketplaceListing[] = [];
-      let listingsCount = 0;
-
-      try {
-        // Resolve PDS for the seller
-        let pdsEndpoint = 'https://bsky.social';
-        try {
-          const didDoc = await fetch(`https://plc.directory/${followProfile.did}`).then(r => r.json());
-          const pdsService = didDoc.service?.find(
-            (s: { id: string; type: string; serviceEndpoint: string }) =>
-              s.id === '#atproto_pds' || s.type === 'AtprotoPersonalDataServer'
-          );
-          if (pdsService?.serviceEndpoint) {
-            pdsEndpoint = pdsService.serviceEndpoint;
-          }
-        } catch {
-          // Use default
+    // Fetch all sellers in parallel, skipping those known to have no online store listings
+    const sellerResults = await Promise.allSettled(
+      followProfiles.map(async (followProfile) => {
+        // Skip sellers recently confirmed to have no online store listings
+        if (isSellerCachedEmpty(followProfile.did)) {
+          return null;
         }
 
-        const pdsAgent = new BskyAgent({ service: pdsEndpoint });
-        const listingsResult = await pdsAgent.api.com.atproto.repo.listRecords({
-          repo: followProfile.did,
-          collection: MARKETPLACE_COLLECTION,
-          limit: 50, // Get more items for accurate count (up to 50)
-          reverse: true, // get latest first
-        });
+        // Use the follow profile data directly (already has displayName, avatar, description)
+        // and fetch PDS+listings
+        const fullProfile = followProfile;
+        const listings = await (async (): Promise<MarketplaceListing[]> => {
+            try {
+              let pdsEndpoint = 'https://bsky.social';
+              try {
+                const didDoc = await fetch(`https://plc.directory/${followProfile.did}`).then(r => r.json());
+                const pdsService = didDoc.service?.find(
+                  (s: { id: string; type: string; serviceEndpoint: string }) =>
+                    s.id === '#atproto_pds' || s.type === 'AtprotoPersonalDataServer'
+                );
+                if (pdsService?.serviceEndpoint) {
+                  pdsEndpoint = pdsService.serviceEndpoint;
+                }
+              } catch {
+                // Use default
+              }
 
-        if (listingsResult.success) {
-          console.log(`[Debug] Fetched ${listingsResult.data.records.length} records for ${followProfile.handle}`);
-          listingsResult.data.records.forEach((r, i) => {
-            console.log(`[Debug] Record ${i}:`, JSON.stringify(r.value));
-          });
+              const pdsAgent = new BskyAgent({ service: pdsEndpoint });
+              const listingsResult = await pdsAgent.api.com.atproto.repo.listRecords({
+                repo: followProfile.did,
+                collection: MARKETPLACE_COLLECTION,
+                limit: 50,
+                reverse: true,
+              });
 
-          listingsCount = listingsResult.data.records.length; // This is just the page count, but good enough as a proxy if < 100
-          // If we want total count we might need to count all, but for perf we'll just check if > 0
-          // Actually, if we want accurate count we might need another strategy or just accept the count of current page if small
+              if (!listingsResult.success) return [];
 
-          // Re-map records to listings
-          listings = listingsResult.data.records.map(record => {
-            const listing = record.value as MarketplaceListing;
-            const formattedImages = generateImageUrls(followProfile.did, listing.images);
+              return listingsResult.data.records.map(record => {
+                const listing = record.value as MarketplaceListing;
+                const formattedImages = generateImageUrls(followProfile.did, listing.images);
+                const { images, ...sanitizedListing } = listing;
+                return {
+                  ...sanitizedListing,
+                  uri: record.uri,
+                  cid: record.cid,
+                  sellerDid: followProfile.did,
+                  formattedImages
+                };
+              });
+            } catch (e) {
+              console.warn(`Could not fetch listings for ${followProfile.handle}:`, e);
+              return [];
+            }
+          })();
 
-            // Create a sanitized listing object without the raw images array
-            // The raw images array contains CIDs which cause serialization errors in Client Components
-            const { images, ...sanitizedListing } = listing;
-
-            return {
-              ...sanitizedListing,
-              uri: record.uri,
-              cid: record.cid,
-              sellerDid: followProfile.did,
-              formattedImages
-            };
-          });
-
-          // To get accurate total counts we'd need to paginate, but let's just stick to what we have or existing logic 
-          // The previous logic fetched limit 100 and counted them. 
-          // Let's do a quick separate fetch for count using the 100 limit if we really need accurate counts,
-          // OR we can just carry over the listing logic
-
-          // Simplify: Just use the count from the main fetch (up to 50)
-          // Ideally we would use a lightweight HEAD request or separate counter if we expected > 50 items
-          // But for now, 50 is plenty for a "Mall" view context.
-          listingsCount = listingsResult.data.records.length;
+        const onlineStoreListings = listings.filter(isOnlineStoreListing);
+        if (onlineStoreListings.length === 0) {
+          markSellerEmpty(followProfile.did);
+          return null;
         }
-      } catch (e) {
-        console.warn(`Could not fetch listings for ${followProfile.handle}:`, e);
-      }
 
-      // Filter to only include online store listings
-      const onlineStoreListings = listings.filter(isOnlineStoreListing);
-      const onlineListingsCount = onlineStoreListings.length;
+        // Seller has products — remove from empty cache in case they were previously empty
+        invalidateSeller(followProfile.did);
 
-      // Only include sellers who have at least one ONLINE STORE listing
-      if (onlineListingsCount > 0) {
-        sellers.push({
+        return {
           did: followProfile.did,
           handle: followProfile.handle,
           displayName: fullProfile.displayName,
@@ -162,11 +137,16 @@ async function getVerifiedSellers(): Promise<SellerWithListings[]> {
           avatar: fullProfile.avatar,
           banner: (fullProfile as { banner?: string }).banner,
           followersCount: (fullProfile as { followersCount?: number }).followersCount,
-          listingsCount: onlineListingsCount,
+          listingsCount: onlineStoreListings.length,
           listings: onlineStoreListings,
-        });
-      }
-    }
+        } as SellerWithListings;
+      })
+    );
+
+    const sellers: SellerWithListings[] = sellerResults
+      .filter((r): r is PromiseFulfilledResult<SellerWithListings | null> => r.status === 'fulfilled')
+      .map(r => r.value)
+      .filter((s): s is SellerWithListings => s !== null);
 
     // Sort Demo stores last, then by newest listings first
     sellers.sort((a, b) => {

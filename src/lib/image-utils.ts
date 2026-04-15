@@ -177,8 +177,6 @@ export async function compressImage(
               lastModified: Date.now()
             });
 
-            console.log(`[Image Compression] ${file.name}: ${(originalSize / 1024).toFixed(0)}KB -> ${(blob.size / 1024).toFixed(0)}KB (quality: ${quality}, dimensions: ${width}x${height})`);
-
             resolve({ file: newFile, wasCompressed: true, originalSize, newSize: blob.size });
             return;
           }
@@ -209,8 +207,6 @@ export async function compressImage(
               lastModified: Date.now()
             });
 
-            console.log(`[Image Compression] ${file.name}: ${(originalSize / 1024).toFixed(0)}KB -> ${(blob.size / 1024).toFixed(0)}KB (scaled to: ${scaledWidth}x${scaledHeight})`);
-
             resolve({ file: newFile, wasCompressed: true, originalSize, newSize: blob.size });
             return;
           }
@@ -234,8 +230,6 @@ export async function compressImage(
             type: 'image/jpeg',
             lastModified: Date.now()
           });
-
-          console.log(`[Image Compression] ${file.name}: ${(originalSize / 1024).toFixed(0)}KB -> ${(finalBlob.size / 1024).toFixed(0)}KB (aggressive compression at ${finalWidth}x${finalHeight})`);
 
           resolve({ file: newFile, wasCompressed: true, originalSize, newSize: finalBlob.size });
           return;

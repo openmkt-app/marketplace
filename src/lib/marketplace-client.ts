@@ -333,11 +333,8 @@ export class MarketplaceClient {
   async resumeOAuthSession(tokens: OAuthTokens, pdsUrl?: string): Promise<{ success: boolean; data?: Record<string, unknown>; error?: Error }> {
     try {
       logger.info('Attempting to resume OAuth session', { meta: { did: tokens.sub, tokenType: tokens.token_type } });
-      console.log('[OAuth Resume] Starting with DID:', tokens.sub, 'Token type:', tokens.token_type);
-
       // Resolve the user's PDS (always resolve from DID for reliability)
       const serviceUrl = await this.resolvePDS(tokens.sub) || 'https://bsky.social';
-      console.log('[OAuth Resume] Resolved PDS:', serviceUrl);
       logger.info(`Resolved PDS for OAuth session: ${serviceUrl}`);
 
       // Recreate agent with custom fetch handler for the correct PDS
@@ -357,8 +354,6 @@ export class MarketplaceClient {
               method = (init?.method || 'GET').toUpperCase(); // DPoP requires uppercase HTTP methods
               url = input instanceof URL ? input.toString() : input as string;
             }
-
-            console.log('[DPoP Request]', method, url);
 
             const performRequest = async (nonce?: string) => {
               // Generate DPoP proof with access token hash for authenticated requests
@@ -447,7 +442,6 @@ export class MarketplaceClient {
 
       // Verify session and get profile (which also gets the real handle)
       try {
-        console.log('[OAuth Resume] Fetching profile for:', tokens.sub);
         const result = await this.agent.getProfile({
           actor: tokens.sub,
         });
@@ -458,7 +452,6 @@ export class MarketplaceClient {
           this.agent.session.handle = result.data.handle;
         }
 
-        console.log('[OAuth Resume] Success! Handle:', result.data.handle);
         logger.info('OAuth session resumed successfully');
         return { success: true, data: { user: result.data } };
       } catch (error) {
