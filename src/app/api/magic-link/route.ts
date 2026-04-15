@@ -181,6 +181,7 @@ export async function GET(request: NextRequest) {
                 .replace(/&gt;/g, '>')
                 .replace(/&quot;/g, '"')
                 .replace(/&#39;/g, "'")
+                .replace(/&#x27;/g, "'")
                 .replace(/&nbsp;/g, ' ');
         };
 
@@ -222,8 +223,18 @@ export async function GET(request: NextRequest) {
         const isEtsyUrl = isMessagingBotDomain(targetUrl.hostname);
 
         const title = getTitle();
-        // Etsy's og:description is generic metadata (favorites, location, date) — not the product description
-        const description = isEtsyUrl ? undefined : getMetaContent('description')?.trim();
+
+        const getRawDescription = () => {
+            if (isEtsyUrl) return undefined; // Etsy's og:description is useless generic metadata
+            let desc = getMetaContent('description')?.trim();
+            if (!desc) return undefined;
+            // Poshmark: strip "Shop ... at a discounted price at Poshmark. Description: " header
+            desc = desc.replace(/^Shop\s.+?at\s+a\s+discounted\s+price\s+at\s+Poshmark\.\s+Description:\s*/i, '');
+            // Poshmark: strip "Sold by ... Fast delivery, full service customer support." footer
+            desc = desc.replace(/\s*Sold\s+by\s+\S+\.\s+Fast\s+delivery,.+$/i, '').trim();
+            return desc || undefined;
+        };
+        const description = getRawDescription();
 
         const images = new Set<string>();
 
@@ -353,6 +364,36 @@ export async function GET(request: NextRequest) {
             if (!price) {
                 const itemPropPrice = html.match(/itemprop="price"[^>]+content="([\d\.]+)"/);
                 if (itemPropPrice) price = itemPropPrice[1];
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // Poshmark Image + Description Extraction
+        // ------------------------------------------------------------------
+        if (targetUrl.hostname.includes('poshmark.')) {
+            // Extract the listing ID — it's the trailing hex at the end of the URL path
+            const poshIdMatch = targetUrl.pathname.match(/([a-f0-9]{24})(?:\/|$)/i);
+            if (poshIdMatch) {
+                const listingId = poshIdMatch[1];
+
+                // Collect all medium (m_) images for this listing from the posts CDN
+                const seenHashes = new Set<string>();
+                const poshImgRegex = new RegExp(
+                    `https://di2ponv0v5otw\\.cloudfront\\.net/posts/[^/]+/[^/]+/[^/]+/${listingId}/m_([a-f0-9]+)\\.jpg`,
+                    'gi'
+                );
+                // Clear the low-res OG image that got picked up first
+                images.forEach(u => { if (u.includes('cloudfront.net/posts')) images.delete(u); });
+
+                let pm;
+                while ((pm = poshImgRegex.exec(html)) !== null) {
+                    const hash = pm[1];
+                    if (!seenHashes.has(hash)) {
+                        seenHashes.add(hash);
+                        images.add(pm[0]); // Use the full URL as-is
+                    }
+                }
+                if (images.size > 0) image = Array.from(images)[0];
             }
         }
 
