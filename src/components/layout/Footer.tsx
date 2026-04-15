@@ -14,7 +14,7 @@ export default function Footer() {
               Open Market
             </h3>
             <p className="text-text-primary text-sm mb-4">
-              Built on the AT Protocol, Open Market acts as a discovery engine, not a trap. We index your products for Bluesky users to find, but your listings, data, and reputation always belong to you.
+              The Bluesky commerce aggregator. Index your existing storefront or list new items directly to the community. Zero friction, no walled gardens.
             </p>
             <div className="flex space-x-4">
               <a href="https://bsky.app/profile/openmkt.app" target="_blank" rel="noopener noreferrer" className="text-text-secondary hover:text-primary-color transition-colors">
@@ -81,7 +81,7 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4 text-text-primary">Why Open?</h3>
             <p className="text-text-primary text-sm mb-4">
-              Built on the AT Protocol. Your listings and reputation belong to you, not us. No hidden algorithms, no locked-in data.
+              Built on the AT Protocol, Open Market acts as a discovery engine, not a trap. We index your products for Bluesky users to find, but your listings, data, and reputation always belong to you.
             </p>
             <a
               href="https://atproto.com/articles/atproto-ethos"

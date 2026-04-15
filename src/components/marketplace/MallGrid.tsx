@@ -82,9 +82,9 @@ export default function MallGrid({ sellers }: MallGridProps) {
                         <div className="w-20 h-20 rounded-full bg-white shadow-sm flex items-center justify-center text-gray-300 group-hover:text-yellow-500 group-hover:scale-110 transition-all duration-300 mb-6">
                             <Plus size={40} />
                         </div>
-                        <h3 className="text-2xl font-bold text-slate-900 mb-2">Open Your Store</h3>
+                        <h3 className="text-2xl font-bold text-slate-900 mb-2">Get Discovered on Bluesky</h3>
                         <p className="text-slate-500 text-sm max-w-xs mb-8">
-                            Join the decentralized commerce revolution. Setup your profile, verify via Bluesky, and start selling in minutes.
+                            Don't rebuild your store from scratch. Setup your profile, use our Magic Link to index your existing shop, and start getting views in minutes.
                         </p>
                         <div className="flex flex-col gap-3 w-full px-8">
                             <Link
