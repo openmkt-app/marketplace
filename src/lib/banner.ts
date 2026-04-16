@@ -4,7 +4,11 @@
 import fs from 'fs';
 import path from 'path';
 
-const BANNER_FILE = path.join(process.cwd(), 'data', 'banner.json');
+// On Vercel (and most serverless platforms) the project root is read-only.
+// /tmp is the only writable directory available at runtime.
+const BANNER_FILE = process.env.VERCEL
+  ? '/tmp/banner.json'
+  : path.join(process.cwd(), 'data', 'banner.json');
 
 export type BannerEntry = {
   message: string;
@@ -14,6 +18,7 @@ export type BannerEntry = {
 };
 
 function ensureDataDir() {
+  if (process.env.VERCEL) return; // /tmp always exists
   const dir = path.dirname(BANNER_FILE);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
