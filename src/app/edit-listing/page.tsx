@@ -38,7 +38,7 @@ function EditListingContent() {
                 const data = await client.getListingByUri(uri!);
                 if (data) {
                     // Verify ownership
-                    if (client.agent && client.agent.session?.did && data.authorDid && client.agent.session.did !== data.authorDid) {
+                    if (client.agent && client.agent.did && data.authorDid && client.agent.did !== data.authorDid) {
                         setError('You do not have permission to edit this listing.');
                     } else {
                         setListing(data);

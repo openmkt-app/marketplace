@@ -1,4 +1,4 @@
-import { BskyAgent } from '@atproto/api';
+import { Agent, AtpAgent } from '@atproto/api';
 import type { MarketplaceListing } from './marketplace-client';
 
 /**
@@ -58,17 +58,18 @@ export function contactSellerViaBluesky(
  * Note: This only works with legacy password auth, not OAuth
  */
 export async function sendMessageToSeller(
-  agent: BskyAgent,
+  agent: Agent,
   sellerDid: string,
   message: string
 ): Promise<{ success: boolean; error?: string; errorCode?: 'REQUIRES_FOLLOW' | 'OAUTH_NOT_SUPPORTED' | 'UNKNOWN' }> {
   try {
-    if (!agent.session) {
+    const legacySession = (agent as AtpAgent).session;
+    if (!legacySession) {
       return { success: false, error: 'User is not logged in' };
     }
 
-    // OAuth sessions can't use chat API due to scope limitations
-    if (isOAuthSessionWithoutChatScope()) {
+    // OAuth sessions use service auth differently; guide user to Bluesky app
+    if (isOAuthSession(agent)) {
       return {
         success: false,
         error: 'Direct messaging is not available with OAuth login. Please use Bluesky to message the seller.',
@@ -91,7 +92,7 @@ export async function sendMessageToSeller(
     const convoToken = convoAuth.data.token;
 
     // 2. Create a specialized agent for the chat service
-    const chatAgent = new BskyAgent({
+    const chatAgent = new AtpAgent({
       service: 'https://api.bsky.chat'
     });
 
@@ -195,67 +196,40 @@ export async function sendMessageToSeller(
 
 /**
  * Check if current session is OAuth-based and lacks chat permissions
- * OAuth sessions with transition:chat.bsky scope CAN use chat
+ * Detect whether the agent is an OAuth session (vs legacy password auth).
+ * OAuth agents don't have a traditional AtpSessionData with accessJwt.
  */
-function isOAuthSessionWithoutChatScope(): boolean {
-  if (typeof window === 'undefined') return false;
-  const oauthTokensStr = localStorage.getItem('oauth_tokens');
-  if (!oauthTokensStr) return false; // Not OAuth, so chat is allowed (legacy auth)
-
-  try {
-    const tokens = JSON.parse(oauthTokensStr);
-    const scope = tokens.scope || '';
-    // If the OAuth token has chat scope, allow chat
-    if (scope.includes('transition:chat.bsky')) {
-      return false; // Has chat scope, so chat IS allowed
-    }
-  } catch {
-    // Parse error, assume no chat scope
-  }
-
-  return true; // OAuth without chat scope, chat NOT allowed
+function isOAuthSession(agent: Agent): boolean {
+  return !(agent as AtpAgent).session?.accessJwt;
 }
 
 /**
- * Get unread chat message count for messages from openmkt.app via the server-side proxy.
- * Uses the user's PDS endpoint to proxy the Bluesky Chat API request.
- * OAuth sessions without chat scope are skipped silently.
+ * Get unread chat message count for messages from openmkt.app.
+ * Uses service auth tokens to call the Bluesky Chat API directly — works for
+ * both OAuth and legacy sessions as long as the token has transition:chat.bsky scope.
  */
-export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
-  const session = agent.session;
-  if (!session || !session.accessJwt) return 0;
-
-  if (isOAuthSessionWithoutChatScope()) return 0;
+export async function getUnreadChatCount(agent: Agent): Promise<number> {
+  if (!agent.did) return 0;
 
   const OPENMKT_HANDLE = 'openmkt.app';
 
-  // Determine PDS endpoint from DID Doc (most reliable), then agent properties
-  let pdsEndpoint = '';
-  const sessionAny = session as any;
-  if (sessionAny.didDoc?.service) {
-    const pdsService = sessionAny.didDoc.service.find(
-      (s: any) => s.id === '#atproto_pds' || s.type === 'AtprotoPersonalDataServer'
-    );
-    if (pdsService?.serviceEndpoint) {
-      pdsEndpoint = pdsService.serviceEndpoint;
-    }
-  }
-  if (!pdsEndpoint) {
-    pdsEndpoint = agent.pdsUrl?.toString() || agent.service?.toString() || 'https://bsky.social';
-  }
-  pdsEndpoint = pdsEndpoint.replace(/\/$/, '');
-
-  const proxyUrl = `/api/proxy/chat/unread?pdsEndpoint=${encodeURIComponent(pdsEndpoint)}`;
-  const messagesUrl = `/api/proxy/chat/messages?pdsEndpoint=${encodeURIComponent(pdsEndpoint)}`;
-  const authHeaders = { Authorization: `Bearer ${session.accessJwt}` };
-
   try {
-    const response = await fetch(proxyUrl, { headers: authHeaders });
-    if (!response.ok) return 0;
+    // Get a service auth token scoped to listing convos
+    const convoAuth = await agent.api.com.atproto.server.getServiceAuth({
+      aud: 'did:web:api.bsky.chat',
+      lxm: 'chat.bsky.convo.listConvos',
+    });
+    if (!convoAuth.success) return 0;
 
-    const { convos } = await response.json() as { convos: any[] };
+    const chatAgent = new AtpAgent({ service: 'https://api.bsky.chat' });
 
-    for (const convo of convos) {
+    const convosRes = await chatAgent.api.chat.bsky.convo.listConvos(
+      {},
+      { headers: { Authorization: `Bearer ${convoAuth.data.token}` } }
+    );
+    if (!convosRes.success) return 0;
+
+    for (const convo of convosRes.data.convos) {
       const unreadCount = convo.unreadCount || 0;
       if (!unreadCount) continue;
 
@@ -265,15 +239,23 @@ export async function getUnreadChatCount(agent: BskyAgent): Promise<number> {
       );
       if (!openMktMember || !convo.id) continue;
 
-      const limit = Math.min(unreadCount, 50);
-      const msgResponse = await fetch(
-        `${messagesUrl}&convoId=${encodeURIComponent(convo.id)}&limit=${limit}`,
-        { headers: authHeaders }
-      );
-      if (!msgResponse.ok) continue;
+      // Get a separate service auth token scoped to fetching messages
+      const msgAuth = await agent.api.com.atproto.server.getServiceAuth({
+        aud: 'did:web:api.bsky.chat',
+        lxm: 'chat.bsky.convo.getMessages',
+      });
+      if (!msgAuth.success) continue;
 
-      const { messages } = await msgResponse.json() as { messages: any[] };
-      const count = messages.filter((m: any) => m?.sender?.did === openMktMember.did).length;
+      const limit = Math.min(unreadCount, 50);
+      const msgsRes = await chatAgent.api.chat.bsky.convo.getMessages(
+        { convoId: convo.id, limit },
+        { headers: { Authorization: `Bearer ${msgAuth.data.token}` } }
+      );
+      if (!msgsRes.success) continue;
+
+      const count = msgsRes.data.messages.filter(
+        (m: any) => m?.sender?.did === openMktMember.did
+      ).length;
       if (count > 0) return count;
     }
   } catch (err) {

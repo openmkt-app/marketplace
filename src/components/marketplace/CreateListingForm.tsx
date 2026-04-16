@@ -177,11 +177,11 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   // Check if seller follows bot on mount
   useEffect(() => {
     async function checkBotFollow() {
-      if (!client.agent || !client.agent.session?.did) return;
+      if (!client.agent || !client.agent.did) return;
 
       setIsCheckingFollow(true);
       try {
-        const isFollowing = await isFollowingBot(client.agent, client.agent.session.did);
+        const isFollowing = await isFollowingBot(client.agent, client.agent.accountDid);
         setIsFollowingBotState(isFollowing);
       } catch (e) {
         console.error('Error checking bot follow:', e);
@@ -1081,11 +1081,11 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
       // If this is a new online store listing, clear the seller from the empty-seller cache
       // so they appear on the Mall page immediately on next load.
-      if (mode === 'create' && isOnlineStore && client.agent?.session?.did) {
+      if (mode === 'create' && isOnlineStore && client.agent?.did) {
         fetch('/api/mall/invalidate-seller', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ did: client.agent.session.did }),
+          body: JSON.stringify({ did: client.agent.did }),
         }).catch(() => {}); // fire-and-forget, non-critical
       }
 

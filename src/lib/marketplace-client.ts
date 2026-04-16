@@ -1,12 +1,11 @@
 // src/lib/marketplace-client.ts
-import { BskyAgent, RichText } from '@atproto/api';
-import type { AtpSessionData } from '@atproto/api';
+import { Agent, AtpAgent, RichText } from '@atproto/api';
 import { generateImageUrls, compressImage } from './image-utils';
 import logger from './logger';
 import { getKnownMarketplaceDIDs, addMarketplaceDID, ensureVerifiedSellersLoaded } from './marketplace-dids';
 
 import { MARKETPLACE_COLLECTION } from './constants';
-import { createRequestDPoPProof, OAuthTokens } from './oauth-client';
+import type { OAuthSession } from './oauth-client';
 
 // Define types for our marketplace listings
 export type ListingLocation = {
@@ -72,8 +71,8 @@ export type MarketplaceListing = {
 
 export type CreateListingParams = Omit<MarketplaceListing, 'createdAt'>;
 
-// Define a session data interface compatible with AtpSessionData
-export type SessionData = AtpSessionData;
+// Kept for any external consumers that may import it
+export type SessionData = { did: string; handle: string; accessJwt: string; refreshJwt: string };
 
 // Add a cache interface for marketplace listings
 interface ListingsCache {
@@ -96,385 +95,45 @@ interface PostRecord {
 }
 
 export class MarketplaceClient {
-  agent: BskyAgent;
+  agent: Agent;
   isLoggedIn: boolean;
-  // Add cache and rate limit tracking properties
+  private _handle: string | undefined;
+  // Cache and rate limit tracking
   private listingsCache: ListingsCache | null;
   private lastApiCall: number;
-  private cacheTTL: number; // cache time-to-live in milliseconds
-  private rateLimitInterval: number; // minimum time between API calls in milliseconds
-  private oauthTokens: OAuthTokens | null = null;
+  private cacheTTL: number;
+  private rateLimitInterval: number;
 
-  constructor(serviceUrl: string = 'https://bsky.social') {
-    // enhanced fetch handler to support DPoP
-    const customFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-      // If we have DPoP tokens, we need to sign the request
-      if (this.oauthTokens && (this.oauthTokens.token_type === 'DPoP' || this.oauthTokens.token_type === 'dpop')) {
-        try {
-          // Extract method - be very careful about the order of checks
-          let method: string;
-          let url: string;
-
-          if (input instanceof Request) {
-            // When input is a Request object, get method and url from it
-            method = input.method.toUpperCase(); // DPoP requires uppercase HTTP methods
-            url = input.url;
-          } else {
-            // When input is URL or string, method comes from init (defaults to GET)
-            method = (init?.method || 'GET').toUpperCase(); // DPoP requires uppercase HTTP methods
-            url = input instanceof URL ? input.toString() : input as string;
-          }
-
-          // Helper to perform the request, optionally with a nonce
-          const performRequest = async (nonce?: string) => {
-            // Generate DPoP proof with access token hash for authenticated requests
-            const proof = await createRequestDPoPProof(method, url, nonce, this.oauthTokens?.access_token);
-
-            // Build headers, starting with original headers
-            let originalHeaders: HeadersInit | undefined;
-            if (input instanceof Request) {
-              originalHeaders = input.headers;
-            } else {
-              originalHeaders = init?.headers;
-            }
-            const headers = new Headers(originalHeaders);
-            headers.set('DPoP', proof);
-
-            // Fix Authorization header if needed (Agent sets 'Bearer', we need 'DPoP')
-            const auth = headers.get('Authorization');
-            if (auth && auth.startsWith('Bearer ')) {
-              headers.set('Authorization', `DPoP ${auth.slice(7)}`);
-            }
-
-            // Build new init, preserving the method and body explicitly
-            const newInit: RequestInit = {
-              method,
-              headers,
-              body: init?.body,
-              credentials: init?.credentials,
-              cache: init?.cache,
-              redirect: init?.redirect,
-              referrer: init?.referrer,
-              integrity: init?.integrity,
-              signal: init?.signal,
-            };
-
-            return fetch(url, newInit);
-          };
-
-          // Initial request
-          let response = await performRequest();
-
-          // Handle DPoP nonce error (use_dpop_nonce)
-          if (response.status === 401) {
-            const checkResponse = response.clone();
-            try {
-              // Try to parse error to see if it's a DPoP nonce error
-              const errorHeader = checkResponse.headers.get('WWW-Authenticate');
-              const errorJson = await checkResponse.json().catch(() => ({}));
-
-              const isNonceError = errorJson.error === 'use_dpop_nonce' ||
-                (errorHeader && errorHeader.includes('use_dpop_nonce'));
-
-              if (isNonceError) {
-                const nonce = response.headers.get('DPoP-Nonce');
-                if (nonce) {
-                  response = await performRequest(nonce);
-                }
-              }
-            } catch (e) {
-              // Ignore parsing errors
-            }
-          }
-
-          return response;
-        } catch (error) {
-          console.error('Error generating DPoP proof:', error);
-          // Fallback to normal fetch if proof generation fails
-          return fetch(input, init);
-        }
-      }
-
-      return fetch(input, init);
-    };
-
-    // Initialize agent with custom fetch
-    // Note: BskyAgent constructor might not expose 'fetch' in all versions, 
-    // but AtpBaseClient (base) does. We cast config to any to bypass strict type check if needed.
-    this.agent = new BskyAgent({
-      service: serviceUrl,
-      fetch: customFetch
-    } as any);
-
+  constructor() {
+    // Start with an unauthenticated agent; replaced by setOAuthSession() after login
+    this.agent = new AtpAgent({ service: 'https://bsky.social' }) as Agent;
     this.isLoggedIn = false;
-    // Initialize cache and rate limit properties
+    this._handle = undefined;
     this.listingsCache = null;
     this.lastApiCall = 0;
-    this.cacheTTL = 5 * 60 * 1000; // 5 minutes cache TTL
-    this.rateLimitInterval = 30 * 1000; // 30 seconds between API calls
+    this.cacheTTL = 5 * 60 * 1000;
+    this.rateLimitInterval = 30 * 1000;
   }
 
-  private async resolvePdsEndpoint(handle: string): Promise<string | null> {
-    const cleanHandle = handle.startsWith('@') ? handle.slice(1) : handle;
-
-    // Emails are not valid AT Protocol handles — skip resolution and use the default PDS
-    if (cleanHandle.includes('@')) return null;
-
-    try {
-      const resolved = await this.agent.resolveHandle({ handle: cleanHandle });
-      const did = resolved.data.did;
-      const didDocResponse = await this.agent.com.atproto.identity.resolveDid({ did });
-      const didDoc = (didDocResponse.data as any).didDoc;
-      const services = Array.isArray(didDoc?.service) ? didDoc.service : [];
-      const pdsService = services.find(
-        (service: any) => service.id === '#atproto_pds' || service.type === 'AtprotoPersonalDataServer'
-      );
-
-      if (pdsService?.serviceEndpoint) {
-        return pdsService.serviceEndpoint as string;
-      }
-    } catch (error) {
-      logger.warn('Failed to resolve PDS endpoint for handle', error as Error);
-    }
-
-    return null;
-  }
-
-  async login(username: string, password: string): Promise<SessionData> {
-    try {
-      const resolvedPds = await this.resolvePdsEndpoint(username);
-      if (resolvedPds && this.agent.serviceUrl.toString() !== resolvedPds) {
-        this.agent = new BskyAgent({ service: resolvedPds });
-      }
-
-      logger.info(`Attempting to login user: ${username}`);
-      logger.logApiRequest('POST', 'com.atproto.server.createSession', { identifier: username });
-      const response = await this.agent.login({
-        identifier: username,
-        password: password,
-      });
-
-      this.isLoggedIn = true;
-      logger.info(`Login successful for user: ${username}`);
-
-      // Return the full session data that the UI might need
-      return response.data as SessionData;
-    } catch (error) {
-      logger.error('Login failed', error as Error);
-      this.isLoggedIn = false;
-      throw error;
-    }
-  }
-
-  async resumeSession(sessionData: SessionData): Promise<{ success: boolean; data?: Record<string, unknown>; error?: Error }> {
-    try {
-      logger.info('Attempting to resume session');
-
-      // Point the agent at the user's actual PDS before resuming, so getSession calls hit the right endpoint
-      const userPds = await this.resolvePDS(sessionData.did);
-      if (userPds) {
-        this.agent = new BskyAgent({ service: userPds });
-      }
-
-      // Instead of directly setting the session property, use the agent's resumeSession method
-      await this.agent.resumeSession({
-        did: sessionData.did,
-        handle: sessionData.handle,
-        accessJwt: sessionData.accessJwt,
-        refreshJwt: sessionData.refreshJwt,
-        active: true, // Add required property
-      });
-
-      // Try to verify the session is valid, but don't fail if profile fetch fails
-      try {
-        const result = await this.agent.getProfile({
-          actor: sessionData.did,
-        });
-
-        this.isLoggedIn = true;
-        logger.info('Session resumed successfully with profile verification');
-
-        return { success: true, data: { user: result.data } };
-      } catch (profileError) {
-        // Profile fetch failed, but session might still be valid
-        logger.warn('Profile verification failed during session resume, but session appears valid:', profileError);
-
-        // Check if we can at least validate the session by making a simple authenticated call
-        try {
-          // Try a simple authenticated call to verify the session works
-          await this.agent.api.com.atproto.server.getSession();
-
-          this.isLoggedIn = true;
-          logger.info('Session resumed successfully (profile verification failed but session is valid)');
-
-          return { success: true, data: { user: { did: sessionData.did, handle: sessionData.handle } } };
-        } catch (sessionError: any) {
-          // If even basic session validation fails, then the session is truly invalid
-          if (sessionError?.message && sessionError.message.includes('Token has expired')) {
-            logger.warn('Session verification: Token expired. User must log in again.');
-          } else {
-            logger.error('Session validation failed completely:', sessionError as Error);
-          }
-          this.isLoggedIn = false;
-          return { success: false, error: sessionError as Error };
-        }
-      }
-    } catch (error: any) {
-      if (error?.message && error.message.includes('Token has expired')) {
-        logger.warn('Resume session check: Token expired. User must log in again.');
-      } else {
-        logger.error('Resume session failed', error as Error);
-      }
-      this.isLoggedIn = false;
-      return { success: false, error: error as Error };
-    }
-  }
-
-  async resumeOAuthSession(tokens: OAuthTokens, pdsUrl?: string): Promise<{ success: boolean; data?: Record<string, unknown>; error?: Error }> {
-    try {
-      logger.info('Attempting to resume OAuth session', { meta: { did: tokens.sub, tokenType: tokens.token_type } });
-      // Resolve the user's PDS (always resolve from DID for reliability)
-      const serviceUrl = await this.resolvePDS(tokens.sub) || 'https://bsky.social';
-      logger.info(`Resolved PDS for OAuth session: ${serviceUrl}`);
-
-      // Recreate agent with custom fetch handler for the correct PDS
-      const customFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-        if (this.oauthTokens && (this.oauthTokens.token_type === 'DPoP' || this.oauthTokens.token_type === 'dpop')) {
-          try {
-            // Extract method - be very careful about the order of checks
-            let method: string;
-            let url: string;
-
-            if (input instanceof Request) {
-              // When input is a Request object, get method and url from it
-              method = input.method.toUpperCase(); // DPoP requires uppercase HTTP methods
-              url = input.url;
-            } else {
-              // When input is URL or string, method comes from init (defaults to GET)
-              method = (init?.method || 'GET').toUpperCase(); // DPoP requires uppercase HTTP methods
-              url = input instanceof URL ? input.toString() : input as string;
-            }
-
-            const performRequest = async (nonce?: string) => {
-              // Generate DPoP proof with access token hash for authenticated requests
-              const proof = await createRequestDPoPProof(method, url, nonce, this.oauthTokens?.access_token);
-
-              // Build headers, starting with original headers
-              let originalHeaders: HeadersInit | undefined;
-              if (input instanceof Request) {
-                originalHeaders = input.headers;
-              } else {
-                originalHeaders = init?.headers;
-              }
-              const headers = new Headers(originalHeaders);
-              headers.set('DPoP', proof);
-
-              const auth = headers.get('Authorization');
-              if (auth && auth.startsWith('Bearer ')) {
-                headers.set('Authorization', `DPoP ${auth.slice(7)}`);
-              }
-
-              // Build new init, preserving the method and body explicitly
-              const newInit: RequestInit = {
-                method,
-                headers,
-                body: init?.body,
-                credentials: init?.credentials,
-                cache: init?.cache,
-                redirect: init?.redirect,
-                referrer: init?.referrer,
-                integrity: init?.integrity,
-                signal: init?.signal,
-              };
-
-              return fetch(url, newInit);
-            };
-
-            let response = await performRequest();
-
-            if (response.status === 401) {
-              const checkResponse = response.clone();
-              try {
-                const errorHeader = checkResponse.headers.get('WWW-Authenticate');
-                const errorJson = await checkResponse.json().catch(() => ({}));
-                const isNonceError = errorJson.error === 'use_dpop_nonce' ||
-                  (errorHeader && errorHeader.includes('use_dpop_nonce'));
-                if (isNonceError) {
-                  const nonce = response.headers.get('DPoP-Nonce');
-                  if (nonce) {
-                    response = await performRequest(nonce);
-                  }
-                }
-              } catch (e) {
-                // Ignore parsing errors
-              }
-            }
-
-            return response;
-          } catch (error) {
-            console.error('Error generating DPoP proof:', error);
-            return fetch(input, init);
-          }
-        }
-        return fetch(input, init);
-      };
-
-      // Create new agent pointed at the user's PDS
-      this.agent = new BskyAgent({
-        service: serviceUrl,
-        fetch: customFetch
-      } as any);
-
-      this.oauthTokens = tokens;
-
-      // Construct session data for the agent
-      const sessionData: SessionData = {
-        accessJwt: tokens.access_token,
-        refreshJwt: tokens.refresh_token,
-        handle: 'loading...', // We don't have handle yet, will resolve
-        did: tokens.sub,
-        email: undefined,
-        active: true
-      };
-
-      // Set the session on the agent
-      await this.agent.resumeSession(sessionData);
-
-      // Verify session and get profile (which also gets the real handle)
-      try {
-        const result = await this.agent.getProfile({
-          actor: tokens.sub,
-        });
-
-        this.isLoggedIn = true;
-        // Update handle in session
-        if (this.agent.session) {
-          this.agent.session.handle = result.data.handle;
-        }
-
-        logger.info('OAuth session resumed successfully');
-        return { success: true, data: { user: result.data } };
-      } catch (error) {
-        console.error('[OAuth Resume] Profile fetch failed:', error);
-        logger.error('Failed to verify OAuth session', error as Error);
-        this.isLoggedIn = false;
-        this.oauthTokens = null;
-        return { success: false, error: error as Error };
-      }
-    } catch (error) {
-      console.error('[OAuth Resume] General error:', error);
-      logger.error('Error resuming OAuth session', error as Error);
-      return { success: false, error: error as Error };
-    }
+  /**
+   * Configure the client with an authenticated OAuth session.
+   * Called by AuthContext after a successful OAuth login or session restore.
+   */
+  setOAuthSession(oauthSession: OAuthSession, did: string, handle: string): void {
+    this.agent = new Agent(oauthSession);
+    this._handle = handle;
+    this.isLoggedIn = true;
+    this.listingsCache = null; // Invalidate cache on session change
+    logger.info('OAuth session configured', { meta: { did, handle } });
   }
 
   logout(): void {
-    // The AT Protocol client should handle session cleanup internally
     this.isLoggedIn = false;
+    this._handle = undefined;
   }
 
   async createListing(listingData: CreateListingParams): Promise<Record<string, unknown>> {
-    if (!this.isLoggedIn || !this.agent.session) {
+    if (!this.isLoggedIn || !this.agent.did) {
       throw new Error('User must be logged in to create a listing');
     }
 
@@ -540,7 +199,7 @@ export class MarketplaceClient {
       }
 
       const result = await this.agent.api.com.atproto.repo.createRecord({
-        repo: this.agent.session.did,
+        repo: this.agent.accountDid,
         collection: MARKETPLACE_COLLECTION,
         record: recordToCreate,
       });
@@ -562,7 +221,7 @@ export class MarketplaceClient {
    * Delete a listing from the marketplace
    */
   async deleteListing(uri: string): Promise<void> {
-    if (!this.isLoggedIn || !this.agent.session) {
+    if (!this.isLoggedIn || !this.agent.did) {
       throw new Error('User must be logged in to delete a listing');
     }
 
@@ -580,7 +239,7 @@ export class MarketplaceClient {
       const [repo, collection, rkey] = uriParts;
 
       // Verify ownership (repo must match session DID)
-      if (repo !== this.agent.session.did) {
+      if (repo !== this.agent.did) {
         throw new Error('You can only delete your own listings');
       }
 
@@ -611,7 +270,7 @@ export class MarketplaceClient {
    * Update an existing listing
    */
   async updateListing(uri: string, listingData: CreateListingParams & { images?: (File | ListingImage)[] }): Promise<void> {
-    if (!this.isLoggedIn || !this.agent.session) {
+    if (!this.isLoggedIn || !this.agent.did) {
       throw new Error('User must be logged in to update a listing');
     }
 
@@ -626,7 +285,7 @@ export class MarketplaceClient {
       const [repo, collection, rkey] = uriParts;
 
       // Verify ownership
-      if (repo !== this.agent.session.did) {
+      if (repo !== this.agent.did) {
         throw new Error('You can only update your own listings');
       }
 
@@ -846,7 +505,7 @@ export class MarketplaceClient {
         cid: string;
       })[] = [];
 
-      if (!this.isLoggedIn || !this.agent.session) {
+      if (!this.isLoggedIn || !this.agent.did) {
         logger.warn('User is not logged in');
         return [];
       }
@@ -942,16 +601,16 @@ export class MarketplaceClient {
     }
 
     try {
-      const did = userDid || this.agent.session!.did;
-      const handle = userDid ? await this.getHandleFromDid(did) : this.agent.session!.handle;
+      const did = userDid || this.agent.accountDid;
+      const handle = userDid ? await this.getHandleFromDid(did) : (this._handle ?? did);
 
       // If fetching from a different user, create a temporary agent with their PDS
       let agentToUse = this.agent;
-      if (userDid && userDid !== this.agent.session?.did) {
+      if (userDid && userDid !== this.agent.did) {
         const userPDS = await this.resolvePDS(userDid);
         if (userPDS) {
           logger.info(`Resolved PDS for ${userDid}: ${userPDS}`);
-          agentToUse = new BskyAgent({ service: userPDS });
+          agentToUse = new AtpAgent({ service: userPDS }) as Agent;
         } else {
           logger.warn(`Could not resolve PDS for ${userDid}, using default agent`);
         }
@@ -1019,7 +678,7 @@ export class MarketplaceClient {
    * Post the listing to the user's Bluesky feed
    */
   async shareListingOnBluesky(listingData: Record<string, any>, uri: string): Promise<void> {
-    if (!this.isLoggedIn || !this.agent.session) {
+    if (!this.isLoggedIn || !this.agent.did) {
       throw new Error('User must be logged in to share a listing');
     }
 
@@ -1178,7 +837,7 @@ export class MarketplaceClient {
   })[]> {
     try {
       // Check if user is logged in before attempting to search
-      if (!this.isLoggedIn || !this.agent.session) {
+      if (!this.isLoggedIn || !this.agent.did) {
         logger.warn('User is not logged in, cannot search marketplace listings');
         return [];
       }
@@ -1300,7 +959,7 @@ export class MarketplaceClient {
           // If hideFromFriends is true, check if the current user follows the author
           if (listing.hideFromFriends) {
             // Don't filter out my own listings
-            if (listing.authorDid === this.agent.session?.did) {
+            if (listing.authorDid === this.agent.did) {
               return listing;
             }
 
@@ -1500,14 +1159,13 @@ export class MarketplaceClient {
    * Used for the "Hide from friends" feature
    */
   async isUserFollowingMe(userDid: string): Promise<boolean> {
-    if (!this.isLoggedIn || !this.agent.session) {
+    if (!this.isLoggedIn || !this.agent.did) {
       logger.warn('User is not logged in, cannot check follow status');
       return false;
     }
 
     try {
-      // Use the getFollows endpoint to check if the provided user follows the authenticated user
-      logger.info(`Checking if user ${userDid} follows ${this.agent.session.did}`);
+      logger.info(`Checking if user ${userDid} follows ${this.agent.accountDid}`);
       logger.logApiRequest('GET', 'app.bsky.graph.getFollows', {
         actor: userDid
       });
@@ -1525,7 +1183,7 @@ export class MarketplaceClient {
 
       // Check if any of the follows match the authenticated user's DID
       const isFollowing = result.data.follows.some(follow =>
-        follow.did === this.agent.session!.did
+        follow.did === this.agent.accountDid
       );
 
       return isFollowing;
@@ -1540,7 +1198,7 @@ export class MarketplaceClient {
    * Returns whether we follow them, and when we started following
    */
   async getFollowDetails(targetDid: string): Promise<{ isFollowing: boolean; followedAt?: string }> {
-    if (!this.isLoggedIn || !this.agent.session) {
+    if (!this.isLoggedIn || !this.agent.did) {
       return { isFollowing: false };
     }
 
@@ -1562,7 +1220,7 @@ export class MarketplaceClient {
         try {
           // We use the agent to fetch the record from our own repo
           const result = await this.agent.api.com.atproto.repo.getRecord({
-            repo: this.agent.session.did, // The follow is in OUR repo
+            repo: this.agent.accountDid, // The follow is in OUR repo
             collection: 'app.bsky.graph.follow',
             rkey
           });
@@ -1749,7 +1407,7 @@ export class MarketplaceClient {
         // If hideFromFriends is true, check if the current user follows the author
         if (listing.hideFromFriends) {
           // Don't filter out my own listings
-          if (listing.authorDid === this.agent.session?.did) {
+          if (listing.authorDid === this.agent.did) {
             return listing;
           }
 
@@ -1895,7 +1553,7 @@ export async function fetchPublicListings(): Promise<(MarketplaceListing & {
       }
 
       // Create a temporary unauthenticated agent for this PDS
-      const agent = new BskyAgent({ service: pdsUrl });
+      const agent = new AtpAgent({ service: pdsUrl });
 
       // Get the handle
       const handle = await getHandleFromDid(did);

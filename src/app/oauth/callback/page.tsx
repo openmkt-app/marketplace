@@ -2,88 +2,51 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { exchangeCodeForTokens } from '@/lib/oauth-client';
+import { processOAuthCallback } from '@/lib/oauth-client';
 import logger from '@/lib/logger';
 
 function OAuthCallbackContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const [error, setError] = useState<string | null>(null);
-    const [isProcessing, setIsProcessing] = useState(true);
 
     useEffect(() => {
         async function handleCallback() {
             try {
-                // Get authorization code and state from URL
-                const code = searchParams.get('code');
-                const state = searchParams.get('state');
+                // Check for OAuth errors in the URL first
                 const errorParam = searchParams.get('error');
                 const errorDescription = searchParams.get('error_description');
-
-                // Check for OAuth errors
                 if (errorParam) {
                     throw new Error(errorDescription || errorParam);
                 }
 
-                if (!code || !state) {
-                    throw new Error('Missing authorization code or state');
-                }
+                logger.info('Processing OAuth callback');
 
-                // Retrieve stored OAuth state
-                const storedCodeVerifier = sessionStorage.getItem('oauth_verifier');
-                const storedState = sessionStorage.getItem('oauth_state');
-                const storedAuthServer = sessionStorage.getItem('oauth_auth_server');
-                const returnTo = sessionStorage.getItem('oauth_return_to') || '/';
+                // Exchange the authorization code for tokens.
+                // BrowserOAuthClient handles PKCE verification, DPoP key management,
+                // and persists the session in IndexedDB automatically.
+                const { session, state } = await processOAuthCallback();
 
-                if (!storedCodeVerifier || !storedState || !storedAuthServer) {
-                    throw new Error('OAuth state not found. Please try logging in again.');
-                }
+                logger.info('OAuth callback processed', { meta: { did: session.did } });
 
-                // Verify state matches (CSRF protection)
-                if (state !== storedState) {
-                    throw new Error('Invalid state parameter. Possible CSRF attack.');
-                }
+                // Notify AuthContext so it can set up the user without a full page reload
+                window.dispatchEvent(
+                    new CustomEvent('oauth-login-success', { detail: { session } })
+                );
 
-                logger.info('Processing OAuth callback', { meta: { code: code.substring(0, 10) + '...' } });
-
-                // Exchange code for tokens
-                const tokens = await exchangeCodeForTokens(code, storedCodeVerifier, storedAuthServer);
-
-                // Store tokens in localStorage (include authServer for session resume)
-                const tokenData = {
-                    accessToken: tokens.access_token,
-                    refreshToken: tokens.refresh_token,
-                    tokenType: tokens.token_type,
-                    expiresAt: Date.now() + (tokens.expires_in * 1000),
-                    scope: tokens.scope,
-                    did: tokens.sub,
-                    authServer: storedAuthServer
-                };
-
-                localStorage.setItem('oauth_tokens', JSON.stringify(tokenData));
-
-                // Clear OAuth state from sessionStorage
-                sessionStorage.removeItem('oauth_verifier');
-                sessionStorage.removeItem('oauth_state');
-                sessionStorage.removeItem('oauth_auth_server');
-                sessionStorage.removeItem('oauth_return_to');
-
-                logger.info('OAuth login successful', { meta: { did: tokens.sub } });
-
-                // Trigger a custom event to notify AuthContext
-                window.dispatchEvent(new CustomEvent('oauth-login-success', { detail: tokenData }));
-
-                // Redirect to original destination
+                // Redirect to the page the user was on before login (stored in OAuth state param)
+                const returnTo = state && state.startsWith('/') ? state : '/';
                 router.push(returnTo);
-            } catch (err: any) {
-                logger.error('OAuth callback error', err);
-                setError(err.message || 'Failed to complete OAuth login');
-                setIsProcessing(false);
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : 'Failed to complete login';
+                logger.error('OAuth callback error', err instanceof Error ? err : new Error(message));
+                setError(message);
             }
         }
 
         handleCallback();
-    }, [searchParams, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     if (error) {
         return (

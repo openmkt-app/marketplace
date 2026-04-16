@@ -26,9 +26,10 @@ interface ListingCardProps {
   };
   showDebug?: boolean;
   flaggedUris?: Set<string>;
+  priority?: boolean;
 }
 
-const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris }: ListingCardProps) => {
+const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, priority = false }: ListingCardProps) => {
   // NSFW blur state
   const isNsfw = shouldBlurListing(listing.labels, listing.uri, flaggedUris);
   const [blurDismissed, setBlurDismissed] = useState(false);
@@ -72,6 +73,7 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris }: Lis
           height="100%"
           className="w-full h-full object-contain transform group-hover:scale-105 transition-transform duration-500"
           fallbackText="No image"
+          priority={priority}
         />
 
         {/* Condition Badge */}

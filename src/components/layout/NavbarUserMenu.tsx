@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { generateAvatarUrl } from '@/lib/image-utils';
 import { LogOut, LayoutGrid, Store, Settings } from 'lucide-react';
 
 interface NavbarUserMenuProps {
@@ -11,7 +10,7 @@ interface NavbarUserMenuProps {
         did: string;
         handle: string;
         displayName?: string;
-        avatarCid?: string;
+        avatarUrl?: string;
     };
     onLogout: () => void;
 }
@@ -43,10 +42,10 @@ export default function NavbarUserMenu({ user, onLogout }: NavbarUserMenuProps) 
                 aria-expanded={isOpen}
                 aria-haspopup="true"
             >
-                {user.did && user.avatarCid ? (
+                {user.avatarUrl ? (
                     <div className={`h-9 w-9 rounded-full border-2 overflow-hidden transition-all relative ${isOpen ? 'ring-2 ring-primary-color border-primary-color' : 'border-gray-100 hover:ring-2 hover:ring-primary-color'}`}>
                         <Image
-                            src={generateAvatarUrl(user.did, user.avatarCid) || ''}
+                            src={user.avatarUrl}
                             alt={user.displayName || user.handle || 'User'}
                             fill
                             className="object-cover"

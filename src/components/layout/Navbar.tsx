@@ -6,7 +6,6 @@ import Image from 'next/image';
 import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import SearchBar from '../marketplace/filters/SearchBar';
-import { generateAvatarUrl } from '@/lib/image-utils';
 import { getUnreadChatCount } from '@/lib/chat-utils';
 import { Bell, Store } from 'lucide-react';
 

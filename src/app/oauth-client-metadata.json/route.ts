@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export const dynamic = 'force-dynamic'; // Defaults to auto, but we want to ensure per-request eval
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-    // Determine the protocol and host from the request
     const host = request.headers.get('host') || 'localhost:3000';
     const protocol = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https';
     const origin = `${protocol}://${host}`;
 
-    // Dynamically construct the metadata based on the current origin
+    // client_id at /oauth-client-metadata.json (root) causes Bluesky's authorize
+    // screen to display just the domain name ("openmkt.app") instead of the full path.
     const metadata = {
         client_id: `${origin}/oauth-client-metadata.json`,
         client_name: 'Open Market',

@@ -1,4 +1,4 @@
-import { BskyAgent } from '@atproto/api';
+import { Agent } from '@atproto/api';
 
 export const BOT_HANDLE = 'openmkt.app';
 
@@ -6,7 +6,7 @@ export const BOT_HANDLE = 'openmkt.app';
  * Check if a user is following the marketplace bot
  */
 export async function isFollowingBot(
-    agent: BskyAgent,
+    agent: Agent,
     userDid: string
 ): Promise<boolean> {
     try {
@@ -21,7 +21,7 @@ export async function isFollowingBot(
         // But since we are checking if *another* user (seller) follows the bot, or the current user, it depends on context.
 
         // Case A: Checking if Current User follows Bot
-        if (userDid === agent.session?.did) {
+        if (userDid === agent.did) {
             const res = await agent.getProfile({ actor: BOT_HANDLE });
             return !!res.data.viewer?.following;
         }
@@ -68,7 +68,7 @@ export async function isFollowingBot(
 /**
  * Follow the marketplace bot
  */
-export async function followBot(agent: BskyAgent): Promise<boolean> {
+export async function followBot(agent: Agent): Promise<boolean> {
     try {
         const profile = await agent.getProfile({ actor: BOT_HANDLE });
         if (!profile.success) return false;
@@ -89,7 +89,7 @@ export function getBotProfileUrl(): string {
  * Check if the current user is following a specific user (e.g., seller)
  */
 export async function isFollowingUser(
-    agent: BskyAgent,
+    agent: Agent,
     targetDid: string
 ): Promise<boolean> {
     try {
@@ -105,7 +105,7 @@ export async function isFollowingUser(
 /**
  * Follow a specific user
  */
-export async function followUser(agent: BskyAgent, targetDid: string): Promise<boolean> {
+export async function followUser(agent: Agent, targetDid: string): Promise<boolean> {
     try {
         await agent.follow(targetDid);
         return true;

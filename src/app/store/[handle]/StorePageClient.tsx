@@ -388,8 +388,8 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {displayListings.map((listing) => (
-                    <ListingCard key={listing.uri} listing={listing} flaggedUris={flaggedUris} />
+                  {displayListings.map((listing, index) => (
+                    <ListingCard key={listing.uri} listing={listing} flaggedUris={flaggedUris} priority={index < 4} />
                   ))}
                 </div>
               )}

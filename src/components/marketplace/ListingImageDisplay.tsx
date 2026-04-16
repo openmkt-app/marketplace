@@ -12,6 +12,7 @@ interface ListingImageDisplayProps {
   className?: string;
   height?: string | number;
   fallbackText?: string;
+  priority?: boolean;
 }
 
 export default function ListingImageDisplay({
@@ -19,7 +20,8 @@ export default function ListingImageDisplay({
   size = 'thumbnail',
   className = 'w-full h-full object-cover',
   height = 200,
-  fallbackText = 'No image available'
+  fallbackText = 'No image available',
+  priority = false,
 }: ListingImageDisplayProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [error, setError] = useState<boolean>(false);
@@ -123,6 +125,8 @@ export default function ListingImageDisplay({
         className={className}
         onError={handleImageError}
         unoptimized
+        priority={priority}
+        loading={priority ? 'eager' : 'lazy'}
       />
     </div>
   );

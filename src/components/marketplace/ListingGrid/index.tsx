@@ -24,7 +24,7 @@ export default function ListingGrid({
   return (
     <div className="listing-grid">
       {listings.map((listing, index) => (
-        <ListingCard key={listing.uri || `listing-${index}`} listing={listing} />
+        <ListingCard key={listing.uri || `listing-${index}`} listing={listing} priority={index < 4} />
       ))}
     </div>
   );

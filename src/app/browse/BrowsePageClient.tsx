@@ -1096,6 +1096,7 @@ const BrowsePageClient = () => {
                       }}
                       showDebug={debugMode}
                       flaggedUris={flaggedUris}
+                      priority={index < 4}
                     />
                   </div>
                 ))}

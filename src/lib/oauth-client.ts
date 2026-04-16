@@ -1,360 +1,115 @@
-// src/lib/oauth-client.ts
 /**
- * OAuth 2.1 Client for AT Protocol
- * Implements authorization code flow with PKCE and DPoP
+ * OAuth client using the official @atproto/oauth-client-browser package.
+ * Replaces the hand-rolled PKCE + DPoP implementation.
+ *
+ * Architecture:
+ * - AuthContext calls restoreOAuthSession() on every mount to restore existing sessions
+ * - LoginPage calls signInWithOAuth() which redirects to Bluesky
+ * - The /oauth/callback page calls processOAuthCallback() to exchange the code and then redirects
+ * - On the destination page, AuthContext calls restoreOAuthSession() and finds the session in IndexedDB
  */
+import { BrowserOAuthClient, OAuthSession } from '@atproto/oauth-client-browser';
 
-import { generatePKCE, generateState, generateDPoPKeyPair, createDPoPProof, storeDPoPKeyPair, retrieveDPoPKeyPair } from './crypto-utils';
-import logger from './logger';
+export type { OAuthSession };
 
-export interface OAuthTokens {
-    access_token: string;
-    token_type: string;
-    expires_in: number;
-    refresh_token: string;
-    scope: string;
-    sub: string; // User's DID
-}
-
-export interface OAuthState {
-    codeVerifier: string;
-    state: string;
-    returnTo?: string;
-}
+let _clientPromise: Promise<BrowserOAuthClient> | null = null;
 
 /**
- * Resolve the authorization server for a given handle
+ * Get (or lazily create) the singleton BrowserOAuthClient.
+ * Uses BrowserOAuthClient.load() to fetch client metadata from the server,
+ * which ensures the metadata matches exactly what is served at the well-known URL.
  */
-async function resolveAuthorizationServer(handle: string): Promise<string> {
-    try {
-        // Clean handle
-        const cleanHandle = handle.startsWith('@') ? handle.slice(1) : handle;
+async function loadOAuthClient(): Promise<BrowserOAuthClient> {
+  if (typeof window === 'undefined') {
+    throw new Error('OAuth client can only be used in the browser');
+  }
+  if (!_clientPromise) {
+    const origin = window.location.origin;
+    const isLoopback =
+      origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1');
 
-        // Resolve DID from handle
-        const didResponse = await fetch(`https://bsky.social/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(cleanHandle)}`);
-
-        if (!didResponse.ok) {
-            throw new Error('Failed to resolve handle to DID');
-        }
-
-        const { did } = await didResponse.json();
-
-        // Resolve PDS from DID
-        const didDocResponse = await fetch(`https://plc.directory/${did}`);
-
-        if (!didDocResponse.ok) {
-            throw new Error('Failed to resolve DID document');
-        }
-
-        const didDoc = await didDocResponse.json();
-
-        // Find PDS service
-        const pdsService = didDoc.service?.find((s: any) =>
-            s.type === 'AtprotoPersonalDataServer'
-        );
-
-        if (!pdsService?.serviceEndpoint) {
-            throw new Error('No PDS found for user');
-        }
-
-        // Fetch PDS metadata to get authorization server
-        const pdsMetadataResponse = await fetch(`${pdsService.serviceEndpoint}/.well-known/oauth-protected-resource`);
-
-        if (!pdsMetadataResponse.ok) {
-            // Fallback to PDS as auth server
-            return pdsService.serviceEndpoint;
-        }
-
-        const pdsMetadata = await pdsMetadataResponse.json();
-
-        return pdsMetadata.authorization_servers?.[0] || pdsService.serviceEndpoint;
-    } catch (error) {
-        logger.error('Failed to resolve authorization server', error as Error);
-        // Fallback to default Bluesky auth server
-        return 'https://bsky.social';
-    }
-}
-
-/**
- * Get or create DPoP key pair
- */
-async function getDPoPKeyPair() {
-    // Try to retrieve existing key pair
-    let keyPair = await retrieveDPoPKeyPair();
-
-    if (!keyPair) {
-        // Generate new key pair
-        keyPair = await generateDPoPKeyPair();
-        await storeDPoPKeyPair(keyPair.privateKey, keyPair.publicKey, keyPair.jwk);
+    let clientId: string;
+    if (isLoopback) {
+      // Loopback client IDs must start with 'http://localhost' (no port).
+      // redirect_uri must use 127.0.0.1 (not localhost) per the AT Protocol spec.
+      // We include the dynamic port so it works on 3000, 3001, etc.
+      const port = window.location.port || '80';
+      clientId = `http://localhost?redirect_uri=${encodeURIComponent(`http://127.0.0.1:${port}/oauth/callback`)}&scope=${encodeURIComponent('atproto transition:generic transition:chat.bsky')}`;
+    } else {
+      clientId = `${origin}/oauth-client-metadata.json`;
     }
 
-    return keyPair;
+    _clientPromise = BrowserOAuthClient.load({
+      clientId,
+      handleResolver: 'https://bsky.social',
+      allowHttp: isLoopback,
+    }).catch((err) => {
+      _clientPromise = null; // Allow retry on next call
+      throw err;
+    });
+  }
+  return _clientPromise;
 }
 
 /**
- * Build authorization URL for OAuth flow
+ * Restore an existing OAuth session from IndexedDB storage.
+ * Returns undefined if no session exists — does NOT process OAuth callbacks.
+ *
+ * On localhost, the library's fixLocation() function redirects to 127.0.0.1 when
+ * the current path matches a redirect URI. For paths that don't match (e.g. the
+ * homepage '/'), fixLocation throws instead. We catch that and redirect manually.
  */
-export async function getAuthorizationUrl(handle: string): Promise<{
-    authUrl: string;
-    codeVerifier: string;
-    state: string;
-    authServer: string;
+export async function restoreOAuthSession(): Promise<{ session: OAuthSession } | undefined> {
+  const client = await loadOAuthClient();
+  try {
+    return await client.initRestore();
+  } catch (err) {
+    if (err instanceof Error) {
+      // fixLocation already triggered a window.location redirect — just return.
+      if (err.message.startsWith('Redirecting to loopback IP')) {
+        return undefined;
+      }
+      // fixLocation found no matching redirect URI for the current path — redirect manually.
+      if (err.message.includes('Please use the loopback IP address')) {
+        const url = new URL(window.location.href);
+        url.hostname = '127.0.0.1';
+        window.location.replace(url.href);
+        return undefined;
+      }
+    }
+    throw err;
+  }
+}
+
+/**
+ * Process the OAuth callback URL parameters (exchange code for tokens).
+ * Must be called on the /oauth/callback page after the auth server redirects back.
+ * Returns the session and the `state` string passed to signInWithOAuth (i.e. the returnTo path).
+ */
+export async function processOAuthCallback(): Promise<{
+  session: OAuthSession;
+  state: string | null;
 }> {
-    try {
-        logger.info('Starting OAuth authorization flow', { meta: { handle } });
-
-        // Generate PKCE parameters
-        const { codeVerifier, codeChallenge } = await generatePKCE();
-        const state = generateState();
-
-        // Resolve authorization server for this user
-        const authServer = await resolveAuthorizationServer(handle);
-        logger.info('Resolved authorization server', { meta: { authServer } });
-
-        // Get client metadata
-        // client_id must match the URL where the metadata is hosted
-        const clientId = `${window.location.origin}/.well-known/oauth-client-metadata.json`;
-        let redirectUri = `${window.location.origin}/oauth/callback`;
-
-
-        // Build authorization URL
-        const params = new URLSearchParams({
-            client_id: clientId,
-            redirect_uri: redirectUri,
-            response_type: 'code',
-            scope: 'atproto transition:generic transition:chat.bsky',
-            state,
-            code_challenge: codeChallenge,
-            code_challenge_method: 'S256',
-            login_hint: handle
-        });
-
-        const authUrl = `${authServer}/oauth/authorize?${params.toString()}`;
-
-        return {
-            authUrl,
-            codeVerifier,
-            state,
-            authServer
-        };
-    } catch (error) {
-        logger.error('Failed to build authorization URL', error as Error);
-        throw error;
-    }
+  const client = await loadOAuthClient();
+  return client.initCallback();
 }
 
 /**
- * Exchange authorization code for tokens
+ * Start the OAuth sign-in flow. Redirects the browser to the user's Bluesky auth server.
+ * @param handle The user's Bluesky handle (e.g. "alice.bsky.social")
+ * @param returnTo Path to return to after successful login (stored in OAuth state param)
  */
-export async function exchangeCodeForTokens(
-    code: string,
-    codeVerifier: string,
-    authServer: string
-): Promise<OAuthTokens> {
-    try {
-        logger.info('Exchanging authorization code for tokens', { meta: { authServer } });
-
-        if (!authServer || !authServer.startsWith('http')) {
-            throw new Error(`Invalid auth server URL: ${authServer}`);
-        }
-
-        // Get DPoP key pair
-        const dpopKeyPair = await getDPoPKeyPair();
-
-        // Get token endpoint from auth server metadata
-        const metadataUrl = `${authServer}/.well-known/oauth-authorization-server`;
-        const metadataResponse = await fetch(metadataUrl);
-
-        if (!metadataResponse.ok) {
-            throw new Error(`Failed to fetch auth server metadata: ${metadataResponse.status} ${metadataResponse.statusText}`);
-        }
-
-        let metadata;
-        try {
-            metadata = await metadataResponse.json();
-        } catch (e) {
-            const text = await metadataResponse.text();
-            console.error('Failed to parse metadata JSON:', text.substring(0, 100));
-            throw new Error(`Invalid JSON from auth server metadata: ${e}`);
-        }
-
-        const tokenEndpoint = metadata.token_endpoint;
-
-        if (!tokenEndpoint) {
-            throw new Error('No token_endpoint found in auth server metadata');
-        }
-
-        // Helper to perform the request, optionally with a nonce
-        const performRequest = async (nonce?: string) => {
-            // Create DPoP proof for token request
-            const dpopProof = await createDPoPProof(
-                dpopKeyPair.privateKey,
-                dpopKeyPair.jwk,
-                'POST',
-                tokenEndpoint,
-                nonce
-            );
-
-            // Prepare token request
-            // Use dynamic values to match the authorization request
-            const clientId = `${window.location.origin}/.well-known/oauth-client-metadata.json`;
-            const redirectUri = `${window.location.origin}/oauth/callback`;
-
-            const body = new URLSearchParams({
-                grant_type: 'authorization_code',
-                code,
-                redirect_uri: redirectUri,
-                client_id: clientId,
-                code_verifier: codeVerifier
-            });
-
-            return fetch(tokenEndpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'DPoP': dpopProof
-                },
-                body: body.toString()
-            });
-        };
-
-        // Initial request
-        let response = await performRequest();
-
-        // Handle DPoP nonce error (use_dpop_nonce)
-        if (!response.ok) {
-            // Clone response to read body without consuming the original if we need to throw later
-            const checkResponse = response.clone();
-            try {
-                const errorJson = await checkResponse.json();
-                if (errorJson.error === 'use_dpop_nonce') {
-                    const nonce = response.headers.get('DPoP-Nonce');
-                    if (nonce) {
-                        logger.info('Retrying token exchange with new DPoP nonce');
-                        response = await performRequest(nonce);
-                    }
-                }
-            } catch (e) {
-                // Not a JSON error or other issue, ignore and let standard error handling take over
-            }
-        }
-
-        if (!response.ok) {
-            const error = await response.text();
-            throw new Error(`Token exchange failed: ${error}`);
-        }
-
-        const tokens: OAuthTokens = await response.json();
-
-        logger.info('Successfully exchanged code for tokens');
-
-        return tokens;
-    } catch (error) {
-        logger.error('Failed to exchange code for tokens', error as Error);
-        throw error;
-    }
+export async function signInWithOAuth(handle: string, returnTo: string = '/'): Promise<void> {
+  const client = await loadOAuthClient();
+  await client.signInRedirect(handle, { state: returnTo });
 }
 
 /**
- * Refresh access token using refresh token
+ * Revoke the OAuth session for the given DID.
+ * Revokes the token at the server and removes it from IndexedDB so the session
+ * is not restored on the next page load.
  */
-export async function refreshAccessToken(
-    refreshToken: string,
-    authServer: string
-): Promise<OAuthTokens> {
-    try {
-        logger.info('Refreshing access token');
-
-        // Get DPoP key pair
-        const dpopKeyPair = await getDPoPKeyPair();
-
-        // Get token endpoint
-        const metadataUrl = `${authServer}/.well-known/oauth-authorization-server`;
-        const metadataResponse = await fetch(metadataUrl);
-
-        if (!metadataResponse.ok) {
-            throw new Error(`Failed to fetch auth server metadata: ${metadataResponse.status}`);
-        }
-
-        const metadata = await metadataResponse.json();
-        const tokenEndpoint = metadata.token_endpoint;
-
-        // Helper to perform the request, optionally with a nonce
-        const performRequest = async (nonce?: string) => {
-            // Create DPoP proof
-            const dpopProof = await createDPoPProof(
-                dpopKeyPair.privateKey,
-                dpopKeyPair.jwk,
-                'POST',
-                tokenEndpoint,
-                nonce
-            );
-
-            // Prepare refresh request
-            const clientId = `${window.location.origin}/.well-known/oauth-client-metadata.json`;
-
-            const body = new URLSearchParams({
-                grant_type: 'refresh_token',
-                refresh_token: refreshToken,
-                client_id: clientId
-            });
-
-            return fetch(tokenEndpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'DPoP': dpopProof
-                },
-                body: body.toString()
-            });
-        };
-
-        // Initial request
-        let response = await performRequest();
-
-        // Handle DPoP nonce error (use_dpop_nonce)
-        if (!response.ok) {
-            const checkResponse = response.clone();
-            try {
-                const errorJson = await checkResponse.json();
-                if (errorJson.error === 'use_dpop_nonce') {
-                    const nonce = response.headers.get('DPoP-Nonce');
-                    if (nonce) {
-                        logger.info('Retrying token refresh with new DPoP nonce');
-                        response = await performRequest(nonce);
-                    }
-                }
-            } catch (e) {
-                // Ignore
-            }
-        }
-
-        if (!response.ok) {
-            const error = await response.text();
-            throw new Error(`Token refresh failed: ${error}`);
-        }
-
-        const tokens: OAuthTokens = await response.json();
-
-        logger.info('Successfully refreshed access token');
-
-        return tokens;
-    } catch (error) {
-        logger.error('Failed to refresh access token', error as Error);
-        throw error;
-    }
-}
-
-/**
- * Create DPoP proof for authenticated requests
- * @param accessToken Optional access token - when provided, includes ath (token hash) in proof
- */
-export async function createRequestDPoPProof(
-    method: string,
-    url: string,
-    nonce?: string,
-    accessToken?: string
-): Promise<string> {
-    const dpopKeyPair = await getDPoPKeyPair();
-    return createDPoPProof(dpopKeyPair.privateKey, dpopKeyPair.jwk, method, url, nonce, accessToken);
+export async function revokeOAuthSession(did: string): Promise<void> {
+  const client = await loadOAuthClient();
+  await client.revoke(did);
 }
