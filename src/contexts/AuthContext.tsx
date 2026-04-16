@@ -48,15 +48,18 @@ async function setupFromOAuthSession(
     // We intentionally do NOT use the OAuth session here — handle/displayName/avatar
     // are public data and using the fresh OAuth token causes intermittent 401/403 errors
     // while the PDS is still accepting the token.
+    const HANDLE_CACHE_KEY = `handle-cache-${did}`;
+
     const publicAgent = new Agent({ service: 'https://api.bsky.app' });
     let profile;
     try {
       const result = await publicAgent.getProfile({ actor: did });
       profile = result.data;
+      // Cache the successfully-resolved handle so we can use it when AT Protocol is down
+      try { localStorage.setItem(HANDLE_CACHE_KEY, profile.handle); } catch {}
     } catch {
-      // api.bsky.app unreachable — resolve handle from the DID document instead
-      // so the handle is always correct (critical for admin checks).
-      let handle = did;
+      // api.bsky.app unreachable — try plc.directory, then cached handle, then raw DID
+      let handle: string | null = null;
       try {
         const didDocUrl = did.startsWith('did:web:')
           ? `https://${did.slice('did:web:'.length)}/.well-known/did.json`
@@ -64,8 +67,14 @@ async function setupFromOAuthSession(
         const doc = await fetch(didDocUrl).then(r => r.json());
         const aka = doc.alsoKnownAs?.[0];
         if (aka?.startsWith('at://')) handle = aka.slice(5);
-      } catch { /* keep DID as last resort */ }
-      profile = { handle, displayName: undefined, avatar: undefined };
+      } catch { /* fall through */ }
+
+      // Last resort: use the previously cached handle (survives full AT Protocol outages)
+      if (!handle) {
+        try { handle = localStorage.getItem(HANDLE_CACHE_KEY); } catch {}
+      }
+
+      profile = { handle: handle ?? did, displayName: undefined, avatar: undefined };
     }
 
     const user: User = {
