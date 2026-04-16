@@ -1527,7 +1527,15 @@ export async function fetchPublicListings(): Promise<(MarketplaceListing & {
   // Helper to get handle from DID
   const getHandleFromDid = async (did: string): Promise<string> => {
     try {
-      const response = await fetch(`https://plc.directory/${did}`);
+      let didDocUrl: string;
+      if (did.startsWith('did:web:')) {
+        const domain = did.slice('did:web:'.length);
+        didDocUrl = `https://${domain}/.well-known/did.json`;
+      } else {
+        didDocUrl = `https://plc.directory/${did}`;
+      }
+
+      const response = await fetch(didDocUrl);
       if (!response.ok) return did;
 
       const didDoc = await response.json();
