@@ -515,21 +515,27 @@ export class MarketplaceClient {
       const knownMarketplaceDIDs = getKnownMarketplaceDIDs();
       logger.info(`Fetching from ${knownMarketplaceDIDs.length} known marketplace DIDs`);
 
-      // Fetch from all known DIDs in parallel for speed
-      const fetchPromises = knownMarketplaceDIDs.map(async (did) => {
-        try {
-          logger.info(`Fetching listings from DID: ${did}`);
-          const didListings = await this.getUserListings(did);
-          logger.info(`Found ${didListings.length} listings from DID ${did}`);
-          return didListings;
-        } catch (error) {
-          logger.warn(`Failed to fetch listings from DID ${did}`, error as Error);
-          return [];
-        }
-      });
-
-      // Wait for all fetches to complete
-      const allListingsArrays = await Promise.all(fetchPromises);
+      // Fetch from known DIDs with a concurrency limit to avoid bursting plc.directory
+      // and PDS endpoints simultaneously (causes 429s under load)
+      const CONCURRENCY = 5;
+      const allListingsArrays: (typeof listings)[] = [];
+      for (let i = 0; i < knownMarketplaceDIDs.length; i += CONCURRENCY) {
+        const chunk = knownMarketplaceDIDs.slice(i, i + CONCURRENCY);
+        const chunkResults = await Promise.all(
+          chunk.map(async (did) => {
+            try {
+              logger.info(`Fetching listings from DID: ${did}`);
+              const didListings = await this.getUserListings(did);
+              logger.info(`Found ${didListings.length} listings from DID ${did}`);
+              return didListings;
+            } catch (error) {
+              logger.warn(`Failed to fetch listings from DID ${did}`, error as Error);
+              return [];
+            }
+          })
+        );
+        allListingsArrays.push(...chunkResults);
+      }
 
       // Flatten and deduplicate
       allListingsArrays.forEach(didListings => {
@@ -602,7 +608,9 @@ export class MarketplaceClient {
 
     try {
       const did = userDid || this.agent.accountDid;
-      const handle = userDid ? await this.getHandleFromDid(did) : (this._handle ?? did);
+      // Use the known handle for the logged-in user; for other DIDs use the DID itself
+      // as a placeholder — the browse page enriches listings with real handles separately.
+      const handle = userDid ? did : (this._handle ?? did);
 
       // If fetching from a different user, create a temporary agent with their PDS
       let agentToUse = this.agent;
@@ -814,11 +822,12 @@ export class MarketplaceClient {
   }
 
   /**
-   * Get handle from DID
+   * Get handle from DID using the public AppView (no auth needed)
    */
   private async getHandleFromDid(did: string): Promise<string> {
     try {
-      const result = await this.agent.getProfile({ actor: did });
+      const publicAgent = new AtpAgent({ service: 'https://api.bsky.app' });
+      const result = await publicAgent.getProfile({ actor: did });
       return result.data.handle;
     } catch (error) {
       logger.error(`Failed to get handle for DID: ${did}`, error as Error);
@@ -1550,55 +1559,60 @@ export async function fetchPublicListings(): Promise<(MarketplaceListing & {
     }
   };
 
-  // Fetch from all known DIDs in parallel
-  const fetchPromises = knownMarketplaceDIDs.map(async (did) => {
-    try {
-      // Resolve the PDS for this DID
-      const pdsUrl = await resolvePDS(did);
-      if (!pdsUrl) {
-        logger.warn(`[Public] Could not resolve PDS for ${did}`);
-        return [];
-      }
+  // Fetch from known DIDs in capped batches to avoid bursting plc.directory / PDS
+  const PUBLIC_CONCURRENCY = 5;
+  const allListingsArrays: (typeof listings)[] = [];
+  for (let i = 0; i < knownMarketplaceDIDs.length; i += PUBLIC_CONCURRENCY) {
+    const chunk = knownMarketplaceDIDs.slice(i, i + PUBLIC_CONCURRENCY);
+    const chunkResults = await Promise.all(
+      chunk.map(async (did) => {
+        try {
+          // Resolve the PDS for this DID
+          const pdsUrl = await resolvePDS(did);
+          if (!pdsUrl) {
+            logger.warn(`[Public] Could not resolve PDS for ${did}`);
+            return [];
+          }
 
-      // Create a temporary unauthenticated agent for this PDS
-      const agent = new AtpAgent({ service: pdsUrl });
+          // Create a temporary unauthenticated agent for this PDS
+          const agent = new AtpAgent({ service: pdsUrl });
 
-      // Get the handle
-      const handle = await getHandleFromDid(did);
+          // Get the handle
+          const handle = await getHandleFromDid(did);
 
-      // Fetch listings from the marketplace collection
-      const result = await agent.api.com.atproto.repo.listRecords({
-        repo: did,
-        collection: MARKETPLACE_COLLECTION,
-        limit: 50
-      });
+          // Fetch listings from the marketplace collection
+          const result = await agent.api.com.atproto.repo.listRecords({
+            repo: did,
+            collection: MARKETPLACE_COLLECTION,
+            limit: 50
+          });
 
-      if (!result.success || !result.data.records.length) {
-        return [];
-      }
+          if (!result.success || !result.data.records.length) {
+            return [];
+          }
 
-      // Process the listings
-      return result.data.records.map(record => {
-        const listingData = record.value as MarketplaceListing;
-        const formattedImages = generateImageUrls(did, listingData.images);
+          // Process the listings
+          return result.data.records.map(record => {
+            const listingData = record.value as MarketplaceListing;
+            const formattedImages = generateImageUrls(did, listingData.images);
 
-        return {
-          ...listingData,
-          authorDid: did,
-          authorHandle: handle,
-          uri: record.uri,
-          cid: record.cid,
-          formattedImages
-        };
-      });
-    } catch (error) {
-      logger.warn(`[Public] Failed to fetch listings from DID ${did}`, error as Error);
-      return [];
-    }
-  });
-
-  // Wait for all fetches to complete
-  const allListingsArrays = await Promise.all(fetchPromises);
+            return {
+              ...listingData,
+              authorDid: did,
+              authorHandle: handle,
+              uri: record.uri,
+              cid: record.cid,
+              formattedImages
+            };
+          });
+        } catch (error) {
+          logger.warn(`[Public] Failed to fetch listings from DID ${did}`, error as Error);
+          return [];
+        }
+      })
+    );
+    allListingsArrays.push(...chunkResults);
+  }
 
   // Flatten and deduplicate
   allListingsArrays.forEach(didListings => {

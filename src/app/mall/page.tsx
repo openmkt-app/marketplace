@@ -65,6 +65,22 @@ async function getVerifiedSellers(): Promise<SellerWithListings[]> {
       p => !isSellerExcluded(p.handle)
     );
 
+    // Batch-fetch full profiles (ProfileViewDetailed) to get banner + followersCount
+    // getProfiles accepts up to 25 actors per call
+    const fullProfileMap = new Map<string, { banner?: string; followersCount?: number }>();
+    const chunkSize = 25;
+    for (let i = 0; i < followProfiles.length; i += chunkSize) {
+      const chunk = followProfiles.slice(i, i + chunkSize).map(p => p.did);
+      try {
+        const res = await agent.getProfiles({ actors: chunk });
+        for (const p of res.data.profiles) {
+          fullProfileMap.set(p.did, { banner: p.banner, followersCount: p.followersCount });
+        }
+      } catch {
+        // Non-fatal — banner just won't show for this chunk
+      }
+    }
+
     // Fetch all sellers in parallel, skipping those known to have no online store listings
     const sellerResults = await Promise.allSettled(
       followProfiles.map(async (followProfile) => {
@@ -76,6 +92,7 @@ async function getVerifiedSellers(): Promise<SellerWithListings[]> {
         // Use the follow profile data directly (already has displayName, avatar, description)
         // and fetch PDS+listings
         const fullProfile = followProfile;
+        const detailedProfile = fullProfileMap.get(followProfile.did);
         const listings = await (async (): Promise<MarketplaceListing[]> => {
             try {
               let pdsEndpoint = 'https://bsky.social';
@@ -135,8 +152,8 @@ async function getVerifiedSellers(): Promise<SellerWithListings[]> {
           displayName: fullProfile.displayName,
           description: fullProfile.description,
           avatar: fullProfile.avatar,
-          banner: (fullProfile as { banner?: string }).banner,
-          followersCount: (fullProfile as { followersCount?: number }).followersCount,
+          banner: detailedProfile?.banner,
+          followersCount: detailedProfile?.followersCount,
           listingsCount: onlineStoreListings.length,
           listings: onlineStoreListings,
         } as SellerWithListings;

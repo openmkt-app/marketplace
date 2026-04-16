@@ -214,11 +214,17 @@ export async function getUnreadChatCount(agent: Agent): Promise<number> {
   const OPENMKT_HANDLE = 'openmkt.app';
 
   try {
-    // Get a service auth token scoped to listing convos
-    const convoAuth = await agent.api.com.atproto.server.getServiceAuth({
-      aud: 'did:web:api.bsky.chat',
-      lxm: 'chat.bsky.convo.listConvos',
-    });
+    // Get a service auth token scoped to listing convos.
+    // 401 here means the account doesn't have chat access (gated by Bluesky) — not an error.
+    let convoAuth;
+    try {
+      convoAuth = await agent.api.com.atproto.server.getServiceAuth({
+        aud: 'did:web:api.bsky.chat',
+        lxm: 'chat.bsky.convo.listConvos',
+      });
+    } catch {
+      return 0;
+    }
     if (!convoAuth.success) return 0;
 
     const chatAgent = new AtpAgent({ service: 'https://api.bsky.chat' });

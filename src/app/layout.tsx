@@ -5,6 +5,7 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { NavbarFilterProvider } from '@/contexts/NavbarFilterContext'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
+import AlertBanner from '@/components/AlertBanner'
 import { GoogleAnalytics } from '@next/third-parties/google'
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' })
@@ -45,6 +46,7 @@ export default function RootLayout({
       <body className={`${inter.className} flex flex-col min-h-screen antialiased`}>
         <AuthProvider>
           <NavbarFilterProvider>
+            <AlertBanner />
             <Suspense fallback={<div className="h-16 bg-white shadow-sm" />}>
               <Navbar />
             </Suspense>

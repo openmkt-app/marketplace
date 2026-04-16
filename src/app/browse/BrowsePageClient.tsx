@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { AtpAgent } from '@atproto/api';
 import MarketplaceClient, { MarketplaceListing, ListingLocation, fetchPublicListings } from '@/lib/marketplace-client';
 import { useAuth } from '@/contexts/AuthContext';
 import ListingCard from '@/components/marketplace/ListingCard';
@@ -633,73 +634,32 @@ const BrowsePageClient = () => {
     return undefined;
   }, [filters.location]);
 
-  // Fetch profile information for a listing
-  const fetchAuthorProfile = useCallback(async (did: string, client: MarketplaceClient) => {
-    if (!did || !client || !client.agent) return null;
+  // Fetch profile information for a listing using the public AppView (no auth needed)
+  const fetchAuthorProfile = useCallback(async (did: string) => {
+    if (!did) return null;
 
     try {
-      // Direct approach to get the profile record
-      const profileRecord = await client.agent.api.com.atproto.repo.getRecord({
-        repo: did,
-        collection: 'app.bsky.actor.profile',
-        rkey: 'self'
-      });
+      const publicAgent = new AtpAgent({ service: 'https://api.bsky.app' });
+      const result = await publicAgent.getProfile({ actor: did });
+      const profile = result.data;
 
-      if (profileRecord.data && profileRecord.data.value) {
-        const profileValue = profileRecord.data.value as Record<string, unknown>;
-
-        const handle = typeof profileValue.handle === 'string'
-          ? profileValue.handle
-          : did.split(':')[2];
-
-        const displayName = typeof profileValue.displayName === 'string'
-          ? profileValue.displayName
-          : undefined;
-
-        // Extract avatar blob CID if available
-        let avatarCid: string | undefined;
-        const avatar = profileValue.avatar;
-
-        // Debug: log the raw avatar object
-
-
-        if (avatar && typeof avatar === 'object') {
-          const avatarObj = avatar as Record<string, unknown>;
-          // Try ref.$link format first (standard blob format)
-          if (avatarObj.ref && typeof avatarObj.ref === 'object') {
-            const ref = avatarObj.ref as Record<string, unknown>;
-            if (typeof ref.$link === 'string') {
-              avatarCid = ref.$link;
-            }
-          }
-          // Fallback: try direct $link on avatar
-          if (!avatarCid && typeof avatarObj.$link === 'string') {
-            avatarCid = avatarObj.$link;
-          }
-          // Try regex extraction as last resort (finds bafk... patterns)
-          if (!avatarCid) {
-            const avatarStr = JSON.stringify(avatar);
-            const cidMatch = avatarStr.match(/bafkrei[a-z0-9]{52,}/i);
-            if (cidMatch) {
-              avatarCid = cidMatch[0];
-            }
-          }
-        }
-
-
-
-        return {
-          did: did,
-          handle,
-          displayName,
-          avatarCid
-        };
+      // Extract CID from the CDN avatar URL:
+      // https://cdn.bsky.app/img/avatar/plain/<did>/<cid>@jpeg
+      let avatarCid: string | undefined;
+      if (profile.avatar) {
+        const cidMatch = profile.avatar.match(/\/(bafkrei[a-z0-9]+)@/i);
+        if (cidMatch) avatarCid = cidMatch[1];
       }
-    } catch (error) {
-      console.error('Error fetching profile for', did, error);
-    }
 
-    return null;
+      return {
+        did,
+        handle: profile.handle,
+        displayName: profile.displayName,
+        avatarCid,
+      };
+    } catch {
+      return null;
+    }
   }, []);
 
   // Fetch listings - works for both logged in and logged out users
@@ -735,8 +695,8 @@ const BrowsePageClient = () => {
             // Fetch profiles in parallel
             await Promise.all(
               uniqueDids.map(async (did) => {
-                if (did && auth.client) {
-                  const profile = await fetchAuthorProfile(did, auth.client);
+                if (did) {
+                  const profile = await fetchAuthorProfile(did);
                   if (profile) {
                     profilesMap.set(did, {
                       handle: profile.handle,

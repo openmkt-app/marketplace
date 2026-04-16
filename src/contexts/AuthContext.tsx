@@ -39,15 +39,24 @@ const AuthContext = createContext<AuthContextType>({
  */
 async function setupFromOAuthSession(
   oauthSession: OAuthSession,
-  client: MarketplaceClient
+  client: MarketplaceClient,
 ): Promise<User | null> {
   try {
-    const agent = new Agent(oauthSession);
     const did = oauthSession.did;
 
-    // Fetch profile to get handle and display name
-    const profileResult = await agent.getProfile({ actor: did });
-    const profile = profileResult.data;
+    // Fetch the public profile using an unauthenticated agent.
+    // We intentionally do NOT use the OAuth session here — handle/displayName/avatar
+    // are public data and using the fresh OAuth token causes intermittent 401/403 errors
+    // while the PDS is still accepting the token.
+    const publicAgent = new Agent({ service: 'https://api.bsky.app' });
+    let profile;
+    try {
+      const result = await publicAgent.getProfile({ actor: did });
+      profile = result.data;
+    } catch {
+      // If the public API is unreachable, fall back to just the DID
+      profile = { handle: did, displayName: undefined, avatar: undefined };
+    }
 
     const user: User = {
       did,
@@ -56,7 +65,7 @@ async function setupFromOAuthSession(
       avatarUrl: profile.avatar,
     };
 
-    // Hand the authenticated agent to the marketplace client
+    // Hand the authenticated OAuth session to the marketplace client
     client.setOAuthSession(oauthSession, did, profile.handle);
 
     return user;

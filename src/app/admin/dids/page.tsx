@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Image from 'next/image';
+import { AlertTriangle, AlertCircle, Info, X } from 'lucide-react';
+
+type BannerType = 'warning' | 'error' | 'info';
 
 type Seller = {
   did: string;
@@ -24,6 +27,12 @@ export default function ManageDIDsPage() {
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
 
+  // Banner state
+  const [activeBanner, setActiveBanner] = useState<{ message: string; type: BannerType } | null>(null);
+  const [bannerMessage, setBannerMessage] = useState('');
+  const [bannerType, setBannerType] = useState<BannerType>('warning');
+  const [bannerSaving, setBannerSaving] = useState(false);
+
   useEffect(() => {
     if (isLoading) return;
     if (!isLoggedIn || !user || user.handle !== 'openmkt.app') {
@@ -31,7 +40,47 @@ export default function ManageDIDsPage() {
       return;
     }
     loadSellers();
+    loadBanner();
   }, [isLoggedIn, user, isLoading, router]);
+
+  const loadBanner = async () => {
+    try {
+      const res = await fetch('/api/admin/banner');
+      if (res.ok) {
+        const data = await res.json();
+        setActiveBanner(data.banner ?? null);
+      }
+    } catch {}
+  };
+
+  const saveBanner = async () => {
+    if (!bannerMessage.trim() || !user) return;
+    setBannerSaving(true);
+    try {
+      const res = await fetch('/api/admin/banner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: bannerMessage, type: bannerType, handle: user.handle }),
+      });
+      if (res.ok) {
+        setActiveBanner({ message: bannerMessage.trim(), type: bannerType });
+        setBannerMessage('');
+      }
+    } catch {}
+    setBannerSaving(false);
+  };
+
+  const clearBanner = async () => {
+    if (!user) return;
+    try {
+      await fetch('/api/admin/banner', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ handle: user.handle }),
+      });
+      setActiveBanner(null);
+    } catch {}
+  };
 
   const loadSellers = async () => {
     setLoading(true);
@@ -182,8 +231,63 @@ export default function ManageDIDsPage() {
         </>
       )}
 
-      {/* Debug Tools */}
+      {/* Alert Banner */}
       <div className="mt-12 pt-6 border-t border-gray-200">
+        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Site Alert Banner</h3>
+
+        {activeBanner && (
+          <div className="mb-4 flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
+            <div className="flex-1">
+              <p className="text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide">Active banner ({activeBanner.type})</p>
+              <p className="text-sm text-slate-800">{activeBanner.message}</p>
+            </div>
+            <button
+              onClick={clearBanner}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors"
+            >
+              <X size={12} /> Clear
+            </button>
+          </div>
+        )}
+
+        <div className="flex gap-3 items-end flex-wrap">
+          <div className="flex gap-2">
+            {(['warning', 'error', 'info'] as BannerType[]).map(t => {
+              const icons = { warning: <AlertTriangle size={13} />, error: <AlertCircle size={13} />, info: <Info size={13} /> };
+              const active = bannerType === t;
+              return (
+                <button
+                  key={t}
+                  onClick={() => setBannerType(t)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-colors capitalize ${
+                    active ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+                  }`}
+                >
+                  {icons[t]} {t}
+                </button>
+              );
+            })}
+          </div>
+          <input
+            type="text"
+            value={bannerMessage}
+            onChange={e => setBannerMessage(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && saveBanner()}
+            placeholder="e.g. Bluesky is experiencing issues — some listings may not load"
+            className="flex-1 min-w-64 px-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+          />
+          <button
+            onClick={saveBanner}
+            disabled={!bannerMessage.trim() || bannerSaving}
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {bannerSaving ? 'Saving…' : 'Set Banner'}
+          </button>
+        </div>
+      </div>
+
+      {/* Debug Tools */}
+      <div className="mt-8 pt-6 border-t border-gray-200">
         <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Debug Tools</h3>
         <button
           onClick={() => {
