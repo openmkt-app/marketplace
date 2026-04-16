@@ -54,8 +54,18 @@ async function setupFromOAuthSession(
       const result = await publicAgent.getProfile({ actor: did });
       profile = result.data;
     } catch {
-      // If the public API is unreachable, fall back to just the DID
-      profile = { handle: did, displayName: undefined, avatar: undefined };
+      // api.bsky.app unreachable — resolve handle from the DID document instead
+      // so the handle is always correct (critical for admin checks).
+      let handle = did;
+      try {
+        const didDocUrl = did.startsWith('did:web:')
+          ? `https://${did.slice('did:web:'.length)}/.well-known/did.json`
+          : `https://plc.directory/${did}`;
+        const doc = await fetch(didDocUrl).then(r => r.json());
+        const aka = doc.alsoKnownAs?.[0];
+        if (aka?.startsWith('at://')) handle = aka.slice(5);
+      } catch { /* keep DID as last resort */ }
+      profile = { handle, displayName: undefined, avatar: undefined };
     }
 
     const user: User = {
