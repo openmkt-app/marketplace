@@ -523,6 +523,10 @@ export function generateAvatarUrl(did: string, avatarBlobCid: string): string | 
     return null;
   }
 
+  if (avatarBlobCid.startsWith('http')) {
+    return avatarBlobCid;
+  }
+
   // Format: https://cdn.bsky.app/img/avatar_thumbnail/plain/[DID]/[BLOB_CID]@jpeg
   return `https://cdn.bsky.app/img/avatar_thumbnail/plain/${did.trim()}/${avatarBlobCid.trim()}@jpeg`;
 }

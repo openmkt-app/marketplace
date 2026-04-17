@@ -1,14 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { BskyAgent } from '@atproto/api';
-import { Store } from 'lucide-react';
-import { isSellerExcluded } from '@/lib/excluded-sellers';
-import { MARKETPLACE_COLLECTION } from '@/lib/constants';
-import { generateImageUrls } from '@/lib/image-utils';
+import { Store, Palette } from 'lucide-react';
 import MallGrid from '@/components/marketplace/MallGrid';
-import type { SellerWithListings } from '@/components/marketplace/StoreCard';
-import type { MarketplaceListing } from '@/lib/marketplace-client';
-import { isSellerCachedEmpty, markSellerEmpty, invalidateSeller } from '@/lib/mall-cache';
+import { getVerifiedSellers } from '@/lib/server/fetch-mall-sellers';
+import { isArtistStore } from '@/lib/artist-store-utils';
 
 export const revalidate = 60; // revalidate at most once per minute
 
@@ -33,171 +28,8 @@ export const metadata: Metadata = {
   },
 };
 
-// Helper to check if a listing is an online store listing
-function isOnlineStoreListing(listing: MarketplaceListing): boolean {
-  return listing.location?.isOnlineStore === true;
-}
-
-async function getVerifiedSellers(): Promise<SellerWithListings[]> {
-  try {
-    const botHandle = process.env.BOT_HANDLE || 'openmkt.app';
-    const botPassword = process.env.BOT_APP_PASSWORD;
-
-    if (!botPassword) {
-      console.warn('BOT_APP_PASSWORD not set, cannot fetch verified sellers');
-      return [];
-    }
-
-    const agent = new BskyAgent({ service: 'https://bsky.social' });
-    await agent.login({
-      identifier: botHandle,
-      password: botPassword,
-    });
-
-    // Fetch who the bot is following (verified sellers)
-    const response = await agent.getFollows({
-      actor: agent.session?.did || botHandle,
-      limit: 100,
-    });
-
-    // Filter excluded sellers up front
-    const followProfiles = response.data.follows.filter(
-      p => !isSellerExcluded(p.handle)
-    );
-
-    // Batch-fetch full profiles (ProfileViewDetailed) to get banner + followersCount
-    // getProfiles accepts up to 25 actors per call
-    const fullProfileMap = new Map<string, { banner?: string; followersCount?: number }>();
-    const chunkSize = 25;
-    for (let i = 0; i < followProfiles.length; i += chunkSize) {
-      const chunk = followProfiles.slice(i, i + chunkSize).map(p => p.did);
-      try {
-        const res = await agent.getProfiles({ actors: chunk });
-        for (const p of res.data.profiles) {
-          fullProfileMap.set(p.did, { banner: p.banner, followersCount: p.followersCount });
-        }
-      } catch {
-        // Non-fatal — banner just won't show for this chunk
-      }
-    }
-
-    // Fetch all sellers in parallel, skipping those known to have no online store listings
-    const sellerResults = await Promise.allSettled(
-      followProfiles.map(async (followProfile) => {
-        // Skip sellers recently confirmed to have no online store listings
-        if (isSellerCachedEmpty(followProfile.did)) {
-          return null;
-        }
-
-        // Use the follow profile data directly (already has displayName, avatar, description)
-        // and fetch PDS+listings
-        const fullProfile = followProfile;
-        const detailedProfile = fullProfileMap.get(followProfile.did);
-        const listings = await (async (): Promise<MarketplaceListing[]> => {
-            try {
-              let pdsEndpoint = 'https://bsky.social';
-              try {
-                const didDoc = await fetch(`https://plc.directory/${followProfile.did}`).then(r => r.json());
-                const pdsService = didDoc.service?.find(
-                  (s: { id: string; type: string; serviceEndpoint: string }) =>
-                    s.id === '#atproto_pds' || s.type === 'AtprotoPersonalDataServer'
-                );
-                if (pdsService?.serviceEndpoint) {
-                  pdsEndpoint = pdsService.serviceEndpoint;
-                }
-              } catch {
-                // Use default
-              }
-
-              const pdsAgent = new BskyAgent({ service: pdsEndpoint });
-              const listingsResult = await pdsAgent.api.com.atproto.repo.listRecords({
-                repo: followProfile.did,
-                collection: MARKETPLACE_COLLECTION,
-                limit: 50,
-                reverse: true,
-              });
-
-              if (!listingsResult.success) return [];
-
-              return listingsResult.data.records.map(record => {
-                const listing = record.value as MarketplaceListing;
-                const formattedImages = generateImageUrls(followProfile.did, listing.images);
-                const { images, ...sanitizedListing } = listing;
-                return {
-                  ...sanitizedListing,
-                  uri: record.uri,
-                  cid: record.cid,
-                  sellerDid: followProfile.did,
-                  formattedImages
-                };
-              });
-            } catch (e) {
-              console.warn(`Could not fetch listings for ${followProfile.handle}:`, e);
-              return [];
-            }
-          })();
-
-        const onlineStoreListings = listings.filter(isOnlineStoreListing);
-        if (onlineStoreListings.length === 0) {
-          markSellerEmpty(followProfile.did);
-          return null;
-        }
-
-        // Seller has products — remove from empty cache in case they were previously empty
-        invalidateSeller(followProfile.did);
-
-        return {
-          did: followProfile.did,
-          handle: followProfile.handle,
-          displayName: fullProfile.displayName,
-          description: fullProfile.description,
-          avatar: fullProfile.avatar,
-          banner: detailedProfile?.banner,
-          followersCount: detailedProfile?.followersCount,
-          listingsCount: onlineStoreListings.length,
-          listings: onlineStoreListings,
-        } as SellerWithListings;
-      })
-    );
-
-    const sellers: SellerWithListings[] = sellerResults
-      .filter((r): r is PromiseFulfilledResult<SellerWithListings | null> => r.status === 'fulfilled')
-      .map(r => r.value)
-      .filter((s): s is SellerWithListings => s !== null);
-
-    // Sort Demo stores last, then by newest listings first
-    sellers.sort((a, b) => {
-      // 1. Demo stores go last
-      const aIsDemo = a.displayName?.includes('(Demo Store)') || a.handle.includes('demo');
-      const bIsDemo = b.displayName?.includes('(Demo Store)') || b.handle.includes('demo');
-
-      if (aIsDemo && !bIsDemo) return 1;
-      if (!aIsDemo && bIsDemo) return -1;
-
-      // 2. Newest stores/listings first (based on most recent listing)
-      const aLatest = a.listings?.[0]?.createdAt || '';
-      const bLatest = b.listings?.[0]?.createdAt || '';
-
-      if (aLatest !== bLatest) {
-        return bLatest.localeCompare(aLatest); // Descending order (newest first)
-      }
-
-      // 3. Fallback to listing count and followers
-      if (b.listingsCount !== a.listingsCount) {
-        return b.listingsCount - a.listingsCount;
-      }
-      return (b.followersCount || 0) - (a.followersCount || 0);
-    });
-
-    return sellers;
-  } catch (error) {
-    console.error('Failed to fetch verified sellers:', error);
-    return [];
-  }
-}
-
 export default async function MallPage() {
-  const sellers = await getVerifiedSellers();
+  const sellers = (await getVerifiedSellers()).filter(s => !isArtistStore(s.listings ?? []));
   const sellersCount = sellers.length;
   const listingsCount = sellers.reduce((acc, s) => acc + s.listingsCount, 0);
 
@@ -269,6 +101,25 @@ export default async function MallPage() {
         ) : (
           <MallGrid sellers={sellers} />
         )}
+      </div>
+
+      {/* Gallery Cross-Promo */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4">
+        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <Palette size={20} className="text-rose-600 mt-0.5 shrink-0" />
+            <div>
+              <p className="font-bold text-rose-900">Looking for commission art?</p>
+              <p className="text-sm text-rose-700">The Gallery features Bluesky artists open for commissions — illustrations, graphic design, and more.</p>
+            </div>
+          </div>
+          <Link
+            href="/gallery"
+            className="shrink-0 px-4 py-2 bg-rose-600 text-white rounded-xl text-sm font-semibold hover:bg-rose-700 transition-colors"
+          >
+            Visit The Gallery
+          </Link>
+        </div>
       </div>
 
       {/* CTA Section */}

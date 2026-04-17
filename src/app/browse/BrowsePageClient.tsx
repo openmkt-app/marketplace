@@ -643,13 +643,7 @@ const BrowsePageClient = () => {
       const result = await publicAgent.getProfile({ actor: did });
       const profile = result.data;
 
-      // Extract CID from the CDN avatar URL:
-      // https://cdn.bsky.app/img/avatar/plain/<did>/<cid>@jpeg
-      let avatarCid: string | undefined;
-      if (profile.avatar) {
-        const cidMatch = profile.avatar.match(/\/(bafkrei[a-z0-9]+)@/i);
-        if (cidMatch) avatarCid = cidMatch[1];
-      }
+      const avatarCid = profile.avatar || undefined;
 
       return {
         did,

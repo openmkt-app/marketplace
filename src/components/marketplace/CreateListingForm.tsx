@@ -11,7 +11,7 @@ import LiveListingPreview from './LiveListingPreview';
 import { createBlueskyCdnImageUrls } from '@/lib/image-utils';
 import { trackCreateListing } from '@/lib/analytics';
 import { processExternalLink, getPlatformDisplayName } from '@/lib/external-link-utils';
-import { Wand2, Loader2, Sparkles } from 'lucide-react';
+import { Wand2, Loader2, Sparkles, Package, Palette } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { CURRENCIES } from '@/lib/price-utils';
 
@@ -84,6 +84,11 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   // Add state for Free category confirmation dialog
   const [showFreeConfirmation, setShowFreeConfirmation] = useState(false);
   const [previousCategory, setPreviousCategory] = useState<string>('');
+
+  // Commission-specific state
+  const [slotsAvailable, setSlotsAvailable] = useState<string>('');
+  const [turnaroundTime, setTurnaroundTime] = useState<string>('');
+  const isCommissionCategory = selectedCategory === 'digital_arts';
 
   // Add state for external URL
   const [externalUrl, setExternalUrl] = useState('');
@@ -270,6 +275,14 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
           createBlueskyCdnImageUrls(img, initialData.authorDid!).fullsize
         );
         setPreviewUrls(generatedUrls);
+      }
+
+      // Handle Commission fields
+      if (initialData.metadata?.slotsAvailable !== undefined) {
+        setSlotsAvailable(String(initialData.metadata.slotsAvailable));
+      }
+      if (initialData.metadata?.turnaroundTime) {
+        setTurnaroundTime(initialData.metadata.turnaroundTime);
       }
 
       // Handle Subcategory
@@ -1030,6 +1043,18 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         metadata.externalPlatform = detectedPlatform.toLowerCase().replace(/\s+/g, '');
       }
 
+      // Commission-specific metadata
+      if (categoryId === 'digital_arts') {
+        if (slotsAvailable !== '') {
+          const slots = parseInt(slotsAvailable, 10);
+          metadata.slotsAvailable = slots;
+          metadata.commissionStatus = slots === 0 ? 'waitlist' : 'open';
+        }
+        if (turnaroundTime.trim()) {
+          metadata.turnaroundTime = turnaroundTime.trim();
+        }
+      }
+
       // Prepare listing data with metadata embedded as JSON
       const listingDataRaw = {
         title: formData.get('title') as string,
@@ -1038,7 +1063,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         currency: currency,
         location: locationData,
         category: categoryId,
-        condition: formData.get('condition') as string,
+        condition: isCommissionCategory ? '' : (formData.get('condition') as string),
         images: images as any, // The client handles mixed types now
         hideFromFriends: hideFromFriends,
         isNsfw: isNsfw,
@@ -1187,6 +1212,56 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
             )}
 
             <form id="listing-form" onSubmit={handleSubmit} className="space-y-8">
+              {/* Listing Type Selector */}
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-neutral-light">
+                <h2 className="text-xl font-semibold mb-4 text-text-primary">I&apos;m selling</h2>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isCommissionCategory) {
+                        setSelectedCategory('');
+                        setSelectedSubcategory('');
+                        setIsOnlineStore(false);
+                      }
+                    }}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-150 ${
+                      !isCommissionCategory
+                        ? 'border-slate-900 bg-slate-900 text-white shadow-md'
+                        : 'border-neutral-light bg-white text-text-secondary hover:border-slate-300'
+                    }`}
+                  >
+                    <Package size={24} />
+                    <span className="font-semibold text-sm">Physical Product</span>
+                    <span className={`text-xs text-center leading-tight ${!isCommissionCategory ? 'text-slate-300' : 'text-text-secondary'}`}>
+                      Goods, handmade items, vintage finds
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isCommissionCategory) {
+                        setSelectedCategory('digital_arts');
+                        setSelectedSubcategory('');
+                        setIsOnlineStore(true);
+                        setIsLocationExpanded(false);
+                      }
+                    }}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-150 ${
+                      isCommissionCategory
+                        ? 'border-rose-600 bg-rose-600 text-white shadow-md'
+                        : 'border-neutral-light bg-white text-text-secondary hover:border-rose-300'
+                    }`}
+                  >
+                    <Palette size={24} />
+                    <span className="font-semibold text-sm">Digital Arts</span>
+                    <span className={`text-xs text-center leading-tight ${isCommissionCategory ? 'text-rose-200' : 'text-text-secondary'}`}>
+                      Commissions, illustrations, design
+                    </span>
+                  </button>
+                </div>
+              </div>
+
               {/* Magic Link Section */}
               <div className="bg-gradient-to-r from-amber-100 to-yellow-100 border-2 border-amber-300 rounded-2xl p-6">
                 <div className="flex items-center gap-2 mb-3">
@@ -1340,12 +1415,14 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
               {/* Item Details */}
               <div className="bg-white p-6 rounded-lg shadow-sm border border-neutral-light">
-                <h2 className="text-xl font-semibold mb-4 text-text-primary">Item Details</h2>
+                <h2 className="text-xl font-semibold mb-4 text-text-primary">
+                  {isCommissionCategory ? 'Commission Details' : 'Item Details'}
+                </h2>
 
                 <div className="space-y-4">
                   <div>
                     <label htmlFor="title" className="block text-sm font-medium text-text-secondary mb-1">
-                      Title <span className="text-red-500">*</span>
+                      {isCommissionCategory ? 'Commission Type' : 'Title'} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -1354,14 +1431,14 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                       required
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      placeholder="What are you selling?"
+                      placeholder={isCommissionCategory ? 'e.g. Full Body Character Illustration' : 'What are you selling?'}
                       className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
                     />
                   </div>
 
                   <div>
                     <label htmlFor="price" className="block text-sm font-medium text-text-secondary mb-1">
-                      Price <span className="text-red-500">*</span>
+                      {isCommissionCategory ? 'Starting At' : 'Price'} <span className="text-red-500">*</span>
                     </label>
                     <div className="flex rounded-md shadow-sm">
                       <select
@@ -1436,7 +1513,43 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                     </select>
                   </div>
 
-                  {selectedCategory !== 'digital_arts' && (
+                  {isCommissionCategory && (
+                    <div className="space-y-4 p-4 bg-rose-50 border border-rose-100 rounded-lg">
+                      <p className="text-sm font-semibold text-rose-800">Commission Settings</p>
+                      <div>
+                        <label className="block text-sm font-medium text-text-secondary mb-1">
+                          Open Slots{' '}
+                          <span className="text-xs font-normal text-text-secondary">(optional — leave blank for unlimited)</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={slotsAvailable}
+                          onChange={(e) => setSlotsAvailable(e.target.value)}
+                          placeholder="e.g. 3"
+                          className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
+                        />
+                        {slotsAvailable !== '' && parseInt(slotsAvailable, 10) === 0 && (
+                          <p className="text-xs text-amber-600 mt-1">Slots set to 0 — listing will display as &quot;Waitlist&quot;.</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-text-secondary mb-1">
+                          Turnaround Time{' '}
+                          <span className="text-xs font-normal text-text-secondary">(optional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={turnaroundTime}
+                          onChange={(e) => setTurnaroundTime(e.target.value)}
+                          placeholder="e.g. 2 weeks, 3–5 business days"
+                          className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {!isCommissionCategory && (
                   <div>
                     <label htmlFor="condition" className="block text-sm font-medium text-text-secondary mb-1">
                       Condition <span className="text-red-500">*</span>
@@ -1461,7 +1574,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
                   <div>
                     <label htmlFor="description" className="block text-sm font-medium text-text-secondary mb-1">
-                      Description <span className="text-red-500">*</span>
+                      {isCommissionCategory ? 'Guidelines & TOS' : 'Description'} <span className="text-red-500">*</span>
                     </label>
                     <textarea
                       id="description"
@@ -1470,7 +1583,9 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                       onChange={(e) => setDescription(e.target.value)}
                       required
                       rows={4}
-                      placeholder="Describe your item in detail. Include features, specifications, and why you&apos;re selling. The more details you provide, the more likely buyers will be interested."
+                      placeholder={isCommissionCategory
+                        ? "Describe your commission process, what you will/won't draw, payment terms, and any other important guidelines."
+                        : "Describe your item in detail. Include features, specifications, and why you're selling. The more details you provide, the more likely buyers will be interested."}
                       className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
                     />
                   </div>
@@ -1515,7 +1630,9 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                 >
                   <div className="flex-1">
                     <div className="flex items-center">
-                      <h2 className="text-xl font-semibold text-text-primary">Location</h2>
+                      <h2 className="text-xl font-semibold text-text-primary">
+                        {isCommissionCategory ? 'Timezone / Region' : 'Location'}
+                      </h2>
                       {locationSaved && (
                         <span className="ml-3 animate-pulse text-sm text-green-600 bg-green-50 rounded-full px-3 py-0.5">
                           Location saved!
@@ -1524,7 +1641,9 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                     </div>
                     {isOnlineStore ? (
                       <p className="text-sm text-text-secondary mt-1">
-                        <span className="font-medium text-blue-600">Online Store</span>
+                        <span className="font-medium text-blue-600">
+                          {isCommissionCategory ? 'Global / Remote Work' : 'Online Store'}
+                        </span>
                       </p>
                     ) : selectedLocation && (
                       <p className="text-sm text-text-secondary mt-1">
@@ -1810,6 +1929,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
             description={description}
             category={selectedCategory}
             condition={condition}
+            slotsAvailable={slotsAvailable}
             location={{
               locality: locationLocality,
               state: locationState

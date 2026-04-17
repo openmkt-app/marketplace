@@ -4,6 +4,7 @@ import { MapPin } from 'lucide-react';
 import { formatConditionForDisplay } from '@/lib/condition-utils';
 import { getCategoryName } from '@/lib/category-utils';
 import { formatPrice } from '@/lib/price-utils';
+import { COMMISSION_CATEGORY_ID } from '@/lib/artist-store-utils';
 
 interface LiveListingPreviewProps {
     title: string;
@@ -12,6 +13,8 @@ interface LiveListingPreviewProps {
     description: string;
     category: string;
     condition: string;
+    slotsAvailable?: string;
+    turnaroundTime?: string;
     location: {
         locality: string;
         state: string;
@@ -26,11 +29,15 @@ const LiveListingPreview = ({
     description,
     category,
     condition,
+    slotsAvailable,
+    turnaroundTime,
     location,
     imageUrls,
     currency,
     isNsfw
 }: LiveListingPreviewProps) => {
+
+    const isCommission = category === COMMISSION_CATEGORY_ID;
 
     const displayPrice = formatPrice(price, currency);
 
@@ -66,11 +73,27 @@ const LiveListingPreview = ({
                                 </div>
                             )}
 
-                            {/* Condition Badge */}
+                            {/* Condition / Slots Badge */}
                             <div className="absolute top-3 left-3">
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-white/95 backdrop-blur-sm text-slate-800 shadow-sm">
-                                    {condition ? formatConditionForDisplay(condition) : 'Condition'}
-                                </span>
+                                {isCommission ? (
+                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold shadow-sm ${
+                                        slotsAvailable === '0'
+                                            ? 'bg-amber-100 text-amber-800'
+                                            : slotsAvailable
+                                                ? 'bg-emerald-100 text-emerald-700'
+                                                : 'bg-emerald-100 text-emerald-700'
+                                    }`}>
+                                        {slotsAvailable === '' || slotsAvailable === undefined
+                                            ? 'Open'
+                                            : slotsAvailable === '0'
+                                                ? 'Waitlist'
+                                                : `${slotsAvailable} slot${slotsAvailable === '1' ? '' : 's'} open`}
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-white/95 backdrop-blur-sm text-slate-800 shadow-sm">
+                                        {condition ? formatConditionForDisplay(condition) : 'Condition'}
+                                    </span>
+                                )}
                             </div>
 
                             {/* NSFW Preview Overlay */}
@@ -94,8 +117,13 @@ const LiveListingPreview = ({
                                         {title || 'Item Title'}
                                     </h3>
                                 </div>
-                                <div className="text-2xl font-bold text-gray-900 whitespace-nowrap ml-4">
-                                    {displayPrice}
+                                <div className="text-right ml-4">
+                                    {isCommission && (
+                                        <span className="text-[10px] text-gray-400 block">Starting at</span>
+                                    )}
+                                    <span className="text-2xl font-bold text-gray-900 whitespace-nowrap">
+                                        {displayPrice}
+                                    </span>
                                 </div>
                             </div>
 
@@ -106,12 +134,21 @@ const LiveListingPreview = ({
                             {/* Footer Meta */}
                             <div className="flex items-center gap-4 pt-4 border-t border-gray-50 text-sm text-gray-500">
                                 <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                    <MapPin size={14} className="text-gray-400 flex-shrink-0" />
-                                    <span className="truncate">
-                                        {location.locality && location.state
-                                            ? `${location.locality}, ${location.state}`
-                                            : 'Location'}
-                                    </span>
+                                    {isCommission && turnaroundTime ? (
+                                        <>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 flex-shrink-0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                            <span className="truncate">{turnaroundTime}</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <MapPin size={14} className="text-gray-400 flex-shrink-0" />
+                                            <span className="truncate">
+                                                {location.locality && location.state
+                                                    ? `${location.locality}, ${location.state}`
+                                                    : 'Location'}
+                                            </span>
+                                        </>
+                                    )}
                                 </div>
 
                                 <div className="flex items-center gap-1.5 flex-shrink-0">

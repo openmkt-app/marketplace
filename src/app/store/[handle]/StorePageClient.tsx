@@ -8,10 +8,12 @@ import { MarketplaceListing } from '@/lib/marketplace-client';
 import { generateImageUrls } from '@/lib/image-utils';
 import { MARKETPLACE_COLLECTION } from '@/lib/constants';
 import ListingCard from '@/components/marketplace/ListingCard';
-import { ExternalLink, Calendar, Globe, MapPin } from 'lucide-react';
+import GalleryListingTile from '@/components/marketplace/GalleryListingTile';
+import { ExternalLink, Calendar, Globe, MapPin, Palette } from 'lucide-react';
 import type { SellerProfile } from '@/lib/server/fetch-store';
 import { linkifyText } from '@/lib/linkify';
 import { isOnlineStore } from '@/lib/location-utils';
+import { isArtistStore } from '@/lib/artist-store-utils';
 
 interface SellerListing extends MarketplaceListing {
   uri: string;
@@ -303,6 +305,19 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
               </div>
             )}
 
+            {/* Commission Artist badge */}
+            {isArtistStore(listings) && (
+              <div className="mt-3 flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-100 text-rose-700 text-xs font-semibold rounded-full">
+                  <Palette size={12} />
+                  Commission Artist
+                </span>
+                <Link href="/gallery" className="text-xs text-rose-600 hover:underline">
+                  View in The Gallery
+                </Link>
+              </div>
+            )}
+
             {/* Stats (Mobile) and Meta Info */}
             <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-500">
               {/* Mobile stats */}
@@ -338,11 +353,15 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
             ? (activeTab === 'store' ? onlineListings : localListings)
             : listings;
 
+          const galleryMode = isArtistStore(displayListings);
+
           return (
             <>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900">
-                  {listings.length > 0 ? `${listings.length} Item${listings.length !== 1 ? 's' : ''} for Sale` : 'Items for Sale'}
+                  {galleryMode
+                    ? `${listings.length} Commission Type${listings.length !== 1 ? 's' : ''}`
+                    : listings.length > 0 ? `${listings.length} Item${listings.length !== 1 ? 's' : ''} for Sale` : 'Items for Sale'}
                 </h2>
               </div>
 
@@ -385,6 +404,12 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
                   <p className="text-gray-500 max-w-md mx-auto">
                     This seller hasn&apos;t listed any items for sale yet. Check back later!
                   </p>
+                </div>
+              ) : galleryMode ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1">
+                  {displayListings.map((listing, index) => (
+                    <GalleryListingTile key={listing.uri} listing={listing} flaggedUris={flaggedUris} priority={index < 4} />
+                  ))}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

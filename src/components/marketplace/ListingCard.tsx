@@ -9,6 +9,7 @@ import ListingImageDisplay from './ListingImageDisplay';
 import ListingImageDebug from './ListingImageDebug';
 import type { MarketplaceListing } from '@/lib/marketplace-client';
 import { formatConditionForDisplay } from '@/lib/condition-utils';
+import { COMMISSION_CATEGORY_ID } from '@/lib/artist-store-utils';
 import { formatPrice, formatDate, formatLocation } from '@/lib/price-utils';
 import { isOnlineStore } from '@/lib/location-utils';
 import { extractSubcategoryFromDescription, getCategoryName } from '@/lib/category-utils';
@@ -76,11 +77,27 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, prior
           priority={priority}
         />
 
-        {/* Condition Badge */}
+        {/* Condition / Commission Status Badge */}
         <div className="absolute top-3 left-3 z-20 pointer-events-none">
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/90 backdrop-blur-sm text-slate-800 shadow-sm">
-            {formatConditionForDisplay(listing.condition)}
-          </span>
+          {listing.category === COMMISSION_CATEGORY_ID ? (
+            listing.metadata?.slotsAvailable === 0 || listing.metadata?.commissionStatus === 'waitlist' ? (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 shadow-sm">
+                Waitlist
+              </span>
+            ) : listing.metadata?.commissionStatus === 'closed' ? (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 shadow-sm">
+                Closed
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 shadow-sm">
+                Open
+              </span>
+            )
+          ) : (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/90 backdrop-blur-sm text-slate-800 shadow-sm">
+              {formatConditionForDisplay(listing.condition)}
+            </span>
+          )}
         </div>
 
         {/* External Buy Badge */}
@@ -128,6 +145,9 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, prior
           {listing.title}
         </h3>
 
+        {listing.category === COMMISSION_CATEGORY_ID && (
+          <span className="text-xs text-slate-400 -mb-1 block">Starting at</span>
+        )}
         <p className="text-xl font-bold text-slate-900 mb-2">
           {formatPrice(listing.price, listing.currency)}
         </p>

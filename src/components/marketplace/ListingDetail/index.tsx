@@ -26,8 +26,10 @@ import {
   UserPlus,
   CheckCircle,
   Info,
-  ExternalLink
+  ExternalLink,
+  Clock,
 } from 'lucide-react';
+import { COMMISSION_CATEGORY_ID } from '@/lib/artist-store-utils';
 import { isOnlineStore, formatLocationShort } from '@/lib/location-utils';
 import { getPlatformDisplayName } from '@/lib/external-link-utils';
 import { trackListingView, trackInterest } from '@/lib/analytics';
@@ -400,7 +402,14 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
 
           {/* Title and Price */}
           <h1 className="text-2xl font-bold text-gray-900 mb-2">{listing.title}</h1>
-          <p className="text-2xl font-bold text-blue-600 mb-6">{formatPrice(listing.price, listing.currency)}</p>
+          <div className="mb-6">
+            {listing.category === COMMISSION_CATEGORY_ID && (
+              <p className="text-xs text-gray-400 mb-0.5">Starting at</p>
+            )}
+            <p className={`text-2xl font-bold ${listing.category === COMMISSION_CATEGORY_ID ? 'text-rose-600' : 'text-blue-600'}`}>
+              {formatPrice(listing.price, listing.currency)}
+            </p>
+          </div>
 
           {/* Seller Info */}
           {(sellerDisplayName || sellerHandle) && (
@@ -468,9 +477,40 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
             </div>
           </div>
 
+          {/* Commission Metadata */}
+          {listing.category === COMMISSION_CATEGORY_ID && (
+            <div className="space-y-2 mb-4">
+              {listing.metadata?.slotsAvailable !== undefined && (
+                <div className="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
+                  <p className="text-xs text-gray-500">Commission Status</p>
+                  {listing.metadata.slotsAvailable === 0 ? (
+                    <span className="text-sm font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                      Waitlist Only
+                    </span>
+                  ) : (
+                    <span className="text-sm font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                      {listing.metadata.slotsAvailable} slot{listing.metadata.slotsAvailable !== 1 ? 's' : ''} open
+                    </span>
+                  )}
+                </div>
+              )}
+              {listing.metadata?.turnaroundTime && (
+                <div className="p-3 bg-gray-50 rounded-lg flex items-center gap-2">
+                  <Clock size={14} className="text-gray-400 shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-500">Estimated Turnaround</p>
+                    <p className="font-medium text-gray-900">{listing.metadata.turnaroundTime}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Location */}
           <div className="p-3 bg-gray-50 rounded-lg mb-6">
-            <p className="text-xs text-gray-500 mb-1">Location</p>
+            <p className="text-xs text-gray-500 mb-1">
+              {listing.category === COMMISSION_CATEGORY_ID ? 'Timezone / Region' : 'Location'}
+            </p>
             <div className="flex items-center gap-1.5">
               {isOnlineStore(listing.location) ? (
                 <Globe size={14} className="text-blue-400" />
@@ -556,12 +596,14 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                       ) : (
                         <>
                           <MessageCircle size={24} />
-                          I&apos;m Interested
+                          {listing.category === COMMISSION_CATEGORY_ID ? 'Request Commission' : "I'm Interested"}
                         </>
                       )}
                     </button>
                     <p className="text-center text-xs text-gray-500">
-                      Click to contact the seller via secure DM
+                      {listing.category === COMMISSION_CATEGORY_ID
+                        ? 'Click to send a commission request via secure DM'
+                        : 'Click to contact the seller via secure DM'}
                     </p>
                   </div>
                 )}
@@ -684,26 +726,45 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
           </div>
         </div>
 
-        {/* Marketplace Safety Tips */}
+        {/* Safety Tips */}
         <div className="bg-white rounded-xl shadow-sm p-5">
           <div className="flex items-center gap-2 mb-3">
-            <ShieldCheck size={20} className="text-blue-600" />
-            <h3 className="font-semibold text-gray-900">Marketplace Safety</h3>
+            <ShieldCheck size={20} className={listing.category === COMMISSION_CATEGORY_ID ? 'text-rose-500' : 'text-blue-600'} />
+            <h3 className="font-semibold text-gray-900">
+              {listing.category === COMMISSION_CATEGORY_ID ? 'Commission Tips' : 'Marketplace Safety'}
+            </h3>
           </div>
-          <ul className="space-y-2 text-sm text-gray-600">
-            <li className="flex items-start gap-2">
-              <span className="text-gray-400 mt-1">•</span>
-              <span>Meet in a public place.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-gray-400 mt-1">•</span>
-              <span>Check the item before paying.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-gray-400 mt-1">•</span>
-              <span>Payment happens outside this app (Cash/Zelle).</span>
-            </li>
-          </ul>
+          {listing.category === COMMISSION_CATEGORY_ID ? (
+            <ul className="space-y-2 text-sm text-gray-600">
+              <li className="flex items-start gap-2">
+                <span className="text-gray-400 mt-1">•</span>
+                <span>Discuss your requirements clearly before paying.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-gray-400 mt-1">•</span>
+                <span>Ask for a sketch or rough draft before the final delivery.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-gray-400 mt-1">•</span>
+                <span>Use a trusted payment platform (PayPal, Ko-fi, etc.).</span>
+              </li>
+            </ul>
+          ) : (
+            <ul className="space-y-2 text-sm text-gray-600">
+              <li className="flex items-start gap-2">
+                <span className="text-gray-400 mt-1">•</span>
+                <span>Meet in a public place.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-gray-400 mt-1">•</span>
+                <span>Check the item before paying.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-gray-400 mt-1">•</span>
+                <span>Payment happens outside this app (Cash/Zelle).</span>
+              </li>
+            </ul>
+          )}
 
           <div className="mt-4 pt-4 border-t border-gray-100">
             <button

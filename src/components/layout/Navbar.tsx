@@ -7,7 +7,7 @@ import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import SearchBar from '../marketplace/filters/SearchBar';
 import { getUnreadChatCount } from '@/lib/chat-utils';
-import { Bell, Store } from 'lucide-react';
+import { Bell, Store, Palette } from 'lucide-react';
 
 import NavbarUserMenu from './NavbarUserMenu';
 
@@ -146,6 +146,14 @@ const NavbarContent = () => {
             </Link>
 
             <Link
+              href="/gallery"
+              className="hidden sm:flex items-center gap-1.5 text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <Palette size={18} />
+              <span className="text-sm font-medium">The Gallery</span>
+            </Link>
+
+            <Link
               href="/create-listing"
               className="hidden sm:flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-full hover:bg-slate-800 transition-colors"
             >
@@ -218,6 +226,13 @@ const NavbarContent = () => {
               onClick={() => setIsMenuOpen(false)}
             >
               The Mall
+            </Link>
+            <Link
+              href="/gallery"
+              className={`block px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive('/gallery') ? 'bg-primary-color/10 text-primary-color' : 'text-slate-600 hover:bg-gray-50'}`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              The Gallery
             </Link>
             <Link
               href="/create-listing"

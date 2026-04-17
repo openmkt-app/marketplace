@@ -24,8 +24,14 @@ export type ListingImage = {
   size: number;
 };
 
+export type CommissionStatus = 'open' | 'waitlist' | 'closed';
+
 export type ListingMetadata = {
   subcategory?: string;
+  externalPlatform?: string;
+  slotsAvailable?: number;
+  turnaroundTime?: string;
+  commissionStatus?: CommissionStatus;
   [key: string]: any;
 };
 
