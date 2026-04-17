@@ -207,6 +207,25 @@ export class MarketplaceClient {
       // Handle standard AT Proto response shape { data: { uri, cid }, success: boolean }
       const recordData = result.data ? result.data : result;
 
+      // Notify the feed indexer — fire-and-forget, must not break listing creation
+      const listingUri = (recordData as any).uri as string | undefined;
+      if (listingUri) {
+        fetch('/api/feed/notify-new-listing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            listingUri,
+            listingData: {
+              title: recordToCreate.title,
+              price: recordToCreate.price,
+              category: recordToCreate.category,
+              location: recordToCreate.location,
+              description: recordToCreate.description,
+            },
+          }),
+        }).catch(() => {});
+      }
+
       return {
         ...(recordData as unknown as Record<string, unknown>),
         images: processedImages // Return the blobs so we can use them for sharing
@@ -256,6 +275,13 @@ export class MarketplaceClient {
       });
 
       logger.info(`Successfully deleted listing: ${uri}`);
+
+      // Remove from feed index — fire-and-forget
+      fetch('/api/feed/notify-new-listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listingUri: uri, action: 'delete', listingData: { title: '', price: '', category: '', location: { state: '', county: '', locality: '' } } }),
+      }).catch(() => {});
 
       // Invalidate cache
       this.listingsCache = null;
@@ -813,6 +839,24 @@ export class MarketplaceClient {
       });
 
       logger.info('Successfully shared listing to Bluesky feed');
+
+      // Index the user's own share post — replaces any existing bot post for this listing
+      fetch('/api/feed/notify-new-listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          listingUri: uri,
+          postUri: postResult.uri,
+          source: 'user',
+          listingData: {
+            title: listingData.title,
+            price: listingData.price,
+            category: listingData.category,
+            location: listingData.location,
+            description: listingData.description,
+          },
+        }),
+      }).catch(() => {});
 
     } catch (error) {
       logger.error('Failed to share listing to Bluesky', error as Error);

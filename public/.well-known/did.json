@@ -1,0 +1,11 @@
+{
+  "@context": ["https://www.w3.org/ns/did/v1"],
+  "id": "did:web:openmkt.app",
+  "service": [
+    {
+      "id": "#atproto_feed_generator",
+      "type": "BskyFeedGenerator",
+      "serviceEndpoint": "https://openmkt.app"
+    }
+  ]
+}
