@@ -5,7 +5,7 @@
     {
       "id": "#bsky_fg",
       "type": "BskyFeedGenerator",
-      "serviceEndpoint": "https://openmkt.app"
+      "serviceEndpoint": "https://openmkt.app/xrpc" 
     }
   ]
 }
