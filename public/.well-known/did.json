@@ -3,7 +3,7 @@
   "id": "did:web:openmkt.app",
   "service": [
     {
-      "id": "#atproto_feed_generator",
+      "id": "#bsky_fg",
       "type": "BskyFeedGenerator",
       "serviceEndpoint": "https://openmkt.app"
     }
