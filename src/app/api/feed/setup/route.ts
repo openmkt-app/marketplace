@@ -29,6 +29,18 @@ export async function POST(req: NextRequest) {
   try {
     const agent = await getBotAgent();
 
+    // Delete first so the indexer sees a fresh "create" event,
+    // which forces re-resolution of the did:web DID document.
+    try {
+      await agent.api.com.atproto.repo.deleteRecord({
+        repo: agent.session!.did,
+        collection: 'app.bsky.feed.generator',
+        rkey: FEED_DEFINITION.rkey,
+      });
+    } catch {
+      // Record may not exist yet — that's fine
+    }
+
     const record = {
       $type: 'app.bsky.feed.generator',
       did: FEED_GENERATOR_DID,
