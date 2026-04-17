@@ -14,16 +14,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing feed parameter' }, { status: 400 });
   }
 
-  // Parse the AT URI: at://<did>/app.bsky.feed.generator/<rkey>
-  let rkey: string;
-  try {
-    const url = new URL(feed.replace('at://', 'https://'));
-    const parts = url.pathname.split('/').filter(Boolean);
-    // parts: ['app.bsky.feed.generator', '<rkey>']
-    rkey = parts[parts.length - 1];
-  } catch {
+  // Parse the AT URI: at://<did>/<collection>/<rkey>
+  // Cannot use new URL() here — the DID colons break URL parsing
+  if (!feed.startsWith('at://')) {
     return NextResponse.json({ error: 'Invalid feed URI' }, { status: 400 });
   }
+  const atParts = feed.slice('at://'.length).split('/');
+  // atParts: ['did:plc:...', 'app.bsky.feed.generator', 'rkey']
+  const rkey = atParts[2];
 
   if (!KNOWN_FEEDS.has(rkey)) {
     return NextResponse.json({ error: 'Unknown feed' }, { status: 404 });
