@@ -51,7 +51,7 @@ function formatImageUrls(cids: string[], did: string) {
   }));
 }
 
-export async function fetchListingById(id: string): Promise<ListingData | null> {
+export async function fetchListingById(id: string): Promise<ListingData | 'removed' | null> {
   try {
     const decodedId = decodeURIComponent(id);
 
@@ -169,6 +169,9 @@ export async function fetchListingById(id: string): Promise<ListingData | null> 
       formattedImages,
     };
   } catch (error) {
+    if (error instanceof Error && error.message.includes('Could not locate record')) {
+      return 'removed';
+    }
     console.error('Failed to fetch listing:', error);
     return null;
   }

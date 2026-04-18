@@ -172,3 +172,9 @@ src/app/test-listing/
 test-*.cjs
 test-*.csv
 scratch-*.html
+
+# Local documentation (keep README.md tracked)
+OAuth 2.md
+PROJECT-TRACKER.md
+PROJECT_TRACKER.md
+TODO-*.md

@@ -167,7 +167,7 @@ const NavbarContent = () => {
             ) : (
               <Link
                 href="/login"
-                className="bg-primary-color text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-primary-light transition-colors"
+                className="bg-primary-color text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-primary-light hover:text-white transition-colors"
               >
                 Log In
               </Link>
@@ -267,7 +267,7 @@ const NavbarContent = () => {
               <div className="pt-2 mt-2 border-t border-gray-100">
                 <Link
                   href="/login"
-                  className="block w-full text-center bg-primary-color text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-primary-light transition-colors"
+                  className="block w-full text-center bg-primary-color text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-primary-light hover:text-white transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Log In

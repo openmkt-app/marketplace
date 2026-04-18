@@ -14,10 +14,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const listing = await fetchListingById(id);
 
-  if (!listing) {
+  if (!listing || listing === 'removed') {
     return {
-      title: 'Listing Not Found | Open Market',
-      description: 'This listing could not be found on Open Market.',
+      title: listing === 'removed' ? 'Listing Removed | Open Market' : 'Listing Not Found | Open Market',
+      description: 'This listing is no longer available on Open Market.',
     };
   }
 
@@ -62,7 +62,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 // JSON-LD structured data for rich snippets
-function generateJsonLd(listing: NonNullable<Awaited<ReturnType<typeof fetchListingById>>>) {
+function generateJsonLd(listing: import('@/lib/server/fetch-listing').ListingData) {
   const imageUrl = listing.formattedImages?.[0]?.fullsize;
   const priceValue = listing.price.replace(/[^0-9.]/g, '');
 
@@ -115,7 +115,9 @@ function getSchemaCondition(condition: string): string {
 export default async function ListingDetailPage({ params, searchParams }: Props) {
   const { id } = await params;
   const searchParamsResolved = await searchParams;
-  const listing = await fetchListingById(id);
+  const result = await fetchListingById(id);
+  const isRemoved = result === 'removed';
+  const listing = isRemoved ? null : result;
 
   return (
     <>
@@ -131,6 +133,7 @@ export default async function ListingDetailPage({ params, searchParams }: Props)
         listingId={id}
         initialListing={listing}
         isNewListing={searchParamsResolved.newListing === 'true'}
+        isRemoved={isRemoved}
       />
     </>
   );

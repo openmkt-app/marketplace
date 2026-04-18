@@ -12,12 +12,14 @@ type Props = {
   listingId: string;
   initialListing: ListingData | null;
   isNewListing: boolean;
+  isRemoved?: boolean;
 };
 
-export default function ListingPageClient({ listingId, initialListing, isNewListing }: Props) {
+export default function ListingPageClient({ listingId, initialListing, isNewListing, isRemoved: initialIsRemoved }: Props) {
   const [listing, setListing] = useState<any>(initialListing);
-  const [isLoading, setIsLoading] = useState(!initialListing);
+  const [isLoading, setIsLoading] = useState(!initialListing && !initialIsRemoved);
   const [error, setError] = useState<string | null>(null);
+  const [isRemoved, setIsRemoved] = useState(initialIsRemoved ?? false);
   const [sellerProfile, setSellerProfile] = useState<any>(
     initialListing
       ? {
@@ -42,8 +44,8 @@ export default function ListingPageClient({ listingId, initialListing, isNewList
   }, [showSuccessMessage]);
 
   useEffect(() => {
-    // If we already have initial listing data from server, no need to fetch
-    if (initialListing) {
+    // If we already have initial listing data from server, or it's known removed, no need to fetch
+    if (initialListing || initialIsRemoved) {
       return;
     }
 
@@ -246,7 +248,12 @@ export default function ListingPageClient({ listingId, initialListing, isNewList
 
       } catch (err) {
         console.error('Failed to fetch listing:', err);
-        setError(`Failed to load listing: ${err instanceof Error ? err.message : String(err)}`);
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes('Could not locate record')) {
+          setIsRemoved(true);
+        } else {
+          setError(`Failed to load listing: ${msg}`);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -265,6 +272,38 @@ export default function ListingPageClient({ listingId, initialListing, isNewList
           </Link>
         </div>
         <div className="animate-pulse bg-neutral-light h-96 rounded-lg"></div>
+      </div>
+    );
+  }
+
+  if (isRemoved) {
+    return (
+      <div className="bg-gray-50 min-h-screen">
+        <div className="max-w-4xl mx-auto px-4 py-12">
+          <div className="mb-6">
+            <Link href="/browse" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to listings
+            </Link>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 p-10 text-center shadow-sm">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-semibold text-gray-800 mb-2">This listing has been removed</h1>
+            <p className="text-gray-500 mb-6">The seller has deleted this listing. It is no longer available.</p>
+            <Link
+              href="/browse"
+              className="inline-flex items-center gap-2 bg-primary-color hover:bg-primary-dark text-white font-medium px-5 py-2.5 rounded-lg transition-colors"
+            >
+              Browse other listings
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
