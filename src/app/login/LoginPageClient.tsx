@@ -32,8 +32,19 @@ export default function LoginPageClient() {
         setError(null);
         setIsSubmitting(true);
 
+        const trimmed = handle.trim();
+
+        if (trimmed.includes('@') && !trimmed.startsWith('@')) {
+            setError("Enter your Bluesky handle, not your email. You can find your handle in bsky.app under Settings → Account.");
+            setIsSubmitting(false);
+            return;
+        }
+
+        // Strip leading @ from handles
+        const normalized = trimmed.startsWith('@') ? trimmed.slice(1) : trimmed;
+
         try {
-            await loginWithOAuth(handle);
+            await loginWithOAuth(normalized);
             // Browser redirects to Bluesky — this line won't be reached
         } catch (err) {
             setError(`Login failed: ${err instanceof Error ? err.message : String(err)}`);

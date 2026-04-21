@@ -97,8 +97,16 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="py-4 border-t border-neutral-light text-sm text-text-primary text-center">
+        <div className="py-4 border-t border-neutral-light text-sm text-text-primary text-center flex flex-col sm:flex-row items-center justify-between gap-2">
           <p>© {currentYear} Open Market (openmkt.app). All rights reserved.</p>
+          <div className="flex gap-4">
+            <Link href="/terms-of-service" className="hover:text-primary-color transition-colors">
+              Terms of Service
+            </Link>
+            <Link href="/privacy-policy" className="hover:text-primary-color transition-colors">
+              Privacy Policy
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
