@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 
-function BlueskyLogo({ className }: { className?: string }) {
+function AtProtoIcon({ className }: { className?: string }) {
     return (
-        <svg className={className} fill="currentColor" viewBox="0 0 600 530" aria-hidden="true">
-            <path d="m135.72 44.03c66.496 49.921 138.02 151.14 164.28 205.46 26.262-54.316 97.782-155.54 164.28-205.46 47.98-36.021 125.72-63.892 125.72 24.795 0 17.712-10.155 148.79-16.111 170.07-20.703 73.984-96.144 92.854-163.25 81.433 117.3 19.964 147.14 86.092 82.697 152.22-122.39 125.59-175.91-31.511-189.63-71.766-2.514-7.3797-3.6904-10.832-3.7077-7.8964-0.0174-2.9357-1.1937 0.51669-3.7077 7.8964-13.714 40.255-67.233 197.36-189.63 71.766-64.444-66.128-34.605-132.26 82.697-152.22-67.108 11.421-142.55-7.4491-163.25-81.433-5.9562-21.282-16.111-152.36-16.111-170.07 0-88.687 77.742-60.816 125.72-24.795z" />
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4" />
+            <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94" />
         </svg>
     );
 }
@@ -35,7 +36,7 @@ export default function LoginPageClient() {
         const trimmed = handle.trim();
 
         if (trimmed.includes('@') && !trimmed.startsWith('@')) {
-            setError("Enter your Bluesky handle, not your email. You can find your handle in bsky.app under Settings → Account.");
+            setError("Enter your AT Protocol handle (e.g. alice.bsky.social or alice.tangled.org), not your email address.");
             setIsSubmitting(false);
             return;
         }
@@ -58,7 +59,7 @@ export default function LoginPageClient() {
                 <div className="bg-white py-8 px-4 shadow-xl sm:rounded-lg sm:px-10">
                     <div className="sm:mx-auto sm:w-full sm:max-w-md mb-6">
                         <div className="flex justify-center mb-3">
-                            <BlueskyLogo className="h-10 w-10 text-[#0085ff]" />
+                            <AtProtoIcon className="h-10 w-10 text-[#0085ff]" />
                         </div>
                         <h2 className="text-center text-3xl font-extrabold text-text-primary mb-2">Welcome Back!</h2>
                         <p className="text-center text-sm text-text-secondary">
@@ -85,7 +86,7 @@ export default function LoginPageClient() {
                     <form className="space-y-6" onSubmit={handleOAuthLogin}>
                         <div>
                             <label htmlFor="handle" className="block text-sm font-medium text-text-primary">
-                                Bluesky Handle
+                                AT Protocol Handle
                             </label>
                             <div className="mt-1">
                                 <input
@@ -97,11 +98,11 @@ export default function LoginPageClient() {
                                     value={handle}
                                     onChange={(e) => setHandle(e.target.value)}
                                     className="appearance-none block w-full px-3 py-2 border border-neutral-medium rounded-lg shadow-sm placeholder-text-secondary/50 focus:outline-none focus:ring-primary-color focus:border-primary-color sm:text-sm"
-                                    placeholder="username.bsky.social"
+                                    placeholder="you.bsky.social or you.your-domain.com"
                                 />
                             </div>
                             <p className="mt-2 text-xs text-text-secondary">
-                                You&apos;ll be redirected to Bluesky to securely authorize access.
+                                You&apos;ll be redirected to your PDS to securely authorize access.
                             </p>
                         </div>
 
@@ -117,12 +118,12 @@ export default function LoginPageClient() {
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
-                                        Redirecting to Bluesky...
+                                        Redirecting to your provider...
                                     </>
                                 ) : (
                                     <>
-                                        <BlueskyLogo className="h-5 w-5" />
-                                        Sign in with Bluesky
+                                        <AtProtoIcon className="h-5 w-5" />
+                                        Sign in with AT Protocol
                                     </>
                                 )}
                             </button>
@@ -140,7 +141,7 @@ export default function LoginPageClient() {
                                 <div className="ml-3">
                                     <h3 className="text-sm font-medium text-blue-700">Secure by design</h3>
                                     <p className="mt-1 text-sm text-blue-600">
-                                        Your password never leaves Bluesky&apos;s servers. Open Market only receives a scoped access token.
+                                        Your password stays with your own PDS. Open Market only receives a scoped access token.
                                     </p>
                                 </div>
                             </div>
@@ -150,14 +151,14 @@ export default function LoginPageClient() {
                     <div className="mt-4">
                         <div className="text-sm text-center">
                             <p className="text-text-secondary">
-                                New to this whole thing?{' '}
+                                New to the AT Protocol?{' '}
                                 <a
                                     href="https://bsky.app/signup"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="font-medium text-primary-color hover:text-primary-light"
                                 >
-                                    Get a Bluesky account
+                                    Get started on Bluesky
                                 </a>
                             </p>
                         </div>
