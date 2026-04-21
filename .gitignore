@@ -178,3 +178,5 @@ OAuth 2.md
 PROJECT-TRACKER.md
 PROJECT_TRACKER.md
 TODO-*.md
+# Local scripts
+*.py
