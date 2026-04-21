@@ -1,181 +1,167 @@
-# AT Protocol Marketplace
+# Open Market
 
-A local marketplace application built on the AT Protocol, allowing users to buy and sell items within their communities.
+A decentralized marketplace built on the [AT Protocol](https://atproto.com) — the open protocol behind Bluesky. Buy and sell directly with your community, no fees, no middlemen.
 
-## Project Overview
+Live at **[openmkt.app](https://openmkt.app)**
 
-This project demonstrates how to build a marketplace application using the Authenticated Transfer Protocol (AT Protocol), the technology behind Bluesky. The application enables users to:
+---
 
-1. Create listings for items they want to sell
-2. Browse listings by location (state, county, city/town/village)
-3. Contact sellers about items
-4. All while maintaining privacy and leveraging the decentralized nature of AT Protocol
+## What is this?
 
-## Features
+Open Market stores listings as AT Protocol records in each user's own repository. There is no central database — your listings live in your Bluesky PDS (Personal Data Server) under a custom lexicon. The app reads from verified sellers' repos server-side and presents them in a familiar marketplace UI.
 
-- **Authentication** - Login and session management using AT Protocol credentials
-- **Browse Listings** - Filter by location, category, condition, and price range
-- **Listing Details** - View detailed information about a listing
-- **User Profiles** - User-specific pages with profile information and listings management
-- **Responsive Design** - Mobile-friendly interface for users on any device
+Key sections:
 
-## Getting Started
+- **Browse** — all listings, filterable by location, category, condition, price, and recency
+- **The Mall** — verified sellers with external storefronts (Etsy, Shopify, etc.)
+- **The Gallery** — curated artist commission listings
+- **Feed** — a Bluesky feed generator that surfaces new listings in the Bluesky app
+
+---
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| Language | TypeScript 5 |
+| Styling | Tailwind CSS 3 |
+| AT Protocol | `@atproto/api`, `@atproto/oauth-client-browser`, `@atproto/lexicon` |
+| Storage | Netlify Blobs (feed index) |
+| Auth | AT Protocol OAuth (Bluesky login) |
+
+---
+
+## Getting started
 
 ### Prerequisites
 
-- Node.js (v18 or later)
-- npm (v8 or later)
-- A Bluesky account (for testing)
+- Node.js 18+
+- A Bluesky account
+- A bot account on Bluesky (for seller verification and feed announcements)
 
 ### Installation
 
-1. Clone this repository:
-   ```
-   git clone https://github.com/yourusername/at-marketplace.git
-   cd at-marketplace
-   ```
-
-2. Install dependencies:
-   ```
-   npm install
-   ```
-
-3. Create a `.env.local` file with your configuration:
-   ```
-   NEXT_PUBLIC_ATP_SERVICE=https://bsky.social
-   ```
-
-4. Start the development server:
-   ```
-   npm run dev
-   ```
-
-5. Open [http://localhost:3000](http://localhost:3000) to view the application
-
-## Project Structure
-
-```
-at-marketplace/
-├── lexicons/               # AT Protocol custom lexicons
-│   └── com/example/marketplace/
-│       └── listing.json    # Marketplace listing lexicon
-├── scripts/                # Helper scripts
-│   └── validate-lexicon.js # Lexicon validation script
-├── src/
-│   ├── app/                # Next.js app router
-│   │   ├── browse/         # Browsing listings
-│   │   ├── create-listing/ # Create new listing
-│   │   ├── listing/        # Listing details page
-│   │   ├── login/          # Authentication
-│   │   ├── my-listings/    # User's active listings
-│   │   ├── profile/        # User profile
-│   ├── components/         # React components
-│   │   ├── auth/           # Authentication components
-│   │   ├── layout/         # Layout components (navbar, etc.)
-│   │   ├── marketplace/    # Marketplace components
-│   ├── contexts/           # React contexts
-│   │   └── AuthContext.tsx # Authentication context
-│   ├── lib/                # Utility functions and client
-│   │   └── marketplace-client.ts  # AT Protocol client
-│   └── types/              # TypeScript type definitions
-└── public/                 # Static assets
+```bash
+git clone https://github.com/openmkt-app/marketplace.git
+cd marketplace
+npm install
 ```
 
-## Custom Lexicon
+### Environment variables
 
-This project defines a custom AT Protocol lexicon for marketplace listings. The lexicon defines the schema for:
+Create a `.env.local` file:
 
-- Basic item information (title, description, price)
-- Location data at the county and city/town level
-- Image attachments
-- Categories and condition information
+```env
+# Bot account used for seller verification and feed announcements
+BOT_HANDLE=yourbot.bsky.social
+BOT_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
 
-The lexicon is defined in `lexicons/com/example/marketplace/listing.json`.
+# Feed index security (optional but recommended in production)
+FEED_INDEX_SECRET=your-secret-here
 
-## Development Guide
+# Switch between production and dev lexicon collections
+# Production: app.openmkt.marketplace.listing
+# Development: app.atprotomkt.marketplace.listing
+NEXT_PUBLIC_MARKETPLACE_ENV=development
 
-### Understanding the AT Protocol
-
-The AT Protocol is a decentralized social networking protocol with several key features relevant to our marketplace:
-
-1. **Decentralized Identity (DID)**: Users have portable identities
-2. **Repository (Repo)**: Each user has a repo containing their data
-3. **Collections**: Different types of data are organized into collections
-4. **Lexicons**: Schema definitions that describe data models
-5. **Blobs**: Binary attachments like images
-
-### Working with Custom Lexicons
-
-To create a custom lexicon:
-
-1. Define your lexicon JSON schema in the `lexicons` directory
-2. Validate it with `npm run lexicon:validate`
-3. Use it in your code to create and query records
-
-### Authentication
-
-The application uses the AT Protocol authentication system via the `BskyAgent` class:
-
-```typescript
-// Login
-const client = new MarketplaceClient();
-const result = await client.login('username', 'password');
-
-// Session management
-const sessionData = {
-  did: 'user-did',
-  handle: 'username',
-  accessJwt: 'access-token',
-  refreshJwt: 'refresh-token'
-};
-await client.resumeSession(sessionData);
+# Optional
+NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
+ETSY_API_KEY=your-etsy-key
 ```
 
-### Creating Listings
+### Run locally
 
-The `MarketplaceClient` class handles creating listings:
-
-```typescript
-const client = new MarketplaceClient();
-await client.login('username', 'password');
-
-await client.createListing({
-  title: 'Vintage Chair',
-  description: 'Mid-century modern chair in excellent condition',
-  price: '75',
-  location: {
-    state: 'California',
-    county: 'Los Angeles',
-    locality: 'Pasadena',
-    zipPrefix: '910'
-  },
-  category: 'furniture',
-  condition: 'good'
-});
+```bash
+npm run dev
 ```
 
-### Finding Listings by Location
+Open [http://localhost:3000](http://localhost:3000).
 
-```typescript
-const listings = await client.getListingsByLocation(
-  'California',
-  'Los Angeles',
-  'Pasadena'
-);
+---
+
+## How listings work
+
+Listings are AT Protocol records stored in each seller's PDS under the `app.openmkt.marketplace.listing` collection. The schema (defined in [`lexicons/app/openmkt/marketplace/listing.json`](lexicons/app/openmkt/marketplace/listing.json)) includes:
+
+```
+title, price, currency, category, condition,
+description, location, images, metadata, externalUrl, labels
 ```
 
-## Limitations and Future Improvements
+**Seller verification** is handled by a bot account — when a user registers, the bot follows them. The app treats "bot follows" as the verified seller list and caches it server-side.
 
-- **Search and Discovery**: The AT Protocol's current search capabilities are limited. This implementation uses a simplified approach that would need to be improved as the protocol evolves.
-- **Messaging**: Direct messaging between users for negotiations would need to be implemented.
-- **Trust Mechanisms**: Additional features for user ratings and verification could be added.
-- **Notifications**: Real-time notifications for new listings or messages.
-- **Image Management**: Improved image uploading and gallery view for listings.
+**Browsing** works entirely server-side to avoid CORS restrictions on direct PDS requests. The `/api/marketplace/listings` route fetches records from all verified sellers' PDSes and returns them as a single response, cached for 5 minutes. The cache is busted immediately when any seller posts a new listing.
+
+---
+
+## Feed generator
+
+Open Market runs a Bluesky feed generator at `did:web:openmkt.app`, surfacing new listings in the Bluesky app.
+
+- When a listing is created, `/api/feed/notify-new-listing` is called
+- The bot creates an announcement post on Bluesky
+- The post is indexed and included in the feed skeleton served at `/xrpc/app.bsky.feed.getFeedSkeleton`
+
+To add the feed in Bluesky, search for `openmkt.app` feeds or use the URI:
+```
+at://did:plc:ma37sd3y64o4j7pl57mwn7lb/app.bsky.feed.generator/all
+```
+
+---
+
+## Project structure
+
+```
+src/
+├── app/
+│   ├── browse/              # Main listings browse page
+│   ├── create-listing/      # New listing form
+│   ├── edit-listing/        # Edit existing listing
+│   ├── gallery/             # The Gallery (artist commissions)
+│   ├── listing/[id]/        # Listing detail page
+│   ├── mall/                # The Mall (online storefronts)
+│   ├── my-listings/         # Seller's own listings
+│   ├── store/[handle]/      # Individual seller storefront
+│   ├── profile/             # User profile
+│   ├── login/               # OAuth login
+│   └── api/
+│       ├── marketplace/
+│       │   ├── listings/    # Proxy: fetches listings server-side
+│       │   ├── sellers/     # Verified seller list (cached)
+│       │   └── register/    # New seller registration (bot follows)
+│       ├── feed/            # Feed generator endpoints
+│       ├── mall/            # Mall cache invalidation
+│       └── admin/           # Moderation and banner management
+├── lib/
+│   ├── marketplace-client.ts  # AT Protocol listing operations
+│   ├── marketplace-dids.ts    # Verified seller DID registry
+│   ├── mall-cache.ts          # Server-side in-memory caches
+│   ├── bot-client.ts          # Bot account agent
+│   └── feed-index.ts          # Feed entry index
+└── components/
+    └── marketplace/           # Listing cards, filters, gallery tiles
+lexicons/
+├── app/openmkt/marketplace/listing.json     # Production lexicon
+└── app/atprotomkt/marketplace/listing.json  # Dev/test lexicon
+```
+
+---
+
+## AT Protocol lexicon
+
+The custom lexicon `app.openmkt.marketplace.listing` is what makes listings portable — any AT Protocol client can read and display them. Validate the lexicon with:
+
+```bash
+npm run lexicon:validate
+```
+
+---
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+PRs are welcome. Open an issue first for larger changes.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT
