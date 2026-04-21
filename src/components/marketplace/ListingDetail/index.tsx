@@ -453,7 +453,7 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                     rel="noopener noreferrer"
                     className="flex-1 px-3 py-2 text-sm font-medium text-center text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors"
                   >
-                    Bluesky Profile
+                    Atmosphere Profile
                   </Link>
                 </div>
               )}
@@ -570,7 +570,7 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                     <div className="flex items-start gap-2 p-3 bg-green-50 rounded-lg">
                       <Info size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
                       <p className="text-xs text-green-700">
-                        The seller has been notified of your interest. They will reach out to you via Bluesky DM if interested.
+                        The seller has been notified of your interest. They will reach out to you via DM if interested.
                       </p>
                     </div>
                   </div>
@@ -718,7 +718,7 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                 <div className="flex items-start gap-2 p-3 bg-gray-50 rounded-lg">
                   <Info size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
                   <p className="text-xs text-gray-600">
-                    Log in with your Bluesky account to contact the seller.
+                    Log in with your Atmosphere account to contact the seller.
                   </p>
                 </div>
               </>

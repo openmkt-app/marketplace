@@ -2,6 +2,9 @@ import { Agent } from '@atproto/api';
 
 export const BOT_HANDLE = 'openmkt.app';
 
+// Use a public agent for reads to bypass granular RPC scope limitations
+const publicAgent = new Agent({ service: 'https://public.api.bsky.app' });
+
 /**
  * Check if a user is following the marketplace bot
  */
@@ -10,52 +13,15 @@ export async function isFollowingBot(
     userDid: string
 ): Promise<boolean> {
     try {
-        // 1. Resolve bot DID
-        const profile = await agent.getProfile({ actor: BOT_HANDLE });
+        // Resolve bot DID publicly
+        const profile = await publicAgent.getProfile({ actor: BOT_HANDLE });
         if (!profile.success) return false;
-
         const botDid = profile.data.did;
 
-        // 2. Check if user follows bot
-        // We use app.bsky.graph.getFollows or simply check the viewer state if we are looking at the bot profile
-        // But since we are checking if *another* user (seller) follows the bot, or the current user, it depends on context.
-
-        // Case A: Checking if Current User follows Bot
-        if (userDid === agent.did) {
-            const res = await agent.getProfile({ actor: BOT_HANDLE });
-            return !!res.data.viewer?.following;
-        }
-
-        // Case B: Checking if Another User (Seller) follows Bot
-        // We can list the seller's follows and look for the bot.
-        // This is expensive if they have many follows.
-        // Alternatively, we can check the Bot's "followers" list for the seller.
-
-        // Let's search graph.getFollows for the *Seller*
-        // Note: This might be paginated.
-        // A more efficient way? 
-        // app.bsky.graph.getAbock (no)
-
-        // Efficient check: getProfile of the Bot *as viewed by the Seller*? No, we can't impersonate.
-
-        // We will check if the Bot follows the Seller? No, that's the result we want.
-        // We need: Does Seller -> Follow -> Bot.
-
-        // Best approach: Check Bot's followers for the Seller DID.
-        // app.bsky.graph.getFollowers({ actor: botDid }) and filter?
-        // Be careful with pagination.
-
-        // For now, let's assume we can rely on `app.bsky.graph.getFollows` of the SELLER.
-        // Limitation: If seller follows 10k people, this is slow.
-        // But usually people follow < 1000.
-
-        // Let's try checking the relationship directly if possible.
-        // Currently API doesn't have a simple "does A follow B" endpoint without auth context of A.
-
-        // Optimization: We will use the Bot's backend to check this more reliably if needed.
-        // But for client-side check, we'll iterate the Seller's follows (first page or two).
-
-        const follows = await agent.getFollows({ actor: userDid, limit: 100 });
+        // Check the user's public follow list
+        // Since we are moving off transition:generic, we cannot use viewer.following efficiently
+        // We will pull the public graph data instead up to 100 records
+        const follows = await publicAgent.getFollows({ actor: userDid, limit: 100 });
         const isFound = follows.data.follows.some(f => f.did === botDid || f.handle === BOT_HANDLE);
         return isFound;
 
@@ -70,7 +36,8 @@ export async function isFollowingBot(
  */
 export async function followBot(agent: Agent): Promise<boolean> {
     try {
-        const profile = await agent.getProfile({ actor: BOT_HANDLE });
+        // Resolve the bot DID publicly first
+        const profile = await publicAgent.getProfile({ actor: BOT_HANDLE });
         if (!profile.success) return false;
 
         await agent.follow(profile.data.did);
@@ -93,9 +60,10 @@ export async function isFollowingUser(
     targetDid: string
 ): Promise<boolean> {
     try {
-        // Get the target user's profile - the viewer.following field tells us if we follow them
-        const profile = await agent.getProfile({ actor: targetDid });
-        return !!profile.data.viewer?.following;
+        if (!agent.did) return false;
+        // Check the authenticated user's public follow list for the seller's DID
+        const follows = await publicAgent.getFollows({ actor: agent.did, limit: 100 });
+        return follows.data.follows.some(f => f.did === targetDid);
     } catch (error) {
         console.error('Error checking if following user:', error);
         return false;

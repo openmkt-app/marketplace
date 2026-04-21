@@ -1892,10 +1892,10 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                   </div>
                   <div className="ml-3 text-sm">
                     <label htmlFor="postToBluesky" className="font-medium text-blue-900">
-                      Post to Bluesky
+                      Share to your feed
                     </label>
                     <p className="text-blue-700">
-                      Automatically create a post on your Bluesky feed to let your followers know about this listing.
+                      Automatically create a post on your Atmosphere feed to let your followers know about this listing.
                     </p>
                   </div>
                 </div>

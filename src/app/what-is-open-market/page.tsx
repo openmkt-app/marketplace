@@ -38,7 +38,7 @@ export default function WhatIsOpenMarketPage() {
                     </div>
                     <div className="transition-all duration-1000 transform opacity-100 translate-y-0" style={{ transitionDelay: '200ms' }}>
                         <p className="text-lg sm:text-xl text-slate-500 mb-10 max-w-2xl mx-auto leading-relaxed font-light">
-                            Turn your Bluesky profile into a storefront. <br className="hidden sm:block" />
+                            Turn your Atmosphere profile into a storefront. <br className="hidden sm:block" />
                             <span className="font-medium text-slate-900">Zero fees. No lock-in. 100% owned by you.</span>
                         </p>
                     </div>
@@ -147,8 +147,8 @@ export default function WhatIsOpenMarketPage() {
                                 <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
                                     <Store size={28} />
                                 </div>
-                                <h3 className="font-bold text-xl text-slate-900 mb-3">The "Bluesky" Storefront</h3>
-                                <p className="text-slate-500 text-sm leading-relaxed">Turn your Bluesky profile into a shop in one click. Give your social followers a place to buy instantly.</p>
+                                <h3 className="font-bold text-xl text-slate-900 mb-3">The Atmosphere Storefront</h3>
+                                <p className="text-slate-500 text-sm leading-relaxed">Turn your Atmosphere profile into a shop in one click. Give your social followers a place to buy instantly.</p>
                             </div>
                         </div>
                         <div className="transition-all duration-1000 transform opacity-100 translate-y-0" style={{ transitionDelay: '200ms' }}>
@@ -200,7 +200,7 @@ export default function WhatIsOpenMarketPage() {
                                 <MessageCircle className="w-8 h-8 text-green-400" />
                             </div>
                             <h3 className="text-xl font-bold mb-2 text-white">Direct Chat</h3>
-                            <p className="text-slate-400">Message sellers directly through Bluesky DMs. No middlemen.</p>
+                            <p className="text-slate-400">Message sellers directly. No middlemen.</p>
                         </div>
                         <div className="text-center">
                             <div className="bg-slate-800 border border-slate-700 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-purple-900/20">
@@ -237,7 +237,7 @@ export default function WhatIsOpenMarketPage() {
                                 <div className="absolute -top-3 -right-3 w-8 h-8 bg-slate-900 text-white rounded-full flex items-center justify-center font-bold border-4 border-white shadow-sm">1</div>
                             </div>
                             <div className="text-center px-2">
-                                <h4 className="text-xl font-bold text-slate-900 mb-3">Log in with Bluesky</h4>
+                                <h4 className="text-xl font-bold text-slate-900 mb-3">Log in with your Atmosphere account</h4>
                                 <p className="text-slate-500 leading-relaxed text-sm">We instantly fetch your avatar, banner, and handle. No new passwords to remember.</p>
                             </div>
                         </div>
@@ -277,7 +277,7 @@ export default function WhatIsOpenMarketPage() {
                                         <div className="min-w-[20px] pt-0.5">
                                             <MessageCircle size={14} className="text-slate-400" />
                                         </div>
-                                        <p className="text-slate-600 text-xs leading-5"><span className="font-bold text-slate-900 block">Community Sellers</span>Arranging a local sale? Chat directly via Bluesky DMs.</p>
+                                        <p className="text-slate-600 text-xs leading-5"><span className="font-bold text-slate-900 block">Community Sellers</span>Arranging a local sale? Chat directly via DMs.</p>
                                     </div>
                                 </div>
                             </div>
@@ -325,7 +325,7 @@ export default function WhatIsOpenMarketPage() {
                             </span>
                         </summary>
                         <div className="px-6 pb-6 text-slate-600 leading-relaxed">
-                            Think of Open Market as your decentralized window display. It is a free discovery engine that puts your products in front of the Bluesky community without them having to dig through a chaotic feed. We act as your top-of-funnel marketing, driving ready-to-buy traffic directly to your Etsy store at no cost.
+                            Think of Open Market as your decentralized window display. It is a free discovery engine that puts your products in front of the Atmosphere community without them having to dig through a chaotic feed. We act as your top-of-funnel marketing, driving ready-to-buy traffic directly to your Etsy store at no cost.
                         </div>
                     </details>
 
@@ -351,7 +351,7 @@ export default function WhatIsOpenMarketPage() {
                             </span>
                         </summary>
                         <div className="px-6 pb-6 text-slate-600 leading-relaxed">
-                            No! You simply log in with your existing Bluesky credentials. Your profile, avatar, and banner come straight from your main account, we just display them in the app.
+                            No! You simply log in with your existing Atmosphere account. Your profile, avatar, and banner come straight from your main account, we just display them in the app.
                         </div>
                     </details>
                 </div>

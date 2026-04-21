@@ -100,6 +100,8 @@ interface PostRecord {
   // Add other fields as needed
 }
 
+const publicAgent = new Agent({ service: 'https://public.api.bsky.app' });
+
 export class MarketplaceClient {
   agent: Agent;
   isLoggedIn: boolean;
@@ -951,7 +953,7 @@ export class MarketplaceClient {
         try {
           logger.logApiRequest('GET', 'app.bsky.feed.searchPosts', { q: term, limit: 25 });
 
-          const searchResults = await this.agent.api.app.bsky.feed.searchPosts({
+          const searchResults = await publicAgent.api.app.bsky.feed.searchPosts({
             q: term,
             limit: 25 // Search fewer per term to avoid rate limits
           });
@@ -1165,7 +1167,7 @@ export class MarketplaceClient {
       // Fallback: Try fetching via the feed API (works for posts)
       logger.logApiRequest('GET', 'app.bsky.feed.getPostThread', { uri });
 
-      const result = await this.agent.api.app.bsky.feed.getPostThread({
+      const result = await publicAgent.api.app.bsky.feed.getPostThread({
         uri,
         depth: 0
       });
@@ -1230,7 +1232,7 @@ export class MarketplaceClient {
       });
 
       // First get the user's follows
-      const result = await this.agent.api.app.bsky.graph.getFollows({
+      const result = await publicAgent.api.app.bsky.graph.getFollows({
         actor: userDid,
         limit: 100
       });
@@ -1262,41 +1264,16 @@ export class MarketplaceClient {
     }
 
     try {
-      // 1. Get profile to find the Follow URI
-      const profile = await this.agent.getProfile({ actor: targetDid });
-      const followUri = profile.data.viewer?.following;
+      // 1. Search our own public graph follows for the targetDid
+      const follows = await publicAgent.getFollows({ actor: this.agent.did || '', limit: 100 });
+      const followObj = follows.data.follows.find(f => f.did === targetDid);
 
-      if (!followUri) {
+      if (!followObj) {
         return { isFollowing: false };
       }
 
-      // 2. Fetch the actual Follow record to get the timestamp
-      // URI format: at://did:plc:xxx/app.bsky.graph.follow/rkey
-      const uriParts = followUri.replace('at://', '').split('/');
-      if (uriParts.length === 3) {
-        const [repo, collection, rkey] = uriParts;
-
-        try {
-          // We use the agent to fetch the record from our own repo
-          const result = await this.agent.api.com.atproto.repo.getRecord({
-            repo: this.agent.accountDid, // The follow is in OUR repo
-            collection: 'app.bsky.graph.follow',
-            rkey
-          });
-
-          if (result.success && result.data.value) {
-            const record = result.data.value as { createdAt: string };
-            return {
-              isFollowing: true,
-              followedAt: record.createdAt
-            };
-          }
-        } catch (e) {
-          logger.warn(`Failed to fetch follow record details for ${targetDid}`, e as Error);
-        }
-      }
-
-      // Fallback: we know we follow them, but couldn't get the date
+      // 2. We skip fetching the actual follow timestamp because we don't have the rkey
+      // easily available without the authenticated viewer object.
       return { isFollowing: true };
 
     } catch (error) {

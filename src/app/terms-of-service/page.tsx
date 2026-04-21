@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
     title: 'Terms of Service — Open Market',
-    description: 'Terms of Service for Open Market (openmkt.app), the Bluesky commerce aggregator.',
+    description: 'Terms of Service for Open Market (openmkt.app), the Atmosphere commerce aggregator.',
     alternates: {
         canonical: '/terms-of-service',
     },
@@ -33,8 +33,8 @@ const sections = [
                     <a href="https://atproto.com" target="_blank" rel="noopener noreferrer" className="text-primary-color hover:underline">
                         AT Protocol
                     </a>
-                    . It allows users with a Bluesky account to create and browse marketplace listings, run storefronts,
-                    and connect with buyers and sellers in the Bluesky community.
+                    . It allows users with an Atmosphere account to create and browse marketplace listings, run storefronts,
+                    and connect with buyers and sellers in the Atmosphere community.
                 </p>
                 <p className="mb-4">
                     Key characteristics of the Service:
@@ -43,8 +43,8 @@ const sections = [
                     <li>Listings are published as ATProto records to your Personal Data Server (PDS) — your data remains under your control.</li>
                     <li>Open Market indexes and displays those records as a discovery layer; it does not own or warehouse your listings.</li>
                     <li>The Service does not process payments. All transactions happen directly between buyers and sellers.</li>
-                    <li>Authentication is handled entirely by Bluesky&apos;s OAuth flow. We never receive or store your password.</li>
-                    <li>The Gallery feature allows artists to advertise commission services through their Bluesky-linked storefront.</li>
+                    <li>Authentication is handled entirely by AT Protocol OAuth. We never receive or store your password.</li>
+                    <li>The Gallery feature allows artists to advertise commission services through their Atmosphere storefront.</li>
                 </ul>
             </>
         ),
@@ -55,8 +55,8 @@ const sections = [
         content: (
             <>
                 <p className="mb-4">
-                    To create listings or manage a storefront, you must have a valid Bluesky account. You are responsible
-                    for maintaining the security of your Bluesky credentials and for all activity that occurs under your
+                    To create listings or manage a storefront, you must have a valid Atmosphere account. You are responsible
+                    for maintaining the security of your AT Protocol credentials and for all activity that occurs under your
                     account. You must be of legal age in your jurisdiction to enter into binding agreements.
                 </p>
                 <p>
@@ -123,8 +123,8 @@ const sections = [
             <>
                 <p className="mb-4">
                     Because Open Market is built on the AT Protocol, listing content is published to and stored on your
-                    Bluesky PDS — not on our servers. Deleting a listing from Open Market removes it from our index; the
-                    underlying ATProto record on your PDS is managed through your Bluesky account.
+                    your own PDS — not on our servers. Deleting a listing from Open Market removes it from our index; the
+                    underlying ATProto record on your PDS is managed through your Atmosphere account.
                 </p>
                 <p className="mb-4">
                     We collect minimal operational data necessary to run the Service, such as session information and
@@ -145,9 +145,9 @@ const sections = [
         title: 'AT Protocol Dependency',
         content: (
             <p>
-                The Service depends on the AT Protocol and Bluesky infrastructure. We are not affiliated with or
+                The Service depends on the AT Protocol network. We are not affiliated with or
                 endorsed by Bluesky PBLLC. Availability of the Service may be affected by changes to the AT Protocol,
-                Bluesky&apos;s PDS infrastructure, or their terms of service. We will make reasonable efforts to communicate
+                PDS infrastructure, or third-party terms of service. We will make reasonable efforts to communicate
                 any material disruptions, but we cannot guarantee uninterrupted access.
             </p>
         ),
@@ -221,7 +221,7 @@ const sections = [
         content: (
             <p>
                 You may stop using the Service at any time. Because your listing data is stored on the AT Protocol,
-                deleting your Bluesky account or removing your records will remove your content from our index. We may
+                deleting your Atmosphere account or removing your records will remove your content from our index. We may
                 suspend or terminate your access to the Service immediately if you violate these Terms, with or without
                 notice.
             </p>

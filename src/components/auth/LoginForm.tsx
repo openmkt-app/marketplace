@@ -32,7 +32,7 @@ export default function LoginForm() {
 
   return (
     <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md">
-      <h1 className="text-2xl font-bold mb-6">Sign in with Bluesky</h1>
+      <h1 className="text-2xl font-bold mb-6">Sign in with AT Protocol</h1>
 
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -43,7 +43,7 @@ export default function LoginForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="handle" className="block text-sm font-medium mb-1">
-            Bluesky Handle
+            AT Protocol Handle
           </label>
           <input
             type="text"
@@ -51,7 +51,7 @@ export default function LoginForm() {
             value={handle}
             onChange={(e) => setHandle(e.target.value)}
             className="w-full px-3 py-2 border rounded-md"
-            placeholder="username.bsky.social"
+            placeholder="you.bsky.social or you.your-domain.com"
             disabled={isLoading}
           />
         </div>
@@ -61,7 +61,7 @@ export default function LoginForm() {
           disabled={isLoading}
           className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md"
         >
-          {isLoading ? 'Redirecting...' : 'Sign in with Bluesky'}
+          {isLoading ? 'Redirecting...' : 'Sign in with AT Protocol'}
         </button>
       </form>
     </div>

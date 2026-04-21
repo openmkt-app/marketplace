@@ -359,7 +359,7 @@ const HeroSection = ({ listingCount, locationName }: { listingCount: number; loc
             href="/login"
             className="w-full sm:w-auto px-8 py-4 bg-transparent border border-white/20 text-white rounded-full font-bold text-sm hover:bg-white/10 transition-all backdrop-blur-sm flex items-center justify-center gap-2"
           >
-            Sign In with Bluesky
+            Sign In with your Atmosphere Account
           </Link>
         </div>
       </div>

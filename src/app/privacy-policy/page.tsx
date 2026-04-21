@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
     title: 'Privacy Policy — Open Market',
-    description: 'Privacy Policy for Open Market (openmkt.app), the Bluesky commerce aggregator.',
+    description: 'Privacy Policy for Open Market (openmkt.app), the Atmosphere commerce aggregator.',
     alternates: {
         canonical: '/privacy-policy',
     },
@@ -23,7 +23,7 @@ const sections = [
                 <a href="https://atproto.com" target="_blank" rel="noopener noreferrer" className="text-primary-color hover:underline">
                     AT Protocol
                 </a>
-                , most of your data — including your listings — lives on your own Bluesky Personal Data Server (PDS),
+                , most of your data — including your listings — lives on your own Personal Data Server (PDS),
                 not ours.
             </p>
         ),
@@ -37,16 +37,16 @@ const sections = [
                     <div className="bg-red-50 border border-red-100 rounded-lg p-4">
                         <p className="text-sm font-semibold text-red-700 mb-2">What we don&apos;t collect</p>
                         <ul className="text-sm text-text-secondary space-y-1 list-disc pl-4">
-                            <li>Your Bluesky password</li>
+                            <li>Your AT Protocol password</li>
                             <li>Payment or financial details</li>
                             <li>Private messages with other users</li>
-                            <li>Data from your Bluesky PDS beyond public records</li>
+                            <li>Data from your PDS beyond public records</li>
                         </ul>
                     </div>
                     <div className="bg-green-50 border border-green-100 rounded-lg p-4">
                         <p className="text-sm font-semibold text-green-700 mb-2">What we do collect</p>
                         <ul className="text-sm text-text-secondary space-y-1 list-disc pl-4">
-                            <li>Your Bluesky handle and DID (from OAuth)</li>
+                            <li>Your Atmosphere handle and DID (from OAuth)</li>
                             <li>Session tokens (stored in your browser)</li>
                             <li>Aggregated usage analytics</li>
                             <li>Support communications</li>
@@ -56,15 +56,15 @@ const sections = [
 
                 <h3 className="font-semibold text-text-primary mb-2">2.1 Identity & Authentication</h3>
                 <p className="mb-4">
-                    When you sign in, you are redirected to Bluesky&apos;s OAuth flow. We never receive or store your
-                    password. Upon successful authentication, we receive your Bluesky handle, DID (Decentralized
+                    When you sign in, you are redirected to your PDS&apos;s OAuth flow. We never receive or store your
+                    password. Upon successful authentication, we receive your Atmosphere handle, DID (Decentralized
                     Identifier), display name, and avatar URL. OAuth tokens are stored in your browser&apos;s
                     IndexedDB — not on our servers.
                 </p>
 
                 <h3 className="font-semibold text-text-primary mb-2">2.2 Listing & Storefront Content</h3>
                 <p className="mb-4">
-                    Listings you create through Open Market are published as public ATProto records to your Bluesky PDS.
+                    Listings you create through Open Market are published as public ATProto records to your PDS.
                     We index those records to power the marketplace. This content is publicly accessible on the
                     AT Protocol network regardless of Open Market.
                 </p>
@@ -110,7 +110,7 @@ const sections = [
                     {[
                         {
                             heading: '3.1 Operating the Service',
-                            body: 'We use your Bluesky identity to authenticate you, associate listings with your account, and display your storefront to other users.',
+                            body: 'We use your Atmosphere identity to authenticate you, associate listings with your account, and display your storefront to other users.',
                         },
                         {
                             heading: '3.2 Product improvement',
@@ -141,9 +141,9 @@ const sections = [
             <>
                 <p className="mb-4">
                     <strong className="text-text-primary">Your listing content</strong> is stored on the AT Protocol
-                    network via your Bluesky PDS — not on our infrastructure. Removing a listing from Open Market
+                    network via your own PDS — not on our infrastructure. Removing a listing from Open Market
                     de-indexes it from our platform, but managing the underlying ATProto record is done through your
-                    Bluesky account.
+                    Atmosphere account.
                 </p>
                 <p className="mb-4">
                     <strong className="text-text-primary">Session tokens</strong> are stored in your browser&apos;s
@@ -169,8 +169,8 @@ const sections = [
             <div className="space-y-4">
                 {[
                     {
-                        name: '5.1 Bluesky / AT Protocol',
-                        body: 'Authentication and listing storage rely on Bluesky\'s OAuth service and the AT Protocol network. Your use of Bluesky is subject to their own privacy policy and terms.',
+                        name: '5.1 AT Protocol / Atmosphere',
+                        body: 'Authentication and listing storage rely on AT Protocol OAuth and the Atmosphere network. Your use of your PDS provider is subject to their own privacy policy and terms.',
                     },
                     {
                         name: '5.2 Google Analytics (GA4)',
@@ -201,7 +201,7 @@ const sections = [
                     },
                     {
                         heading: '6.2 Delete your data',
-                        body: 'You can delete your listings directly from your Bluesky account (which removes them from our index) or contact us to request deletion of any additional data we hold.',
+                        body: 'You can delete your listings directly from your Atmosphere account (which removes them from our index) or contact us to request deletion of any additional data we hold.',
                     },
                     {
                         heading: '6.3 Opt out of analytics',
@@ -209,7 +209,7 @@ const sections = [
                     },
                     {
                         heading: '6.4 Revoke access',
-                        body: 'You can revoke Open Market\'s OAuth access at any time from your Bluesky account settings under Connected Apps. This will sign you out and prevent future access until you re-authenticate.',
+                        body: 'You can revoke Open Market\'s OAuth access at any time from your Atmosphere account settings under Connected Apps. This will sign you out and prevent future access until you re-authenticate.',
                     },
                 ].map(({ heading, body }) => (
                     <div key={heading}>
@@ -327,7 +327,7 @@ export default function PrivacyPolicyPage() {
                     <h1 className="text-3xl font-bold text-primary-color mb-3">Privacy Policy</h1>
                     <p className="text-text-secondary text-sm">Effective date: {EFFECTIVE_DATE}</p>
                     <div className="mt-5 bg-blue-50 border border-blue-100 rounded-lg p-5">
-                        <p className="font-semibold text-text-primary mb-1">Your listings live on your Bluesky PDS — not our servers.</p>
+                        <p className="font-semibold text-text-primary mb-1">Your listings live on your own PDS — not our servers.</p>
                         <p className="text-text-secondary text-sm">
                             Because Open Market is built on the AT Protocol, the content you publish stays on your own
                             Personal Data Server. We index it for discovery, but we don&apos;t own it and can&apos;t hold it

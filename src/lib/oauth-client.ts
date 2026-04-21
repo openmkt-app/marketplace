@@ -34,7 +34,7 @@ async function loadOAuthClient(): Promise<BrowserOAuthClient> {
       // redirect_uri must use 127.0.0.1 (not localhost) per the AT Protocol spec.
       // We include the dynamic port so it works on 3000, 3001, etc.
       const port = window.location.port || '80';
-      clientId = `http://localhost?redirect_uri=${encodeURIComponent(`http://127.0.0.1:${port}/oauth/callback`)}&scope=${encodeURIComponent('atproto transition:generic transition:chat.bsky')}`;
+      clientId = `http://localhost?redirect_uri=${encodeURIComponent(`http://127.0.0.1:${port}/oauth/callback`)}&scope=${encodeURIComponent('atproto transition:chat.bsky repo:app.openmkt.marketplace.listing repo:app.bsky.feed.post repo:app.bsky.graph.follow blob:*/*')}`;
     } else {
       clientId = `${origin}/oauth-client-metadata.json`;
     }

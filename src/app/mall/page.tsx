@@ -59,7 +59,7 @@ export default async function MallPage() {
               </h1>
 
               <p className="text-lg text-slate-300 max-w-xl leading-relaxed">
-                Browse verified sellers linking to Etsy, Amazon, Shopify and more. Shop from trusted storefronts with real identities on Bluesky.
+                Browse verified sellers linking to Etsy, Amazon, Shopify and more. Shop from trusted storefronts with real identities on the Atmosphere.
               </p>
             </div>
 
@@ -110,7 +110,7 @@ export default async function MallPage() {
             <Palette size={20} className="text-rose-600 mt-0.5 shrink-0" />
             <div>
               <p className="font-bold text-rose-900">Looking for commission art?</p>
-              <p className="text-sm text-rose-700">The Gallery features Bluesky artists open for commissions — illustrations, graphic design, and more.</p>
+              <p className="text-sm text-rose-700">The Gallery features Atmosphere artists open for commissions — illustrations, graphic design, and more.</p>
             </div>
           </div>
           <Link
@@ -128,7 +128,7 @@ export default async function MallPage() {
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Want to open your own store?</h2>
             <p className="text-gray-600 mb-6 max-w-xl mx-auto">
-              It&apos;s free and easy! Just log in with your Bluesky account and create your first listing.
+              It&apos;s free and easy! Just log in with your Atmosphere account and create your first listing.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link

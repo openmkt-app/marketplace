@@ -66,7 +66,7 @@ export default function SafetyTipsPage() {
                             <div>
                                 <h2 className="text-xl font-semibold text-text-primary mb-2">4. Check Their Reputation</h2>
                                 <p className="text-text-secondary">
-                                    Unlike other platforms, Open Market connects you to real Bluesky profiles. Click the seller's handle to see their activity. Do they have followers? Have they been active for a while? Reputation is your best safety tool.
+                                    Unlike other platforms, Open Market connects you to real Atmosphere profiles. Click the seller's handle to see their activity. Do they have followers? Have they been active for a while? Reputation is your best safety tool.
                                 </p>
                             </div>
                         </div>

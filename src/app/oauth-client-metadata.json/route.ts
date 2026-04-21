@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
         redirect_uris: [
             `${origin}/oauth/callback`
         ],
-        scope: 'atproto transition:generic transition:chat.bsky',
+        scope: 'atproto transition:chat.bsky repo:app.openmkt.marketplace.listing repo:app.bsky.feed.post repo:app.bsky.graph.follow blob:*/*',
         grant_types: [
             'authorization_code',
             'refresh_token'

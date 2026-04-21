@@ -9,13 +9,13 @@ export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: 'The Gallery | Open Market',
-  description: 'Discover Bluesky commission artists. Browse illustration, graphic design, 3D art, and digital commissions — verified identities on AT Protocol.',
+  description: 'Discover Atmosphere commission artists. Browse illustration, graphic design, 3D art, and digital commissions — verified identities on AT Protocol.',
   alternates: {
     canonical: 'https://openmkt.app/gallery',
   },
   openGraph: {
     title: 'The Gallery | Open Market',
-    description: 'Discover Bluesky commission artists. Browse illustration, graphic design, 3D art, and digital commissions.',
+    description: 'Discover Atmosphere commission artists. Browse illustration, graphic design, 3D art, and digital commissions.',
     type: 'website',
     url: 'https://openmkt.app/gallery',
     siteName: 'Open Market',
@@ -49,7 +49,7 @@ export default async function GalleryPage() {
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
                 Commission <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-pink-300">
-                  Artists on Bluesky
+                  Artists on the Atmosphere
                 </span>
               </h1>
 
@@ -101,7 +101,7 @@ export default async function GalleryPage() {
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Want to showcase your commissions?</h2>
             <p className="text-gray-600 mb-6 max-w-xl mx-auto">
-              It&apos;s free! Log in with your Bluesky account, create a listing under Digital Arts &amp; Commissions, and you&apos;ll automatically appear in The Gallery.
+              It&apos;s free! Log in with your Atmosphere account, create a listing under Digital Arts &amp; Commissions, and you&apos;ll automatically appear in The Gallery.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link

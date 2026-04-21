@@ -81,7 +81,7 @@ function GalleryCTACard() {
       </div>
       <h3 className="font-bold text-rose-900 mb-2">Open for Commissions?</h3>
       <p className="text-sm text-rose-700 max-w-xs">
-        List your commission types on Open Market and get discovered by the Bluesky community.
+        List your commission types on Open Market and get discovered by the Atmosphere community.
       </p>
     </Link>
   );
