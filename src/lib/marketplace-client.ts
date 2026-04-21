@@ -2,7 +2,7 @@
 import { Agent, AtpAgent, RichText } from '@atproto/api';
 import { generateImageUrls, compressImage } from './image-utils';
 import logger from './logger';
-import { getKnownMarketplaceDIDs, addMarketplaceDID, ensureVerifiedSellersLoaded } from './marketplace-dids';
+import { getKnownMarketplaceDIDs, addMarketplaceDID, ensureVerifiedSellersLoaded, getKnownPDS } from './marketplace-dids';
 
 import { MARKETPLACE_COLLECTION } from './constants';
 import type { OAuthSession } from './oauth-client';
@@ -1534,8 +1534,7 @@ export class MarketplaceClient {
 
 /**
  * Fetch public marketplace listings without requiring authentication.
- * The AT Protocol data is public, so we can read listings from known DIDs
- * without logging in.
+ * Proxied through the Next.js API to avoid CORS issues with direct PDS requests.
  */
 export async function fetchPublicListings(): Promise<(MarketplaceListing & {
   authorDid: string;
@@ -1543,139 +1542,32 @@ export async function fetchPublicListings(): Promise<(MarketplaceListing & {
   uri: string;
   cid: string;
 })[]> {
-  logger.info('[Public] Fetching public listings');
+  logger.info('[Public] Fetching public listings via API proxy');
 
-  // Ensure verified sellers are loaded
-  await ensureVerifiedSellersLoaded();
-  const knownMarketplaceDIDs = getKnownMarketplaceDIDs();
-  const listings: (MarketplaceListing & {
-    authorDid: string;
-    authorHandle: string;
-    uri: string;
-    cid: string;
-  })[] = [];
-
-  // Get known DIDs from registry
-  logger.info(`[Public] Fetching from ${knownMarketplaceDIDs.length} known marketplace DIDs`);
-
-  // Helper to resolve PDS for a DID
-  const resolvePDS = async (did: string): Promise<string | null> => {
-    try {
-      let didDocUrl: string;
-      if (did.startsWith('did:web:')) {
-        const domain = did.slice('did:web:'.length);
-        didDocUrl = `https://${domain}/.well-known/did.json`;
-      } else {
-        didDocUrl = `https://plc.directory/${did}`;
-      }
-
-      const response = await fetch(didDocUrl);
-      if (!response.ok) return null;
-
-      const didDoc = await response.json();
-      const pdsService = didDoc.service?.find((s: any) =>
-        s.type === 'AtprotoPersonalDataServer'
-      );
-
-      return pdsService?.serviceEndpoint || null;
-    } catch {
-      return null;
+  try {
+    const response = await fetch('/api/marketplace/listings');
+    if (!response.ok) {
+      logger.warn(`[Public] Listings API returned ${response.status}`);
+      return [];
     }
-  };
 
-  // Helper to get handle from DID
-  const getHandleFromDid = async (did: string): Promise<string> => {
-    try {
-      let didDocUrl: string;
-      if (did.startsWith('did:web:')) {
-        const domain = did.slice('did:web:'.length);
-        didDocUrl = `https://${domain}/.well-known/did.json`;
-      } else {
-        didDocUrl = `https://plc.directory/${did}`;
-      }
+    const data = await response.json();
+    const listings: (MarketplaceListing & {
+      authorDid: string;
+      authorHandle: string;
+      uri: string;
+      cid: string;
+    })[] = (data.listings ?? []).map((listing: any) => ({
+      ...listing,
+      formattedImages: generateImageUrls(listing.authorDid, listing.images),
+    }));
 
-      const response = await fetch(didDocUrl);
-      if (!response.ok) return did;
-
-      const didDoc = await response.json();
-      // The handle is usually in alsoKnownAs as "at://handle"
-      const aka = didDoc.alsoKnownAs?.[0];
-      if (aka && aka.startsWith('at://')) {
-        return aka.replace('at://', '');
-      }
-      return did;
-    } catch {
-      return did;
-    }
-  };
-
-  // Fetch from known DIDs in capped batches to avoid bursting plc.directory / PDS
-  const PUBLIC_CONCURRENCY = 5;
-  const allListingsArrays: (typeof listings)[] = [];
-  for (let i = 0; i < knownMarketplaceDIDs.length; i += PUBLIC_CONCURRENCY) {
-    const chunk = knownMarketplaceDIDs.slice(i, i + PUBLIC_CONCURRENCY);
-    const chunkResults = await Promise.all(
-      chunk.map(async (did) => {
-        try {
-          // Resolve the PDS for this DID
-          const pdsUrl = await resolvePDS(did);
-          if (!pdsUrl) {
-            logger.warn(`[Public] Could not resolve PDS for ${did}`);
-            return [];
-          }
-
-          // Create a temporary unauthenticated agent for this PDS
-          const agent = new AtpAgent({ service: pdsUrl });
-
-          // Get the handle
-          const handle = await getHandleFromDid(did);
-
-          // Fetch listings from the marketplace collection
-          const result = await agent.api.com.atproto.repo.listRecords({
-            repo: did,
-            collection: MARKETPLACE_COLLECTION,
-            limit: 50
-          });
-
-          if (!result.success || !result.data.records.length) {
-            return [];
-          }
-
-          // Process the listings
-          return result.data.records.map(record => {
-            const listingData = record.value as MarketplaceListing;
-            const formattedImages = generateImageUrls(did, listingData.images);
-
-            return {
-              ...listingData,
-              authorDid: did,
-              authorHandle: handle,
-              uri: record.uri,
-              cid: record.cid,
-              formattedImages
-            };
-          });
-        } catch (error) {
-          logger.warn(`[Public] Failed to fetch listings from DID ${did}`, error as Error);
-          return [];
-        }
-      })
-    );
-    allListingsArrays.push(...chunkResults);
+    logger.info(`[Public] Total marketplace listings found: ${listings.length}`);
+    return listings;
+  } catch (error) {
+    logger.error('[Public] Failed to fetch listings', error as Error);
+    return [];
   }
-
-  // Flatten and deduplicate
-  allListingsArrays.forEach(didListings => {
-    didListings.forEach(listing => {
-      if (!listings.some(existing => existing.uri === listing.uri)) {
-        listings.push(listing);
-      }
-    });
-  });
-
-  logger.info(`[Public] Total marketplace listings found: ${listings.length}`);
-
-  return listings;
 }
 
 export default MarketplaceClient;

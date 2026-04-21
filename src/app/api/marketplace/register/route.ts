@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBotAgent } from '@/lib/bot-client';
+import { invalidateSellersCache } from '@/lib/mall-cache';
 
 export async function POST(req: NextRequest) {
     try {
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest) {
 
         // Create Follow
         await agent.follow(did);
+        invalidateSellersCache();
 
         return NextResponse.json({
             success: true,

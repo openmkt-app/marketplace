@@ -14,6 +14,7 @@ export const KNOWN_MARKETPLACE_DIDS: string[] = [
 
 // Cache for verified sellers to avoid refetching too often
 let verifiedSellers: string[] = [];
+let verifiedSellersPDS: Map<string, string> = new Map();
 let lastFetched: number = 0;
 const CACHE_TTL = 60 * 1000; // 1 minute
 let fetchPromise: Promise<string[]> | null = null;
@@ -35,13 +36,17 @@ export function fetchVerifiedSellers(force = false): Promise<string[]> {
   // Otherwise start a new fetch
   fetchPromise = (async () => {
     try {
-      const response = await fetch('/api/marketplace/sellers?t=' + Date.now());
+      const response = await fetch('/api/marketplace/sellers');
       if (response.ok) {
         const data = await response.json();
         if (data.sellers && Array.isArray(data.sellers)) {
           verifiedSellers = data.sellers.map((s: any) => s.did);
+          verifiedSellersPDS = new Map(
+            data.sellers
+              .filter((s: any) => s.pds)
+              .map((s: any) => [s.did, s.pds])
+          );
           lastFetched = Date.now();
-
         }
       }
     } catch (e) {
@@ -119,6 +124,13 @@ export function loadMarketplaceDIDsFromStorage(): void {
       console.warn('Failed to load marketplace DIDs', e);
     }
   }
+}
+
+/**
+ * Get the pre-resolved PDS endpoint for a DID if available from the sellers cache
+ */
+export function getKnownPDS(did: string): string | undefined {
+  return verifiedSellersPDS.get(did);
 }
 
 /**

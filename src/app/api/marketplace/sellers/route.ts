@@ -2,12 +2,16 @@ import { NextResponse } from 'next/server';
 import { BskyAgent } from '@atproto/api';
 import { getBotAgent } from '@/lib/bot-client';
 import { MARKETPLACE_COLLECTION } from '@/lib/constants';
+import { getCachedSellers, setSellersCache, getCachedPDS, setCachedPDS } from '@/lib/mall-cache';
 
 export const dynamic = 'force-dynamic';
 
 const PDS_TIMEOUT_MS = 5000;
 
 async function resolvePDS(did: string): Promise<string> {
+    const cached = getCachedPDS(did);
+    if (cached) return cached;
+
     try {
         const didDocUrl = did.startsWith('did:web:')
             ? `https://${did.slice('did:web:'.length)}/.well-known/did.json`
@@ -17,7 +21,9 @@ async function resolvePDS(did: string): Promise<string> {
         if (!res.ok) return 'https://bsky.social';
         const doc = await res.json();
         const svc = doc.service?.find((s: any) => s.type === 'AtprotoPersonalDataServer');
-        return svc?.serviceEndpoint || 'https://bsky.social';
+        const endpoint = svc?.serviceEndpoint || 'https://bsky.social';
+        setCachedPDS(did, endpoint);
+        return endpoint;
     } catch {
         return 'https://bsky.social';
     }
@@ -47,6 +53,11 @@ async function fetchListingCount(did: string): Promise<number> {
 
 export async function GET() {
     try {
+        const cached = getCachedSellers();
+        if (cached) {
+            return NextResponse.json(cached);
+        }
+
         const agent = await getBotAgent();
         const session = agent.session;
         if (!session) {
@@ -67,8 +78,8 @@ export async function GET() {
             cursor = response.data.cursor;
         } while (cursor);
 
-        // Fetch listing counts — resolve each user's PDS directly (5 concurrent)
-        const CONCURRENCY = 5;
+        // Fetch listing counts with higher concurrency
+        const CONCURRENCY = 20;
         const counts: number[] = new Array(allFollows.length).fill(0);
         for (let i = 0; i < allFollows.length; i += CONCURRENCY) {
             const batch = allFollows.slice(i, i + CONCURRENCY);
@@ -76,13 +87,22 @@ export async function GET() {
             results.forEach((n, j) => { counts[i + j] = n; });
         }
 
-        const sellers = allFollows.map((s, i) => ({ ...s, listingCount: counts[i] }));
+        // Resolve PDS for all sellers (already in cache from fetchListingCount)
+        const pdsEndpoints = await Promise.all(allFollows.map(s => resolvePDS(s.did)));
 
-        return NextResponse.json({
-            sellers,
-            count: sellers.length,
-            timestamp: new Date().toISOString()
-        });
+        const payload = {
+            sellers: allFollows.map((s, i) => ({
+                ...s,
+                listingCount: counts[i],
+                pds: pdsEndpoints[i],
+            })),
+            count: allFollows.length,
+            timestamp: new Date().toISOString(),
+        };
+
+        setSellersCache(payload);
+
+        return NextResponse.json(payload);
 
     } catch (error) {
         console.error('Error fetching verified sellers:', error);
