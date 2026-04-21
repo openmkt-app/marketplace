@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BskyAgent } from '@atproto/api';
 import { createBlueskyCdnImageUrls } from '@/lib/image-utils';
-import { demoListingsData } from '@/app/browse/demo-data';
 import ListingDetail from '@/components/marketplace/ListingDetail';
 import type { ListingData } from '@/lib/server/fetch-listing';
 
@@ -60,18 +59,7 @@ export default function ListingPageClient({ listingId, initialListing, isNewList
           throw new Error('No listing ID provided');
         }
 
-        // Check if this is a demo listing
-        if (id.startsWith('demo-listing-')) {
-          const demoListing = demoListingsData.find(listing => listing.uri === id);
-          if (demoListing) {
-            setListing(demoListing);
-            return;
-          } else {
-            throw new Error('Demo listing not found');
-          }
-        }
-
-        // If it's not a demo listing, try to fetch from AT Protocol
+        // Fetch from AT Protocol
         const uri = id;
         const parts = uri.split('/');
         const did = parts[2];
