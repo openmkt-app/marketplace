@@ -63,18 +63,8 @@ export async function sendMessageToSeller(
   message: string
 ): Promise<{ success: boolean; error?: string; errorCode?: 'REQUIRES_FOLLOW' | 'OAUTH_NOT_SUPPORTED' | 'UNKNOWN' }> {
   try {
-    const legacySession = (agent as AtpAgent).session;
-    if (!legacySession) {
+    if (!agent.did) {
       return { success: false, error: 'User is not logged in' };
-    }
-
-    // OAuth sessions use service auth differently; guide user to Bluesky app
-    if (isOAuthSession(agent)) {
-      return {
-        success: false,
-        error: 'Direct messaging is not available with OAuth login. Please use Bluesky to message the seller.',
-        errorCode: 'OAUTH_NOT_SUPPORTED'
-      };
     }
 
     // 1. Get a service auth token for getConvoForMembers
