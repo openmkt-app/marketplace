@@ -16,13 +16,17 @@ export default function Footer() {
             <p className="text-text-primary text-sm mb-4">
               The Atmosphere commerce aggregator. Index your existing storefront or list new items directly to the community. Zero friction, no walled gardens.
             </p>
-            <div className="flex space-x-4">
-              <a href="https://bsky.app/profile/openmkt.app" target="_blank" rel="noopener noreferrer" className="text-text-secondary hover:text-primary-color transition-colors">
-                <span className="sr-only">Bluesky</span>
-                <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 600 530" aria-hidden="true">
-                  <path d="m135.72 44.03c66.496 49.921 138.02 151.14 164.28 205.46 26.262-54.316 97.782-155.54 164.28-205.46 47.98-36.021 125.72-63.892 125.72 24.795 0 17.712-10.155 148.79-16.111 170.07-20.703 73.984-96.144 92.854-163.25 81.433 117.3 19.964 147.14 86.092 82.697 152.22-122.39 125.59-175.91-31.511-189.63-71.766-2.514-7.3797-3.6904-10.832-3.7077-7.8964-0.0174-2.9357-1.1937 0.51669-3.7077 7.8964-13.714 40.255-67.233 197.36-189.63 71.766-64.444-66.128-34.605-132.26 82.697-152.22-67.108 11.421-142.55-7.4491-163.25-81.433-5.9562-21.282-16.111-152.36-16.111-170.07 0-88.687 77.742-60.816 125.72-24.795z" />
-                </svg>
-              </a>
+            <div className="flex flex-col space-y-2 mt-6 border-t border-neutral-light pt-4">
+              <span className="text-xs text-text-primary font-semibold uppercase tracking-wider">Follow Us On</span>
+              <div className="flex space-x-4">
+                <a href="https://bsky.app/profile/openmkt.app" target="_blank" rel="noopener noreferrer" className="text-[#1185FE] hover:opacity-80 transition-opacity flex items-center space-x-2">
+                  <span className="sr-only">Bluesky</span>
+                  <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 600 530" aria-hidden="true">
+                    <path d="m135.72 44.03c66.496 49.921 138.02 151.14 164.28 205.46 26.262-54.316 97.782-155.54 164.28-205.46 47.98-36.021 125.72-63.892 125.72 24.795 0 17.712-10.155 148.79-16.111 170.07-20.703 73.984-96.144 92.854-163.25 81.433 117.3 19.964 147.14 86.092 82.697 152.22-122.39 125.59-175.91-31.511-189.63-71.766-2.514-7.3797-3.6904-10.832-3.7077-7.8964-0.0174-2.9357-1.1937 0.51669-3.7077 7.8964-13.714 40.255-67.233 197.36-189.63 71.766-64.444-66.128-34.605-132.26 82.697-152.22-67.108 11.421-142.55-7.4491-163.25-81.433-5.9562-21.282-16.111-152.36-16.111-170.07 0-88.687 77.742-60.816 125.72-24.795z" />
+                  </svg>
+                  <span className="font-medium text-sm text-text-primary">Bluesky</span>
+                </a>
+              </div>
             </div>
           </div>
 
@@ -97,9 +101,14 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="py-4 border-t border-neutral-light text-sm text-text-primary text-center flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p>© {currentYear} Open Market (openmkt.app). All rights reserved.</p>
-          <div className="flex gap-4">
+        <div className="py-6 border-t border-neutral-light text-sm text-text-primary flex flex-col items-center justify-center gap-4 text-center">
+          <div className="flex flex-col items-center gap-2">
+            <p>© {currentYear} Open Market (openmkt.app). All rights reserved.</p>
+            <p className="text-xs text-text-secondary max-w-3xl">
+              Disclaimer: Open Market is an independent platform built on the AT Protocol and is not affiliated with, endorsed by, or sponsored by Bluesky Social, PBC.
+            </p>
+          </div>
+          <div className="flex gap-6">
             <Link href="/terms-of-service" className="hover:text-primary-color transition-colors">
               Terms of Service
             </Link>
