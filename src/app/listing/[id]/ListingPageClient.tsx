@@ -66,8 +66,26 @@ export default function ListingPageClient({ listingId, initialListing, isNewList
         const collection = parts[3];
         const rkey = parts[4];
 
+        // Resolve the DID to find the correct PDS (handles non-bsky.social accounts)
+        let pdsEndpoint = 'https://bsky.social';
+        try {
+          const didDocUrl = did.startsWith('did:web:')
+            ? `https://${did.slice('did:web:'.length)}/.well-known/did.json`
+            : `https://plc.directory/${did}`;
+          const didDocRes = await fetch(didDocUrl, { signal: AbortSignal.timeout(5000) });
+          if (didDocRes.ok) {
+            const didDoc = await didDocRes.json();
+            const pdsService = didDoc.service?.find((s: any) => s.type === 'AtprotoPersonalDataServer');
+            if (pdsService?.serviceEndpoint) {
+              pdsEndpoint = pdsService.serviceEndpoint;
+            }
+          }
+        } catch {
+          // Fall back to bsky.social
+        }
+
         const agent = new BskyAgent({
-          service: 'https://bsky.social',
+          service: pdsEndpoint,
         });
 
         const record = await agent.api.com.atproto.repo.getRecord({
