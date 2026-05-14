@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { fetchStoreByHandle } from '@/lib/server/fetch-store';
 import { isSellerExcluded } from '@/lib/excluded-sellers';
@@ -12,6 +12,12 @@ type Props = {
 // Generate dynamic metadata for SEO
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { handle, locale } = await params;
+
+  // Handle the placeholder link from Bluesky bio
+  if (handle === '[your-handle]' || handle === '%5Byour-handle%5D' || handle === 'your-handle') {
+    redirect(`/${locale}/my-store`);
+  }
+
   const t = await getTranslations({ locale, namespace: 'store.metadata' });
 
   // Check if seller has opted out
@@ -89,7 +95,12 @@ function generateJsonLd(profile: NonNullable<Awaited<ReturnType<typeof fetchStor
 }
 
 export default async function StorePage({ params }: Props) {
-  const { handle } = await params;
+  const { handle, locale } = await params;
+
+  // Handle the placeholder link from Bluesky bio
+  if (handle === '[your-handle]' || handle === '%5Byour-handle%5D' || handle === 'your-handle') {
+    redirect(`/${locale}/my-store`);
+  }
 
   // Check if seller has opted out - return 404
   if (isSellerExcluded(handle)) {

@@ -32,22 +32,12 @@ const nextConfig = {
         permanent: false,
       },
       {
-        source: '/your-handle',
+        source: '/[your-handle]',
         destination: '/en/my-store',
         permanent: false,
       },
       {
-        source: '/:locale/%5Byour-handle%5D',
-        destination: '/:locale/my-store',
-        permanent: false,
-      },
-      {
-        source: '/:locale/store/%5Byour-handle%5D',
-        destination: '/:locale/my-store',
-        permanent: false,
-      },
-      {
-        source: '/store/%5Byour-handle%5D',
+        source: '/your-handle',
         destination: '/en/my-store',
         permanent: false,
       },
