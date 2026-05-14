@@ -1076,5 +1076,128 @@
   "search": {
     "placeholder": "Buscar anuncios...",
     "button": "Buscar"
+  },
+  "privacyPolicy": {
+    "metadata": {
+      "title": "Política de privacidad | Open Market",
+      "description": "Cómo Open Market maneja sus datos."
+    },
+    "title": "Política de Privacidad",
+    "effectiveDate": "Fecha de vigencia: {date}",
+    "introBoxTitle": "Tus anuncios viven en tu propio PDS, no en nuestros servidores.",
+    "introBoxBody": "Debido a que Open Market está construido sobre el Protocolo AT, el contenido que publicas permanece en tu propio Servidor de Datos Personales. Lo indexamos para su descubrimiento, pero no somos dueños de él y no podemos retenerlo.",
+    "sections": {
+      "intro": {
+        "title": "Introducción",
+        "body": "Esta Política de Privacidad describe cómo Open Market recopila, utiliza y protege la información. La mayoría de sus datos, incluidos sus anuncios, viven en su propio Servidor de Datos Personales (PDS), no en el nuestro."
+      },
+      "collection": {
+        "title": "Información que recopilamos",
+        "notCollected": "Lo que no recopilamos",
+        "notCollectedItems": "Contraseña del Protocolo AT, detalles de pago, mensajes privados, datos del PDS más allá de los registros públicos",
+        "collected": "Lo que recopilamos",
+        "collectedItems": "Nombre de usuario de Atmosphere/DID (vía OAuth), tokens de sesión, analíticas, correos de soporte",
+        "identity": "Identidad y Autenticación",
+        "identityBody": "Nunca recibimos su contraseña. Los tokens de OAuth se almacenan en su navegador, no en nuestros servidores.",
+        "listings": "Contenido de anuncios y tiendas",
+        "listingsBody": "Los anuncios se publican como registros públicos de ATProto en su PDS. Solo los indexamos para potenciar el mercado.",
+        "analytics": "Analíticas de uso",
+        "analyticsBody": "Utilizamos Google Analytics para entender el uso del servicio. Estos datos son agregados y no lo identifican personalmente."
+      },
+      "usage": {
+        "title": "Cómo utilizamos la información",
+        "operating": "Operación del servicio",
+        "operatingBody": "Para autenticarlo y mostrar su tienda a otros usuarios.",
+        "improvement": "Mejora del producto",
+        "improvementBody": "Las analíticas nos ayudan a decidir qué funciones desarrollar a continuación.",
+        "support": "Soporte al cliente",
+        "supportBody": "Para responder a sus consultas y solucionar problemas."
+      },
+      "storage": {
+        "title": "Almacenamiento y seguridad de datos",
+        "listings": "Contenido del anuncio",
+        "listingsBody": "Almacenado en la red del Protocolo AT a través de su PDS. Eliminar un anuncio lo desindexa de Open Market.",
+        "sessions": "Tokens de sesión",
+        "sessionsBody": "Almacenados en su navegador y nunca retenidos por nuestros servidores.",
+        "operational": "Datos operativos",
+        "operationalBody": "Las analíticas y los registros se almacenan en servidores seguros y encriptados."
+      },
+      "rights": {
+        "title": "Sus derechos y opciones",
+        "access": "Acceso y eliminación",
+        "accessBody": "Puede solicitar sus datos o eliminar anuncios directamente desde su cuenta de Atmosphere.",
+        "revoke": "Revocar acceso",
+        "revokeBody": "Puede revocar el acceso de OAuth en cualquier momento desde la configuración de Atmosphere."
+      },
+      "cookies": {
+        "title": "Cookies y seguimiento",
+        "body": "Utilizamos cookies esenciales para las sesiones. No utilizamos cookies publicitarias ni de seguimiento entre sitios."
+      },
+      "association": {
+        "title": "Asociación con el Protocolo AT",
+        "body": "Open Market es una plataforma independiente construida sobre el Protocolo AT. No estamos afiliados, respaldados ni patrocinados por Bluesky Social, PBC."
+      },
+      "changes": {
+        "title": "Cambios y contacto",
+        "body": "Es posible que actualicemos esta política. Contáctenos en support@openmkt.app para cualquier consulta."
+      }
+    },
+    "questionsTitle": "¿Preguntas sobre su privacidad?",
+    "questionsBody": "Estamos comprometidos con la transparencia. Si algo no está claro, simplemente pregunte.",
+    "contactBtn": "Contáctenos",
+    "backHome": "← Volver al inicio",
+    "readTerms": "← Leer nuestros Términos de Servicio"
+  },
+  "termsOfService": {
+    "metadata": {
+      "title": "Términos de servicio | Open Market",
+      "description": "Términos y condiciones para usar Open Market."
+    },
+    "title": "Términos de Servicio",
+    "effectiveDate": "Fecha de vigencia: {date}",
+    "introBody": "Estos Términos rigen su uso de Open Market, la plataforma gratuita y descentralizada de descubrimiento de comercio construida sobre el Protocolo AT. Por favor, léalos detenidamente.",
+    "sections": {
+      "acceptance": {
+        "title": "Aceptación de los términos",
+        "body": "Al usar Open Market, usted acepta estos Términos. Si no está de acuerdo, no utilice el servicio."
+      },
+      "description": {
+        "title": "Descripción del servicio",
+        "body": "Open Market es una capa de descubrimiento para la comunidad de Atmosphere. Sus datos permanecen en su PDS y nosotros no procesamos pagos."
+      },
+      "eligibility": {
+        "title": "Elegibilidad",
+        "body": "Debe tener una cuenta de Atmosphere válida y tener la edad legal para usar el servicio."
+      },
+      "listings": {
+        "title": "Anuncios y responsabilidad",
+        "body": "Usted es el único responsable de su contenido. No permitimos material ilegal, de odio o que infrinja derechos."
+      },
+      "transactions": {
+        "title": "Transacciones y pagos",
+        "body": "Open Market NO es parte de ninguna transacción. Los pagos y el envío son entre comprador y vendedor."
+      },
+      "dependency": {
+        "title": "Dependencia del Protocolo AT",
+        "body": "El servicio depende del Protocolo AT. No estamos afiliados a Bluesky PBLLC."
+      },
+      "conduct": {
+        "title": "Conducta prohibida",
+        "body": "Prohibido el fraude, el scraping, el acoso o la actividad ilegal."
+      },
+      "liability": {
+        "title": "Limitación de responsabilidad",
+        "body": "El servicio se proporciona \"tal cual\". No somos responsables de las pérdidas derivadas de las transacciones de los usuarios."
+      },
+      "termination": {
+        "title": "Terminación",
+        "body": "Puede dejar de usar el servicio en cualquier momento. Podemos suspender el acceso si viola estos términos."
+      }
+    },
+    "questionsTitle": "¿Tiene alguna pregunta o inquietud?",
+    "questionsBody": "Somos un proyecto pequeño y abierto, y nos tomamos en serio sus preguntas.",
+    "contactBtn": "Contáctenos",
+    "backHome": "← Volver al inicio",
+    "readPrivacy": "Leer nuestra Política de Privacidad →"
   }
 }

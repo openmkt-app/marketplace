@@ -1076,5 +1076,128 @@
   "search": {
     "placeholder": "Search listings...",
     "button": "Search"
+  },
+  "privacyPolicy": {
+    "metadata": {
+      "title": "Privacy Policy | Open Market",
+      "description": "How Open Market handles your data."
+    },
+    "title": "Privacy Policy",
+    "effectiveDate": "Effective date: {date}",
+    "introBoxTitle": "Your listings live on your own PDS — not our servers.",
+    "introBoxBody": "Because Open Market is built on the AT Protocol, the content you publish stays on your own Personal Data Server. We index it for discovery, but we don't own it and can't hold it hostage.",
+    "sections": {
+      "intro": {
+        "title": "Introduction",
+        "body": "This Privacy Policy describes how Open Market collects, uses, and protects information. Most of your data — including your listings — lives on your own Personal Data Server (PDS), not ours."
+      },
+      "collection": {
+        "title": "Information We Collect",
+        "notCollected": "What we don't collect",
+        "notCollectedItems": "AT Protocol password, payment details, private messages, PDS data beyond public records",
+        "collected": "What we do collect",
+        "collectedItems": "Atmosphere handle/DID (via OAuth), session tokens, analytics, support emails",
+        "identity": "Identity & Authentication",
+        "identityBody": "We never receive your password. OAuth tokens are stored in your browser, not our servers.",
+        "listings": "Listing & Storefront Content",
+        "listingsBody": "Listings are published as public ATProto records to your PDS. We only index them to power the marketplace.",
+        "analytics": "Usage Analytics",
+        "analyticsBody": "We use Google Analytics to understand service usage. This data is aggregated and doesn't identify you personally."
+      },
+      "usage": {
+        "title": "How We Use Information",
+        "operating": "Operating the Service",
+        "operatingBody": "To authenticate you and display your storefront to others.",
+        "improvement": "Product Improvement",
+        "improvementBody": "Analytics help us decide which features to build next.",
+        "support": "Customer Support",
+        "supportBody": "To respond to your inquiries and troubleshoot issues."
+      },
+      "storage": {
+        "title": "Data Storage & Security",
+        "listings": "Listing Content",
+        "listingsBody": "Stored on the AT Protocol network via your PDS. Removing a listing de-indexes it from Open Market.",
+        "sessions": "Session Tokens",
+        "sessionsBody": "Stored in your browser and never held by our servers.",
+        "operational": "Operational Data",
+        "operationalBody": "Analytics and logs are stored on secure, encrypted servers."
+      },
+      "rights": {
+        "title": "Your Rights & Choices",
+        "access": "Access & Delete",
+        "accessBody": "You can request your data or delete listings directly from your Atmosphere account.",
+        "revoke": "Revoke Access",
+        "revokeBody": "You can revoke OAuth access at any time from your Atmosphere settings."
+      },
+      "cookies": {
+        "title": "Cookies & Tracking",
+        "body": "We use essential cookies for sessions. We do not use advertising or cross-site tracking cookies."
+      },
+      "association": {
+        "title": "AT Protocol Association",
+        "body": "Open Market is an independent platform built on the AT Protocol. We are not affiliated with, endorsed by, or sponsored by Bluesky Social, PBC."
+      },
+      "changes": {
+        "title": "Changes & Contact",
+        "body": "We may update this policy. Contact us at support@openmkt.app for inquiries."
+      }
+    },
+    "questionsTitle": "Questions about your privacy?",
+    "questionsBody": "We're committed to transparency. If anything here is unclear, just ask.",
+    "contactBtn": "Contact us",
+    "backHome": "← Back to Home",
+    "readTerms": "← Read our Terms of Service"
+  },
+  "termsOfService": {
+    "metadata": {
+      "title": "Terms of Service | Open Market",
+      "description": "Terms and conditions for using Open Market."
+    },
+    "title": "Terms of Service",
+    "effectiveDate": "Effective date: {date}",
+    "introBody": "These Terms govern your use of Open Market, the free and decentralized commerce discovery platform built on the AT Protocol. Please read them carefully.",
+    "sections": {
+      "acceptance": {
+        "title": "Acceptance of Terms",
+        "body": "By using Open Market, you agree to these Terms. If you do not agree, do not use the service."
+      },
+      "description": {
+        "title": "Description of Service",
+        "body": "Open Market is a discovery layer for the Atmosphere community. Your data stays on your PDS, and we do not process payments."
+      },
+      "eligibility": {
+        "title": "Eligibility",
+        "body": "You must have a valid Atmosphere account and be of legal age to use the service."
+      },
+      "listings": {
+        "title": "Listings & Responsibility",
+        "body": "You are solely responsible for your content. We don't allow illegal, hateful, or infringing material."
+      },
+      "transactions": {
+        "title": "Transactions & Payments",
+        "body": "Open Market is NOT a party to any transaction. Payments and shipping are between buyer and seller."
+      },
+      "dependency": {
+        "title": "AT Protocol Dependency",
+        "body": "The service depends on the AT Protocol. We are not affiliated with Bluesky PBLLC."
+      },
+      "conduct": {
+        "title": "Prohibited Conduct",
+        "body": "No fraud, scraping, harassment, or illegal activity."
+      },
+      "liability": {
+        "title": "Limitation of Liability",
+        "body": "The service is provided \"as is\". We are not liable for losses arising from user transactions."
+      },
+      "termination": {
+        "title": "Termination",
+        "body": "You can stop using the service at any time. We may suspend access if you violate these terms."
+      }
+    },
+    "questionsTitle": "Have a question or concern?",
+    "questionsBody": "We're a small, open project and we take your questions seriously.",
+    "contactBtn": "Contact us",
+    "backHome": "← Back to Home",
+    "readPrivacy": "Read our Privacy Policy →"
   }
 }
