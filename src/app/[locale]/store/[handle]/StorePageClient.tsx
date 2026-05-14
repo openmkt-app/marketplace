@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { BskyAgent } from '@atproto/api';
 import { MarketplaceListing } from '@/lib/marketplace-client';
@@ -33,6 +33,7 @@ type Props = {
 
 export default function StorePageClient({ handle: encodedHandle, initialProfile, initialListingsCount }: Props) {
   const t = useTranslations('store');
+  const locale = useLocale();
   const handle = decodeURIComponent(encodedHandle);
 
   const [profile, setProfile] = useState<SellerProfile | null>(initialProfile);
@@ -158,7 +159,7 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
   function formatJoinDate(dateString?: string): string {
     if (!dateString) return '';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    return date.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
   }
 
   if (loading) {
