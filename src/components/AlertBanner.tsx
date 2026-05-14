@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { X, AlertTriangle, AlertCircle, Info } from 'lucide-react';
 
 type BannerType = 'warning' | 'error' | 'info';
@@ -32,6 +33,7 @@ const STYLES: Record<BannerType, { bg: string; text: string; icon: React.ReactNo
 export default function AlertBanner() {
   const [banner, setBanner] = useState<BannerData | null>(null);
   const [dismissed, setDismissed] = useState(false);
+  const t = useTranslations('common');
 
   useEffect(() => {
     fetch('/api/admin/banner')
@@ -54,7 +56,7 @@ export default function AlertBanner() {
         <button
           onClick={() => setDismissed(true)}
           className={`${text} opacity-60 hover:opacity-100 transition-opacity`}
-          aria-label="Dismiss"
+          aria-label={t('dismiss')}
         >
           <X size={16} />
         </button>

@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import type { MarketplaceListing } from '@/lib/marketplace-client';
 import ListingImageGallery from '../ListingImageGallery';
 import { formatConditionForDisplay } from '@/lib/condition-utils';

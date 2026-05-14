@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import { MapPin, ShoppingCart, Globe } from 'lucide-react';
 import ListingImageDisplay from './ListingImageDisplay';

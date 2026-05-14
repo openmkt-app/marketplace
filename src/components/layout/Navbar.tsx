@@ -1,15 +1,17 @@
 'use client';
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import Image from 'next/image';
 import { useState, useEffect, Suspense, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/contexts/AuthContext';
 import SearchBar from '../marketplace/filters/SearchBar';
 import { getUnreadChatCount } from '@/lib/chat-utils';
 import { Bell, Store, Palette } from 'lucide-react';
 
 import NavbarUserMenu from './NavbarUserMenu';
+import LanguageSwitcher from './LanguageSwitcher';
 
 // Wrapper for search param usage
 const NavbarContent = () => {
@@ -21,6 +23,7 @@ const NavbarContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentQuery = searchParams.get('q') || '';
+  const t = useTranslations('nav');
 
   // Handle search - only navigate when user actively searches, not on passive state changes
   const handleSearch = useCallback((query?: string) => {
@@ -128,7 +131,7 @@ const NavbarContent = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors relative"
-                aria-label="Notifications"
+                aria-label={t('notifications')}
               >
                 <Bell size={20} />
                 {hasUnreadMessages && (
@@ -142,7 +145,7 @@ const NavbarContent = () => {
               className="hidden sm:flex items-center gap-1.5 text-gray-600 hover:text-gray-900 transition-colors"
             >
               <Store size={18} />
-              <span className="text-sm font-medium">The Mall</span>
+              <span className="text-sm font-medium">{t('mall')}</span>
             </Link>
 
             <Link
@@ -150,15 +153,17 @@ const NavbarContent = () => {
               className="hidden sm:flex items-center gap-1.5 text-gray-600 hover:text-gray-900 transition-colors"
             >
               <Palette size={18} />
-              <span className="text-sm font-medium">The Gallery</span>
+              <span className="text-sm font-medium">{t('gallery')}</span>
             </Link>
 
             <Link
               href="/create-listing"
               className="hidden sm:flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-full hover:bg-slate-800 transition-colors"
             >
-              <span className="text-sm font-medium">Sell Item</span>
+              <span className="text-sm font-medium">{t('sellItem')}</span>
             </Link>
+
+            <LanguageSwitcher />
 
             {isLoggedIn && user ? (
               <div className="flex items-center ml-2">
@@ -169,7 +174,7 @@ const NavbarContent = () => {
                 href="/login"
                 className="bg-primary-color text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-primary-light hover:text-white transition-colors"
               >
-                Log In
+                {t('logIn')}
               </Link>
             )}
 
@@ -179,7 +184,7 @@ const NavbarContent = () => {
               className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
               aria-expanded={isMenuOpen}
             >
-              <span className="sr-only">Open main menu</span>
+              <span className="sr-only">{t('openMenu')}</span>
               {!isMenuOpen ? (
                 <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -211,36 +216,40 @@ const NavbarContent = () => {
               className={`block px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive('/') ? 'bg-primary-color/10 text-primary-color' : 'text-slate-600 hover:bg-gray-50'}`}
               onClick={() => setIsMenuOpen(false)}
             >
-              Home
+              {t('home')}
             </Link>
             <Link
               href="/browse"
               className={`block px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive('/browse') ? 'bg-primary-color/10 text-primary-color' : 'text-slate-600 hover:bg-gray-50'}`}
               onClick={() => setIsMenuOpen(false)}
             >
-              Browse Listings
+              {t('browse')}
             </Link>
             <Link
               href="/mall"
               className={`block px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive('/mall') ? 'bg-primary-color/10 text-primary-color' : 'text-slate-600 hover:bg-gray-50'}`}
               onClick={() => setIsMenuOpen(false)}
             >
-              The Mall
+              {t('mall')}
             </Link>
             <Link
               href="/gallery"
               className={`block px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive('/gallery') ? 'bg-primary-color/10 text-primary-color' : 'text-slate-600 hover:bg-gray-50'}`}
               onClick={() => setIsMenuOpen(false)}
             >
-              The Gallery
+              {t('gallery')}
             </Link>
             <Link
               href="/create-listing"
               className={`block px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive('/create-listing') ? 'bg-primary-color/10 text-primary-color' : 'text-slate-600 hover:bg-gray-50'}`}
               onClick={() => setIsMenuOpen(false)}
             >
-              Sell Item
+              {t('sellItem')}
             </Link>
+
+            <div className="px-4 py-2">
+              <LanguageSwitcher />
+            </div>
 
             {isLoggedIn ? (
               <>
@@ -249,7 +258,7 @@ const NavbarContent = () => {
                   className={`block px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive('/my-listings') ? 'bg-primary-color/10 text-primary-color' : 'text-slate-600 hover:bg-gray-50'}`}
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  My Listings
+                  {t('myListings')}
                 </Link>
                 <div className="px-4 py-3 mt-2 border-t border-gray-100">
                   <button
@@ -259,7 +268,7 @@ const NavbarContent = () => {
                     }}
                     className="w-full text-left px-4 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
                   >
-                    Log Out
+                    {t('logOut')}
                   </button>
                 </div>
               </>
@@ -270,7 +279,7 @@ const NavbarContent = () => {
                   className="block w-full text-center bg-primary-color text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-primary-light hover:text-white transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Log In
+                  {t('logIn')}
                 </Link>
               </div>
             )}

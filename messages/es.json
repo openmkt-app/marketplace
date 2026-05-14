@@ -1,0 +1,225 @@
+{
+  "common": {
+    "loading": "Cargando...",
+    "dismiss": "Cerrar",
+    "backHome": "← Volver al inicio"
+  },
+  "nav": {
+    "home": "Inicio",
+    "browse": "Explorar anuncios",
+    "mall": "El Centro",
+    "gallery": "La Galería",
+    "sellItem": "Vender artículo",
+    "myListings": "Mis anuncios",
+    "logIn": "Iniciar sesión",
+    "logOut": "Cerrar sesión",
+    "openMenu": "Abrir menú",
+    "notifications": "Notificaciones",
+    "myStore": "Mi tienda",
+    "manageListings": "Gestionar anuncios"
+  },
+  "footer": {
+    "tagline": "El agregador de comercio del Atmosphere. Indexa tu tienda existente o publica nuevos artículos directamente para la comunidad. Sin fricción, sin jardines amurallados.",
+    "followUsOn": "Síguenos en",
+    "quickLinks": "Enlaces rápidos",
+    "home": "Inicio",
+    "browse": "Explorar anuncios",
+    "createListing": "Crear anuncio",
+    "signIn": "Iniciar sesión",
+    "community": "Comunidad",
+    "whatIsOpenMarket": "¿Qué es Open Market?",
+    "safetyTips": "Consejos de seguridad",
+    "sellerGuide": "Guía del vendedor",
+    "reportBug": "Reportar un error",
+    "whyOpen": "¿Por qué abierto?",
+    "whyOpenBody": "Construido sobre el Protocolo AT, Open Market actúa como un motor de descubrimiento, no una trampa. Indexamos tus productos para que la comunidad Atmosphere los encuentre, pero tus anuncios, datos y reputación siempre te pertenecen.",
+    "whyDecentralization": "Por qué importa la descentralización",
+    "copyright": "© {year} Open Market (openmkt.app). Todos los derechos reservados.",
+    "disclaimer": "Aviso: Open Market es una plataforma independiente construida sobre el Protocolo AT y no está afiliada, respaldada ni patrocinada por Bluesky Social, PBC.",
+    "termsOfService": "Términos del servicio",
+    "privacyPolicy": "Política de privacidad"
+  },
+  "languageSwitcher": {
+    "label": "Idioma",
+    "en": "English",
+    "es": "Español",
+    "pt": "Português"
+  },
+  "metadata": {
+    "title": "Open Market - Compra, vende e intercambia localmente",
+    "description": "Compra, vende e intercambia localmente sin comisiones. Open Market es un mercado comunitario construido sobre la web abierta. Descubre artículos únicos de vecinos verificados.",
+    "ogDescription": "Compra, vende e intercambia localmente sin comisiones. Open Market es un mercado comunitario construido sobre la web abierta."
+  },
+  "browse": {
+    "metadata": {
+      "title": "Explorar anuncios | Open Market",
+      "description": "Explora anuncios locales en Open Market. Encuentra grandes ofertas en artículos a la venta en tu zona, sin comisiones ni intermediarios.",
+      "ogDescription": "Explora anuncios locales en Open Market. Encuentra grandes ofertas en artículos a la venta en tu zona."
+    }
+  },
+  "login": {
+    "metadata": {
+      "title": "Inicia sesión en Open Market",
+      "description": "Inicia sesión en tu cuenta de Open Market para gestionar tu tienda y tus anuncios."
+    },
+    "welcomeBack": "¡Bienvenido de nuevo!",
+    "subtitle": "Gestiona tu tienda y explora el mercado.",
+    "errorTitle": "Mmm, eso no funcionó",
+    "emailWarning": "Introduce tu identificador del Protocolo AT (p. ej. alice.bsky.social o alice.tangled.org), no tu correo electrónico.",
+    "failed": "Error al iniciar sesión: {message}",
+    "handleLabel": "Identificador del Protocolo AT",
+    "handlePlaceholder": "tu.bsky.social o tu.dominio.com",
+    "handleHint": "Te redirigiremos a tu PDS para autorizar el acceso de forma segura.",
+    "submitDefault": "Iniciar sesión con el Protocolo AT",
+    "submitting": "Redirigiendo a tu proveedor...",
+    "secureTitle": "Seguro por diseño",
+    "secureBody": "Tu contraseña queda en tu propio PDS. Open Market solo recibe un token de acceso limitado.",
+    "newQuestion": "¿Eres nuevo en el Protocolo AT?",
+    "newCta": "Empieza en Bluesky",
+    "backToBrowsing": "← Volver a explorar"
+  },
+  "mall": {
+    "metadata": {
+      "title": "El Centro | Open Market",
+      "description": "Explora tiendas en línea en Open Market. Descubre vendedores verificados que enlazan a Etsy, Amazon, Shopify y más."
+    },
+    "heroLabel": "El Centro Abierto",
+    "heroTitleLine1": "Descubre",
+    "heroTitleLine2": "tiendas en línea",
+    "heroSubtitle": "Explora vendedores verificados que enlazan a Etsy, Amazon, Shopify y más. Compra en tiendas de confianza con identidades reales en el Atmosphere.",
+    "activeStores": "Tiendas activas",
+    "itemsListed": "Artículos publicados",
+    "noStoresTitle": "Aún no hay tiendas en línea",
+    "noStoresBody": "¡Sé el primero en abrir una tienda en línea! Crea un anuncio y marca \"En línea / Tienda\" para aparecer aquí.",
+    "createFirst": "Crea tu primer anuncio",
+    "commissionPromoTitle": "¿Buscas arte por encargo?",
+    "commissionPromoBody": "La Galería reúne a artistas del Atmosphere abiertos a comisiones: ilustración, diseño gráfico y mucho más.",
+    "visitGallery": "Visita la Galería",
+    "ctaTitle": "¿Quieres abrir tu propia tienda?",
+    "ctaBody": "¡Es gratis y sencillo! Inicia sesión con tu cuenta del Atmosphere y crea tu primer anuncio.",
+    "createListing": "Crear un anuncio",
+    "importEtsy": "Importar desde Etsy",
+    "readSellerGuide": "Lee la guía del vendedor"
+  },
+  "gallery": {
+    "metadata": {
+      "title": "La Galería | Open Market",
+      "description": "Descubre artistas del Atmosphere abiertos a comisiones. Explora ilustración, diseño gráfico, arte 3D y comisiones digitales — identidades verificadas en el Protocolo AT.",
+      "ogDescription": "Descubre artistas del Atmosphere abiertos a comisiones. Explora ilustración, diseño gráfico, arte 3D y comisiones digitales."
+    },
+    "heroLabel": "La Galería",
+    "heroTitleLine1": "Artistas",
+    "heroTitleLine2": "por encargo en el Atmosphere",
+    "heroSubtitle": "Explora ilustradores, diseñadores gráficos y artistas digitales abiertos a comisiones. Compra con confianza: identidades verificadas en el Protocolo AT.",
+    "artists": "Artistas",
+    "commissionTypes": "Tipos de comisión",
+    "noArtistsTitle": "Aún no hay artistas por encargo",
+    "noArtistsBody": "¡Sé el primero! Crea un anuncio en \"Artes digitales y comisiones\" para aparecer en La Galería.",
+    "listYourCommissions": "Publica tus comisiones",
+    "ctaTitle": "¿Quieres mostrar tus comisiones?",
+    "ctaBody": "¡Es gratis! Inicia sesión con tu cuenta del Atmosphere, crea un anuncio en Artes digitales y comisiones, y aparecerás automáticamente en La Galería.",
+    "browseMall": "Explorar el Centro",
+    "filters": {
+      "all": "Todos los artistas",
+      "illustration": "Ilustración",
+      "graphicDesign": "Diseño gráfico",
+      "threeDAnimation": "3D y animación",
+      "webDesign": "Web y UI",
+      "otherDigital": "Otro digital"
+    },
+    "noFiltered": "Aún no hay artistas en esta categoría.",
+    "ctaCardTitle": "¿Abierto a comisiones?",
+    "ctaCardBody": "Publica tus tipos de comisión en Open Market y deja que la comunidad Atmosphere te descubra.",
+    "commissionsOpen": "{count, plural, =0 {Sin comisiones abiertas} one {# comisión abierta} other {# comisiones abiertas}}",
+    "waitlist": "Lista de espera / Cerrado",
+    "portfolio": "Portafolio",
+    "viewPortfolio": "Ver portafolio"
+  },
+  "safety": {
+    "metadata": {
+      "title": "Consejos de seguridad | Open Market",
+      "description": "Mantente seguro al comprar y vender en Open Market."
+    },
+    "title": "Consejos de seguridad",
+    "intro": "En Open Market, tu seguridad es nuestra prioridad. Aunque la mayoría de las transacciones salen bien, conviene mantenerse alerta. Aquí tienes algunas pautas para comprar y vender de forma segura.",
+    "tip1Title": "1. Reúnete en un lugar público",
+    "tip1Body": "Acuerda siempre encontrarte en un lugar concurrido como una cafetería, un centro comercial o una \"zona segura de intercambio\" en una comisaría. Evita quedar en tu casa o en lugares aislados, especialmente para artículos de alto valor.",
+    "tip2Title": "2. Lleva a alguien contigo",
+    "tip2Body": "Si puedes, lleva a un amigo o familiar al encuentro. Hay seguridad en grupo. Si tienes que ir solo, avisa a alguien de dónde vas y con quién te reúnes.",
+    "tip3Title": "3. Inspecciona antes de pagar",
+    "tip3Body": "Examina el artículo a fondo antes de entregar dinero. Asegúrate de que coincide con la descripción y funciona como esperas. No te dejes presionar para cerrar la venta deprisa.",
+    "tip4Title": "4. Comprueba su reputación",
+    "tip4Body": "A diferencia de otras plataformas, Open Market te conecta con perfiles reales del Atmosphere. Haz clic en el identificador del vendedor para ver su actividad. ¿Tiene seguidores? ¿Lleva tiempo activo? La reputación es tu mejor herramienta de seguridad.",
+    "reportTitle": "¿Ves algo sospechoso?",
+    "reportBody": "Si encuentras un anuncio o usuario sospechoso, repórtalo de inmediato con la función \"Reportar anuncio\" o contactando con nosotros directamente.",
+    "reportCta": "Reportar un problema"
+  },
+  "sellerGuide": {
+    "metadata": {
+      "title": "Guía del vendedor | Open Market",
+      "description": "Buenas prácticas para crear anuncios que se vendan rápido en Open Market."
+    },
+    "title": "Guía del vendedor",
+    "intro": "¿Listo para hacer espacio y ganar algo de dinero extra? Sigue estas buenas prácticas para crear anuncios que atraigan compradores y se vendan rápido en Open Market.",
+    "photosTitle": "1. Haz buenas fotos",
+    "photosTip1": "Usa luz natural siempre que sea posible.",
+    "photosTip2": "Toma fotos desde varios ángulos (frente, atrás, laterales).",
+    "photosTip3": "Muestra honestamente cualquier defecto o desgaste.",
+    "photosTip4": "Usa un fondo limpio y despejado.",
+    "descTitle": "2. Escribe descripciones claras",
+    "descTip1": "Sé descriptivo en el título (marca, modelo, talla).",
+    "descTip2": "Incluye dimensiones y detalles del estado.",
+    "descTip3": "Menciona por qué lo vendes.",
+    "descTip4": "Usa palabras clave que los compradores podrían buscar.",
+    "priceTitle": "3. Pon precios competitivos",
+    "priceTip1": "Investiga artículos similares para ver a qué precio se vendieron.",
+    "priceTip2": "Está dispuesto a negociar ofertas razonables.",
+    "priceTip3": "Considera bajar un poco el precio para una venta rápida.",
+    "priceTip4": "¡Marca como \"Gratis\" lo que solo quieras regalar!",
+    "commTitle": "4. Responde rápido",
+    "commTip1": "Responde a los mensajes lo antes posible.",
+    "commTip2": "Sé educado y profesional.",
+    "commTip3": "Indica claramente tu disponibilidad para quedar.",
+    "commTip4": "Marca los artículos como \"Vendido\" justo después de la venta.",
+    "ctaTitle": "¿Listo para empezar a vender?",
+    "ctaBody": "Únete hoy a nuestra comunidad de compradores y vendedores. Es gratis, descentralizado y está construido sobre la web abierta.",
+    "ctaButton": "Crea tu primer anuncio"
+  },
+  "whatIsOpenMarket": {
+    "metadata": {
+      "title": "¿Qué es Open Market?",
+      "description": "Deja de alquilar tu tienda. Empieza a ser su dueño."
+    }
+  },
+  "privacyPolicy": {
+    "metadata": {
+      "title": "Política de privacidad | Open Market",
+      "description": "Cómo gestiona Open Market tus datos."
+    }
+  },
+  "termsOfService": {
+    "metadata": {
+      "title": "Términos del servicio | Open Market",
+      "description": "Términos y condiciones de uso de Open Market."
+    }
+  },
+  "listing": {
+    "metadata": {
+      "removedTitle": "Anuncio eliminado | Open Market",
+      "notFoundTitle": "Anuncio no encontrado | Open Market",
+      "removedDescription": "Este anuncio ya no está disponible en Open Market.",
+      "titleTemplate": "{title} | Open Market",
+      "descriptionFallback": "Compra {title} por {price} en Open Market."
+    }
+  },
+  "store": {
+    "metadata": {
+      "notAvailableTitle": "Tienda no disponible | Open Market",
+      "notAvailableDescription": "Esta tienda no está disponible en Open Market.",
+      "notFoundTitle": "Tienda no encontrada | Open Market",
+      "notFoundDescription": "No se ha podido encontrar esta tienda en Open Market.",
+      "titleTemplate": "Tienda de {name} | Open Market",
+      "descriptionFallback": "Compra {count, plural, =0 {artículos} one {# artículo} other {# artículos}} de {name} en Open Market."
+    }
+  }
+}

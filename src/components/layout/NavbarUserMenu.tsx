@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { LogOut, LayoutGrid, Store, Settings } from 'lucide-react';
 
 interface NavbarUserMenuProps {
@@ -18,6 +19,7 @@ interface NavbarUserMenuProps {
 export default function NavbarUserMenu({ user, onLogout }: NavbarUserMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+    const t = useTranslations('nav');
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -81,7 +83,7 @@ export default function NavbarUserMenu({ user, onLogout }: NavbarUserMenuProps) 
                             onClick={() => setIsOpen(false)}
                         >
                             <Store size={16} />
-                            My Store
+                            {t('myStore')}
                         </Link>
                         <Link
                             href="/my-listings"
@@ -89,7 +91,7 @@ export default function NavbarUserMenu({ user, onLogout }: NavbarUserMenuProps) 
                             onClick={() => setIsOpen(false)}
                         >
                             <LayoutGrid size={16} />
-                            Manage Listings
+                            {t('manageListings')}
                         </Link>
                     </div>
 
@@ -106,7 +108,7 @@ export default function NavbarUserMenu({ user, onLogout }: NavbarUserMenuProps) 
                             className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                         >
                             <LogOut size={16} />
-                            Log Out
+                            {t('logOut')}
                         </button>
                     </div>
                 </div>

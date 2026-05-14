@@ -1,3 +1,7 @@
+import createNextIntlPlugin from 'next-intl/plugin';
+
+const withNextIntl = createNextIntlPlugin();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -15,10 +19,15 @@ const nextConfig = {
       {
         source: '/',
         destination: '/browse',
-        permanent: true, // 308 redirect - tells search engines this is permanent
+        permanent: true,
+      },
+      {
+        source: '/:locale(es|pt)',
+        destination: '/:locale/browse',
+        permanent: true,
       },
     ];
   },
 }
 
-export default nextConfig
+export default withNextIntl(nextConfig);

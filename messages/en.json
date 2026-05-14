@@ -1,0 +1,225 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "dismiss": "Dismiss",
+    "backHome": "← Back to Home"
+  },
+  "nav": {
+    "home": "Home",
+    "browse": "Browse Listings",
+    "mall": "The Mall",
+    "gallery": "The Gallery",
+    "sellItem": "Sell Item",
+    "myListings": "My Listings",
+    "logIn": "Log In",
+    "logOut": "Log Out",
+    "openMenu": "Open main menu",
+    "notifications": "Notifications",
+    "myStore": "My Store",
+    "manageListings": "Manage Listings"
+  },
+  "footer": {
+    "tagline": "The Atmosphere commerce aggregator. Index your existing storefront or list new items directly to the community. Zero friction, no walled gardens.",
+    "followUsOn": "Follow Us On",
+    "quickLinks": "Quick Links",
+    "home": "Home",
+    "browse": "Browse Listings",
+    "createListing": "Create Listing",
+    "signIn": "Sign In",
+    "community": "Community",
+    "whatIsOpenMarket": "What's Open Market?",
+    "safetyTips": "Safety Tips",
+    "sellerGuide": "Seller Guide",
+    "reportBug": "Report a Bug",
+    "whyOpen": "Why Open?",
+    "whyOpenBody": "Built on the AT Protocol, Open Market acts as a discovery engine, not a trap. We index your products for the Atmosphere community to find, but your listings, data, and reputation always belong to you.",
+    "whyDecentralization": "Why decentralization matters",
+    "copyright": "© {year} Open Market (openmkt.app). All rights reserved.",
+    "disclaimer": "Disclaimer: Open Market is an independent platform built on the AT Protocol and is not affiliated with, endorsed by, or sponsored by Bluesky Social, PBC.",
+    "termsOfService": "Terms of Service",
+    "privacyPolicy": "Privacy Policy"
+  },
+  "languageSwitcher": {
+    "label": "Language",
+    "en": "English",
+    "es": "Español",
+    "pt": "Português"
+  },
+  "metadata": {
+    "title": "Open Market - Buy, Sell, and Trade Locally",
+    "description": "Buy, sell, and trade locally without fees. Open Market is a community-owned marketplace built on the open web. Discover unique items from verified neighbors.",
+    "ogDescription": "Buy, sell, and trade locally without fees. Open Market is a community-owned marketplace built on the open web."
+  },
+  "browse": {
+    "metadata": {
+      "title": "Browse Listings | Open Market",
+      "description": "Browse local listings on Open Market. Find great deals on items for sale in your area without fees or middlemen.",
+      "ogDescription": "Browse local listings on Open Market. Find great deals on items for sale in your area."
+    }
+  },
+  "login": {
+    "metadata": {
+      "title": "Login to Open Market",
+      "description": "Sign in to your Open Market account to manage your store and listings."
+    },
+    "welcomeBack": "Welcome Back!",
+    "subtitle": "Manage your Storefront and explore the Marketplace.",
+    "errorTitle": "Hmm, that didn't work",
+    "emailWarning": "Enter your AT Protocol handle (e.g. alice.bsky.social or alice.tangled.org), not your email address.",
+    "failed": "Login failed: {message}",
+    "handleLabel": "AT Protocol Handle",
+    "handlePlaceholder": "you.bsky.social or you.your-domain.com",
+    "handleHint": "You'll be redirected to your PDS to securely authorize access.",
+    "submitDefault": "Sign in with AT Protocol",
+    "submitting": "Redirecting to your provider...",
+    "secureTitle": "Secure by design",
+    "secureBody": "Your password stays with your own PDS. Open Market only receives a scoped access token.",
+    "newQuestion": "New to the AT Protocol?",
+    "newCta": "Get started on Bluesky",
+    "backToBrowsing": "← Back to browsing"
+  },
+  "mall": {
+    "metadata": {
+      "title": "The Mall | Open Market",
+      "description": "Browse online storefronts on Open Market. Discover verified sellers linking to Etsy, Amazon, Shopify and more."
+    },
+    "heroLabel": "The Open Mall",
+    "heroTitleLine1": "Discover",
+    "heroTitleLine2": "Online Storefronts",
+    "heroSubtitle": "Browse verified sellers linking to Etsy, Amazon, Shopify and more. Shop from trusted storefronts with real identities on the Atmosphere.",
+    "activeStores": "Active Stores",
+    "itemsListed": "Items Listed",
+    "noStoresTitle": "No online stores yet",
+    "noStoresBody": "Be the first to open an online storefront! Create a listing and check \"Online / Store Listing\" to appear here.",
+    "createFirst": "Create Your First Listing",
+    "commissionPromoTitle": "Looking for commission art?",
+    "commissionPromoBody": "The Gallery features Atmosphere artists open for commissions — illustrations, graphic design, and more.",
+    "visitGallery": "Visit The Gallery",
+    "ctaTitle": "Want to open your own store?",
+    "ctaBody": "It's free and easy! Just log in with your Atmosphere account and create your first listing.",
+    "createListing": "Create a Listing",
+    "importEtsy": "Import from Etsy",
+    "readSellerGuide": "Read the Seller Guide"
+  },
+  "gallery": {
+    "metadata": {
+      "title": "The Gallery | Open Market",
+      "description": "Discover Atmosphere commission artists. Browse illustration, graphic design, 3D art, and digital commissions — verified identities on AT Protocol.",
+      "ogDescription": "Discover Atmosphere commission artists. Browse illustration, graphic design, 3D art, and digital commissions."
+    },
+    "heroLabel": "The Gallery",
+    "heroTitleLine1": "Commission",
+    "heroTitleLine2": "Artists on the Atmosphere",
+    "heroSubtitle": "Browse illustrators, graphic designers, and digital artists open for commissions. Shop with confidence — verified identities on AT Protocol.",
+    "artists": "Artists",
+    "commissionTypes": "Commission Types",
+    "noArtistsTitle": "No commission artists yet",
+    "noArtistsBody": "Be the first! Create a listing under \"Digital Arts & Commissions\" to appear in The Gallery.",
+    "listYourCommissions": "List Your Commissions",
+    "ctaTitle": "Want to showcase your commissions?",
+    "ctaBody": "It's free! Log in with your Atmosphere account, create a listing under Digital Arts & Commissions, and you'll automatically appear in The Gallery.",
+    "browseMall": "Browse The Mall",
+    "filters": {
+      "all": "All Artists",
+      "illustration": "Illustration",
+      "graphicDesign": "Graphic Design",
+      "threeDAnimation": "3D & Animation",
+      "webDesign": "Web & UI",
+      "otherDigital": "Other Digital"
+    },
+    "noFiltered": "No artists found for this category yet.",
+    "ctaCardTitle": "Open for Commissions?",
+    "ctaCardBody": "List your commission types on Open Market and get discovered by the Atmosphere community.",
+    "commissionsOpen": "{count, plural, =0 {No commission types open} one {# commission type open} other {# commission types open}}",
+    "waitlist": "Waitlist / Closed",
+    "portfolio": "Portfolio",
+    "viewPortfolio": "View Portfolio"
+  },
+  "safety": {
+    "metadata": {
+      "title": "Safety Tips | Open Market",
+      "description": "Stay safe when buying and selling on Open Market."
+    },
+    "title": "Safety Tips",
+    "intro": "At Open Market, your safety is our top priority. While most transactions go smoothly, it's important to stay vigilant. Here are some guidelines to help you buy and sell safely.",
+    "tip1Title": "1. Meet in a Public Place",
+    "tip1Body": "Always arrange to meet in a busy, public location like a coffee shop, shopping mall, or police station \"safe exchange zone\". Avoid meeting at your home or a secluded area, especially for high-value items.",
+    "tip2Title": "2. Bring a Friend",
+    "tip2Body": "If possible, bring a friend or family member with you to the exchange. There is safety in numbers. If you must go alone, let someone know where you are going and who you are meeting.",
+    "tip3Title": "3. Inspect Before You Pay",
+    "tip3Body": "Examine the item thoroughly before handing over any money. Ensure it matches the description and works as expected. Don't be pressured into a quick sale.",
+    "tip4Title": "4. Check Their Reputation",
+    "tip4Body": "Unlike other platforms, Open Market connects you to real Atmosphere profiles. Click the seller's handle to see their activity. Do they have followers? Have they been active for a while? Reputation is your best safety tool.",
+    "reportTitle": "See something suspicious?",
+    "reportBody": "If you encounter a suspicious listing or user, please report it to us immediately using the \"Report Listing\" feature or contacting us directly.",
+    "reportCta": "Report an Issue"
+  },
+  "sellerGuide": {
+    "metadata": {
+      "title": "Seller Guide | Open Market",
+      "description": "Best practices for creating listings that sell quickly on Open Market."
+    },
+    "title": "Seller Guide",
+    "intro": "Ready to declutter and earn some extra cash? Follow these best practices to create listings that attract buyers and sell quickly on Open Market.",
+    "photosTitle": "1. Take Great Photos",
+    "photosTip1": "Use natural lighting whenever possible.",
+    "photosTip2": "Take photos from multiple angles (front, back, sides).",
+    "photosTip3": "Show any defects or wear honestly.",
+    "photosTip4": "Use a clean, uncluttered background.",
+    "descTitle": "2. Write Clear Descriptions",
+    "descTip1": "Be descriptive in your title (brand, model, size).",
+    "descTip2": "Include dimensions and condition details.",
+    "descTip3": "Mention why you are selling it.",
+    "descTip4": "Use keywords buyers might search for.",
+    "priceTitle": "3. Price Competitively",
+    "priceTip1": "Research similar items to see what they sold for.",
+    "priceTip2": "Be willing to negotiate reasonable offers.",
+    "priceTip3": "Consider pricing slightly lower for a quick sale.",
+    "priceTip4": "Mark items as \"Free\" if you just want them gone!",
+    "commTitle": "4. Communicate Promptly",
+    "commTip1": "Respond to messages as quickly as you can.",
+    "commTip2": "Be polite and professional.",
+    "commTip3": "Clearly state your availability for meeting up.",
+    "commTip4": "Mark items as \"Sold\" immediately after the sale.",
+    "ctaTitle": "Ready to start selling?",
+    "ctaBody": "Join our community of buyers and sellers today. It's free, decentralized, and built on the open web.",
+    "ctaButton": "Create Your First Listing"
+  },
+  "whatIsOpenMarket": {
+    "metadata": {
+      "title": "What is Open Market?",
+      "description": "Stop Renting Your Store. Start Owning It."
+    }
+  },
+  "privacyPolicy": {
+    "metadata": {
+      "title": "Privacy Policy | Open Market",
+      "description": "How Open Market handles your data."
+    }
+  },
+  "termsOfService": {
+    "metadata": {
+      "title": "Terms of Service | Open Market",
+      "description": "Terms and conditions for using Open Market."
+    }
+  },
+  "listing": {
+    "metadata": {
+      "removedTitle": "Listing Removed | Open Market",
+      "notFoundTitle": "Listing Not Found | Open Market",
+      "removedDescription": "This listing is no longer available on Open Market.",
+      "titleTemplate": "{title} | Open Market",
+      "descriptionFallback": "Buy {title} for {price} on Open Market."
+    }
+  },
+  "store": {
+    "metadata": {
+      "notAvailableTitle": "Store Not Available | Open Market",
+      "notAvailableDescription": "This store is not available on Open Market.",
+      "notFoundTitle": "Store Not Found | Open Market",
+      "notFoundDescription": "This store could not be found on Open Market.",
+      "titleTemplate": "{name}'s Store | Open Market",
+      "descriptionFallback": "Shop {count, plural, =0 {items} one {# item} other {# items}} from {name} on Open Market."
+    }
+  }
+}

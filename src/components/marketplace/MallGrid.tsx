@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { Store, Plus, ShoppingBag } from 'lucide-react';
 import StoreCard, { SellerWithListings } from './StoreCard';
 

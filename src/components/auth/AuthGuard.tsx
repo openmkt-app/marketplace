@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface AuthGuardProps {

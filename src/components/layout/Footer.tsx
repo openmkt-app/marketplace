@@ -1,9 +1,11 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
+  const t = useTranslations('footer');
 
   return (
     <footer className="bg-white border-t border-neutral-light">
@@ -14,10 +16,10 @@ export default function Footer() {
               Open Market
             </h3>
             <p className="text-text-primary text-sm mb-4">
-              The Atmosphere commerce aggregator. Index your existing storefront or list new items directly to the community. Zero friction, no walled gardens.
+              {t('tagline')}
             </p>
             <div className="flex flex-col space-y-2 mt-6 border-t border-neutral-light pt-4">
-              <span className="text-xs text-text-primary font-semibold uppercase tracking-wider">Follow Us On</span>
+              <span className="text-xs text-text-primary font-semibold uppercase tracking-wider">{t('followUsOn')}</span>
               <div className="flex space-x-4">
                 <a href="https://bsky.app/profile/openmkt.app" target="_blank" rel="noopener noreferrer" className="text-[#1185FE] hover:opacity-80 transition-opacity flex items-center space-x-2">
                   <span className="sr-only">Bluesky</span>
@@ -31,61 +33,61 @@ export default function Footer() {
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-text-primary">Quick Links</h3>
+            <h3 className="text-lg font-semibold mb-4 text-text-primary">{t('quickLinks')}</h3>
             <ul className="space-y-3 text-sm">
               <li>
                 <Link href="/" className="text-text-primary hover:text-primary-color transition-colors">
-                  Home
+                  {t('home')}
                 </Link>
               </li>
               <li>
                 <Link href="/browse" className="text-text-primary hover:text-primary-color transition-colors">
-                  Browse Listings
+                  {t('browse')}
                 </Link>
               </li>
               <li>
                 <Link href="/create-listing" className="text-text-primary hover:text-primary-color transition-colors">
-                  Create Listing
+                  {t('createListing')}
                 </Link>
               </li>
               <li>
                 <Link href="/login" className="text-text-primary hover:text-primary-color transition-colors">
-                  Sign In
+                  {t('signIn')}
                 </Link>
               </li>
             </ul>
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-text-primary">Community</h3>
+            <h3 className="text-lg font-semibold mb-4 text-text-primary">{t('community')}</h3>
             <ul className="space-y-3 text-sm">
               <li>
                 <Link href="/what-is-open-market" className="text-text-primary hover:text-primary-color transition-colors">
-                  What's Open Market?
+                  {t('whatIsOpenMarket')}
                 </Link>
               </li>
               <li>
                 <Link href="/community/safety" className="text-text-primary hover:text-primary-color transition-colors">
-                  Safety Tips
+                  {t('safetyTips')}
                 </Link>
               </li>
               <li>
                 <Link href="/community/seller-guide" className="text-text-primary hover:text-primary-color transition-colors">
-                  Seller Guide
+                  {t('sellerGuide')}
                 </Link>
               </li>
               <li>
                 <a href="https://github.com/openmkt-app/marketplace" target="_blank" rel="noopener noreferrer" className="text-text-primary hover:text-primary-color transition-colors font-medium">
-                  Report a Bug
+                  {t('reportBug')}
                 </a>
               </li>
             </ul>
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-text-primary">Why Open?</h3>
+            <h3 className="text-lg font-semibold mb-4 text-text-primary">{t('whyOpen')}</h3>
             <p className="text-text-primary text-sm mb-4">
-              Built on the AT Protocol, Open Market acts as a discovery engine, not a trap. We index your products for the Atmosphere community to find, but your listings, data, and reputation always belong to you.
+              {t('whyOpenBody')}
             </p>
             <a
               href="https://atproto.com/articles/atproto-ethos"
@@ -93,7 +95,7 @@ export default function Footer() {
               rel="noopener noreferrer"
               className="inline-flex items-center text-primary-color hover:text-primary-light transition-colors text-sm font-medium"
             >
-              Why decentralization matters
+              {t('whyDecentralization')}
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>
@@ -103,17 +105,17 @@ export default function Footer() {
 
         <div className="py-6 border-t border-neutral-light text-sm text-text-primary flex flex-col items-center justify-center gap-4 text-center">
           <div className="flex flex-col items-center gap-2">
-            <p>© {currentYear} Open Market (openmkt.app). All rights reserved.</p>
+            <p>{t('copyright', { year: currentYear })}</p>
             <p className="text-xs text-text-secondary max-w-3xl">
-              Disclaimer: Open Market is an independent platform built on the AT Protocol and is not affiliated with, endorsed by, or sponsored by Bluesky Social, PBC.
+              {t('disclaimer')}
             </p>
           </div>
           <div className="flex gap-6">
             <Link href="/terms-of-service" className="hover:text-primary-color transition-colors">
-              Terms of Service
+              {t('termsOfService')}
             </Link>
             <Link href="/privacy-policy" className="hover:text-primary-color transition-colors">
-              Privacy Policy
+              {t('privacyPolicy')}
             </Link>
           </div>
         </div>
