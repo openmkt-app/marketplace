@@ -32,7 +32,42 @@ const nextConfig = {
         permanent: false,
       },
       {
+        source: '/[your-handle]',
+        destination: '/my-store',
+        permanent: false,
+      },
+      {
         source: '/your-handle',
+        destination: '/my-store',
+        permanent: false,
+      },
+      {
+        source: '/:locale/%5Byour-handle%5D',
+        destination: '/:locale/my-store',
+        permanent: false,
+      },
+      {
+        source: '/:locale/[your-handle]',
+        destination: '/:locale/my-store',
+        permanent: false,
+      },
+      {
+        source: '/:locale/store/%5Byour-handle%5D',
+        destination: '/:locale/my-store',
+        permanent: false,
+      },
+      {
+        source: '/:locale/store/[your-handle]',
+        destination: '/:locale/my-store',
+        permanent: false,
+      },
+      {
+        source: '/store/%5Byour-handle%5D',
+        destination: '/my-store',
+        permanent: false,
+      },
+      {
+        source: '/store/[your-handle]',
         destination: '/my-store',
         permanent: false,
       },
