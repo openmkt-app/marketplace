@@ -26,6 +26,16 @@ const nextConfig = {
         destination: '/:locale/browse',
         permanent: true,
       },
+      {
+        source: '/pt/o-que-e-o-open-market',
+        destination: '/pt/what-is-open-market',
+        permanent: true,
+      },
+      {
+        source: '/es/que-es-open-market',
+        destination: '/es/what-is-open-market',
+        permanent: true,
+      },
     ];
   },
 }
