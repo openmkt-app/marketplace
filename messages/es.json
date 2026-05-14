@@ -1008,5 +1008,122 @@
   "search": {
     "placeholder": "Buscar anuncios...",
     "button": "Buscar"
+  },
+  "whatIsOpenMarket": {
+    "metadata": {
+      "title": "¿Qué es Open Market? | El Marketplace de la Web Abierta",
+      "description": "Aprende como Open Market está recuperando o comércio para a comunidade no AT Protocol."
+    },
+    "hero": {
+      "badge": "Recuperando el comercio para la comunidad",
+      "title": "El Marketplace para la",
+      "titleGradient": "Web Abierta.",
+      "subtitle": "Convierte teu perfil de Atmosphere em uma vitrina.",
+      "subtitleHighlight": "Cero comisiones. Sin ataduras. 100% tuyo.",
+      "ctaClaim": "Reclamar Mi Tienda",
+      "ctaExplore": "Explorar Anuncios"
+    },
+    "theWhy": {
+      "title": "Las redes sociales son geniales para conectar, ",
+      "titleHighlight": "pero terribles para el comercio.",
+      "description": "Publicas un producto y el algoritmo lo entierra. Construyes una audiencia y la plataforma la mantiene como rehén.",
+      "solution": "Open Market cambia eso.",
+      "solutionDesc": "Construimos un marketplace descentralizado directamente sobre el AT Protocol. No \"hospedamos\" tu tienda, es toda tuya; solo facilitamos que la encuentren.",
+      "features": {
+        "ownData": "Eres Dueño de Tus Datos",
+        "ownDataDesc": "Tus anuncios viven en tu propio repositorio personal (PDS), no solo en nuestra base de datos.",
+        "ownAudience": "Eres Dueño de Tu Audiencia",
+        "ownAudienceDesc": "No usamos algoritmos para ocultar tus publicaciones ni te cobramos por anuncios.",
+        "portable": "Eres Portátil",
+        "portableDesc": "Si alguna vez te vas, te llevas tu reputación, historial y anuncios contigo."
+      }
+    },
+    "forSellers": {
+      "badge": "Para Vendedores",
+      "title": "\"Ya tengo Etsy/Shopify. ¿Por qué necesito esto?\"",
+      "subtitle": "Não estamos tentando substituir sua loja principal — estamos aqui para ",
+      "subtitleHighlight": "supercargarla",
+      "storefront": {
+        "title": "La Vitrina de Atmosphere",
+        "desc": "Convierte tu perfil en una tienda con un clic. Ofrece a tus seguidores un lugar para comprar al instante."
+      },
+      "traffic": {
+        "title": "Motor de Tráfico",
+        "desc": "Enlaza tus anuncios de Open Market directamente al checkout de Etsy o Shopify. Úsanos para descubrimiento, a ellos para finalizar."
+      },
+      "zeroFees": {
+        "title": "Cero Comisiones",
+        "desc": "No cobramos tarifas de publicación ni de transacción. Nosotros verificamos, tú vendes. Te quedas con el 100% del valor."
+      }
+    },
+    "forCommunity": {
+      "badge": "Para la Comunidad",
+      "title": "El comercio vuelve a sentirse humano.",
+      "subtitle": "¿Recuerdas quando comprar algo significaba hablar con una persona, no con un bot?",
+      "local": {
+        "title": "Hallazgos Locales",
+        "desc": "Descubre muebles, equipo y coleccionables en tu propio vecindario."
+      },
+      "chat": {
+        "title": "Chat Directo",
+        "desc": "Habla directamente con los vendedores. Sin intermediarios."
+      },
+      "trust": {
+        "title": "Identidad Confiable",
+        "desc": "Mira exactamente con quién estás tratando: su fecha de ingreso, sus publicaciones y su reputación."
+      }
+    },
+    "howItWorks": {
+      "badge": "Integración Perfecta",
+      "title": "Ya tienes una cuenta.",
+      "subtitle": "Como estamos construidos sobre el {atproto}, no necesitas crear un nuevo perfil. Tu reputación viaja contigo.",
+      "step1": {
+        "title": "Inicia sesión con tu cuenta de Atmosphere",
+        "desc": "Obtenemos al instante tu avatar, banner y nombre de usuario. Sin nuevas contraseñas que recordar."
+      },
+      "step2": {
+        "title": "Anuncia en Segundos",
+        "desc": "Toma una foto, añade una descripción y fija tu precio. Es rápido y fácil."
+      },
+      "step3": {
+        "title": "Vende a Tu Manera",
+        "online": {
+          "title": "Tiendas Online",
+          "desc": "Enlaza directamente a tu Etsy, Shopify o Gumroad. Actuamos como un motor de tráfico."
+        },
+        "community": {
+          "title": "Vendedores de la Comunidad",
+          "desc": "¿Estás coordinando una venta local? Chatea directamente vía DMs."
+        }
+      }
+    },
+    "faq": {
+      "title": "Preguntas Frecuentes",
+      "q1": {
+        "q": "¿Cuesta dinero?",
+        "a": "No. Open Market es de uso gratuito. Somos un proyecto construido por la comunidad dedicado a la Web Abierta."
+      },
+      "q2": {
+        "q": "¿Quién construyó esto?",
+        "a": "Open Market ha sido construido por un solo desarrollador, para la comunidad. Creo en la visión del AT Protocol y en una internet controlada por el usuario."
+      },
+      "q3": {
+        "q": "Ya vendo en Etsy. ¿Por qué necesito esto?",
+        "a": "Piensa en Open Market como tu vitrina descentralizada. Es un motor de búsqueda gratuito que pone tus productos frente a la comunidad Atmosphere. Actuamos como marketing, enviando tráfico cualificado a tu tienda Etsy sin coste."
+      },
+      "q4": {
+        "q": "¿Es algo de cripto?",
+        "a": "No. Open Market es un marketplace estándar. Usamos el AT Protocol para almacenamiento de datos e identidad, no para pagos. Pagas con efectivo, transferencia o tarjeta (vía el enlace externo del vendedor)."
+      },
+      "q5": {
+        "q": "¿Tengo que crear una cuenta nueva?",
+        "a": "¡No! Simplemente inicias sesión con tu cuenta existente de Atmosphere. Tu perfil, avatar y banner vienen directo de tu cuenta principal."
+      }
+    },
+    "cta": {
+      "title": "¿Listo para recuperar tu comercio?",
+      "claim": "Reclamar Mi Tienda",
+      "browse": "Explorar Anuncios"
+    }
   }
 }

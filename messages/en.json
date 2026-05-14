@@ -1008,5 +1008,122 @@
   "search": {
     "placeholder": "Search listings...",
     "button": "Search"
+  },
+  "whatIsOpenMarket": {
+    "metadata": {
+      "title": "What is Open Market? | The Open Web Marketplace",
+      "description": "Learn how Open Market is reclaiming commerce for the community on the AT Protocol."
+    },
+    "hero": {
+      "badge": "Reclaiming commerce for the community",
+      "title": "The Marketplace for the",
+      "titleGradient": "Open Web.",
+      "subtitle": "Turn your Atmosphere profile into a storefront.",
+      "subtitleHighlight": "Zero fees. No lock-in. 100% owned by you.",
+      "ctaClaim": "Claim My Shop",
+      "ctaExplore": "Explore Listings"
+    },
+    "theWhy": {
+      "title": "Social media is great for connection, ",
+      "titleHighlight": "but terrible for commerce.",
+      "description": "You post a product, and the algorithm buries it. You build an audience, and the platform holds them hostage.",
+      "solution": "Open Market changes that.",
+      "solutionDesc": "We built a decentralized marketplace directly on the AT Protocol. We don't \"host\" your shop, it's all yours—we just make it easier to find.",
+      "features": {
+        "ownData": "You Own Your Data",
+        "ownDataDesc": "Your listings live in your personal repository (PDS), not just our database.",
+        "ownAudience": "You Own Your Audience",
+        "ownAudienceDesc": "We don't use algorithms to hide your posts or shake you down for ads.",
+        "portable": "You Are Portable",
+        "portableDesc": "If you ever leave, you take your reputation, history, and listings with you."
+      }
+    },
+    "forSellers": {
+      "badge": "For Sellers",
+      "title": "\"I already have an Etsy/Shopify. Why do I need this?\"",
+      "subtitle": "We aren't trying to replace your main shop—we are here to ",
+      "subtitleHighlight": "supercharge it",
+      "storefront": {
+        "title": "The Atmosphere Storefront",
+        "desc": "Turn your Atmosphere profile into a shop in one click. Give your social followers a place to buy instantly."
+      },
+      "traffic": {
+        "title": "Traffic Engine",
+        "desc": "Link your Open Market listings directly to your Etsy or Shopify checkout. Use us for discovery, them for fulfillment."
+      },
+      "zeroFees": {
+        "title": "Zero Fees",
+        "desc": "We don't charge listing fees or transaction fees. We verify, you sell. You keep 100% of the sale price."
+      }
+    },
+    "forCommunity": {
+      "badge": "For the Community",
+      "title": "Commerce feels human again.",
+      "subtitle": "Remember when buying something meant talking to a person, not a bot?",
+      "local": {
+        "title": "Local Finds",
+        "desc": "Discover furniture, gear, and collectibles in your actual neighborhood."
+      },
+      "chat": {
+        "title": "Direct Chat",
+        "desc": "Message sellers directly. No middlemen."
+      },
+      "trust": {
+        "title": "Trusted Identity",
+        "desc": "See exactly who you are dealing with—their join date, their posts, and their reputation."
+      }
+    },
+    "howItWorks": {
+      "badge": "Seamless Integration",
+      "title": "You already have an account.",
+      "subtitle": "Because we are built on the {atproto}, you don't need to create a new profile. Your reputation travels with you.",
+      "step1": {
+        "title": "Log in with your Atmosphere account",
+        "desc": "We instantly fetch your avatar, banner, and handle. No new passwords to remember."
+      },
+      "step2": {
+        "title": "List in Seconds",
+        "desc": "Snap a photo, add a description, and set your price. It's quick and easy."
+      },
+      "step3": {
+        "title": "Sell Your Way",
+        "online": {
+          "title": "Online Stores",
+          "desc": "Link directly to your Etsy, Shopify, or Gumroad. We act as a traffic engine."
+        },
+        "community": {
+          "title": "Community Sellers",
+          "desc": "Arranging a local sale? Chat directly via DMs."
+        }
+      }
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "q1": {
+        "q": "Does it cost money?",
+        "a": "No. Open Market is free to use. We are a community-built project dedicated to the Open Web."
+      },
+      "q2": {
+        "q": "Who built this?",
+        "a": "Open Market is built by a single developer, for the community. I believe in the vision of the AT Protocol and a user-owned internet."
+      },
+      "q3": {
+        "q": "I already sell on Etsy. Why do I need this?",
+        "a": "Think of Open Market as your decentralized window display. It is a free discovery engine that puts your products in front of the Atmosphere community without them having to dig through a chaotic feed. We act as your top-of-funnel marketing, driving ready-to-buy traffic directly to your Etsy store at no cost."
+      },
+      "q4": {
+        "q": "Is this a crypto thing?",
+        "a": "No. Open Market is a standard marketplace. We use the AT Protocol for data storage and identity, not for payments. You pay with cash, Venmo, or credit card (via the seller's external link)."
+      },
+      "q5": {
+        "q": "Do I have to create a new account?",
+        "a": "No! You simply log in with your existing Atmosphere account. Your profile, avatar, and banner come straight from your main account, we just display them in the app."
+      }
+    },
+    "cta": {
+      "title": "Ready to reclaim your commerce?",
+      "claim": "Claim My Storefront",
+      "browse": "Browse Listings"
+    }
   }
 }
