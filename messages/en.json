@@ -1125,5 +1125,9 @@
       "claim": "Claim My Storefront",
       "browse": "Browse Listings"
     }
+  },
+  "myStore": {
+    "redirecting": "Redirecting to your store...",
+    "pleaseWait": "Please wait a moment while we connect you."
   }
 }

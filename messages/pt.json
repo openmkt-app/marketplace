@@ -1125,5 +1125,9 @@
       "claim": "Criar Minha Vitrine",
       "browse": "Explorar Anúncios"
     }
+  },
+  "myStore": {
+    "redirecting": "Redirecionando para sua loja...",
+    "pleaseWait": "Aguarde um momento enquanto conectamos você."
   }
 }

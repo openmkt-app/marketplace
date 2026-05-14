@@ -1125,5 +1125,9 @@
       "claim": "Reclamar Mi Tienda",
       "browse": "Explorar Anuncios"
     }
+  },
+  "myStore": {
+    "redirecting": "Redirigiendo a tu tienda...",
+    "pleaseWait": "Por favor espera un momento mientras te conectamos."
   }
 }

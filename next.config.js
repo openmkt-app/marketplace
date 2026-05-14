@@ -27,6 +27,21 @@ const nextConfig = {
         permanent: true,
       },
       {
+        source: '/%5Byour-handle%5D',
+        destination: '/my-store',
+        permanent: false,
+      },
+      {
+        source: '/your-handle',
+        destination: '/my-store',
+        permanent: false,
+      },
+      {
+        source: '/my-store',
+        destination: '/en/my-store',
+        permanent: false,
+      },
+      {
         source: '/pt/o-que-e-o-open-market',
         destination: '/pt/what-is-open-market',
         permanent: true,
