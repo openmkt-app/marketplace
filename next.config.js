@@ -28,26 +28,16 @@ const nextConfig = {
       },
       {
         source: '/%5Byour-handle%5D',
-        destination: '/my-store',
-        permanent: false,
-      },
-      {
-        source: '/[your-handle]',
-        destination: '/my-store',
+        destination: '/en/my-store',
         permanent: false,
       },
       {
         source: '/your-handle',
-        destination: '/my-store',
+        destination: '/en/my-store',
         permanent: false,
       },
       {
         source: '/:locale/%5Byour-handle%5D',
-        destination: '/:locale/my-store',
-        permanent: false,
-      },
-      {
-        source: '/:locale/[your-handle]',
         destination: '/:locale/my-store',
         permanent: false,
       },
@@ -57,22 +47,7 @@ const nextConfig = {
         permanent: false,
       },
       {
-        source: '/:locale/store/[your-handle]',
-        destination: '/:locale/my-store',
-        permanent: false,
-      },
-      {
         source: '/store/%5Byour-handle%5D',
-        destination: '/my-store',
-        permanent: false,
-      },
-      {
-        source: '/store/[your-handle]',
-        destination: '/my-store',
-        permanent: false,
-      },
-      {
-        source: '/my-store',
         destination: '/en/my-store',
         permanent: false,
       },
