@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { Link } from '@/i18n/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslations, useLocale } from 'next-intl';
 import { MarketplaceListing } from '@/lib/marketplace-client';
 import ListingImageDisplay from '@/components/marketplace/ListingImageDisplay';
 import { Trash2, ExternalLink, AlertCircle, Edit } from 'lucide-react';
@@ -14,6 +15,9 @@ import { shouldBlurListing } from '@/lib/content-labels';
 export default function MyListingsPage() {
   const { user, client, isLoggedIn, isLoading: authLoading } = useAuth();
   const router = useRouter();
+  const t = useTranslations('myListings');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
   const [listings, setListings] = useState<(MarketplaceListing & { uri: string; cid: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -51,7 +55,7 @@ export default function MyListingsPage() {
         setListings(userListings);
       } catch (err) {
         console.error('Failed to fetch user listings:', err);
-        setError('Failed to load your listings. Please try again.');
+        setError(t('errorLoad'));
       } finally {
         setLoading(false);
       }
@@ -88,7 +92,7 @@ export default function MyListingsPage() {
       console.error('Failed to delete listing:', err);
       // Close modal and show error alert or toast
       setIsModalOpen(false);
-      alert('Failed to delete listing. Please try again.');
+      alert(t('errorDelete'));
     } finally {
       setDeletingId(null);
     }
@@ -106,14 +110,14 @@ export default function MyListingsPage() {
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">My Listings</h1>
-          <p className="text-gray-500 mt-1">Manage your items for sale</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
+          <p className="text-gray-500 mt-1">{t('subtitle')}</p>
         </div>
         <Link
           href="/create-listing"
           className="bg-primary-color text-white px-6 py-2.5 rounded-xl font-medium hover:bg-primary-light transition-colors shadow-sm"
         >
-          Create New Listing
+          {t('createButton')}
         </Link>
       </div>
 
@@ -131,15 +135,15 @@ export default function MyListingsPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-1">No listings yet</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-1">{t('noListingsTitle')}</h3>
           <p className="text-gray-500 mb-6 max-w-md mx-auto">
-            You haven't listed any items for sale. Start selling today to reach buyers across the AT Protocol network.
+            {t('noListingsBody')}
           </p>
           <Link
             href="/create-listing"
             className="text-primary-color font-medium hover:text-primary-light hover:underline"
           >
-            Create your first listing &rarr;
+            {t('createFirst')}
           </Link>
         </div>
       ) : (
@@ -160,7 +164,7 @@ export default function MyListingsPage() {
                 {listing.hideFromFriends && (
                   <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-md font-medium flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-yellow-400"></span>
-                    Hidden from Friends
+                    {t('hiddenFromFriends')}
                   </div>
                 )}
 
@@ -170,7 +174,7 @@ export default function MyListingsPage() {
                     onClick={() => setRevealedNsfw(prev => new Set(prev).add(listing.uri))}
                   >
                     <span className="text-white text-xs font-bold bg-red-500/80 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg">
-                      NSFW — Click to reveal
+                      {t('nsfwReveal')}
                     </span>
                   </div>
                 )}
@@ -183,7 +187,7 @@ export default function MyListingsPage() {
                     {listing.title}
                   </h3>
                   <span className="font-bold text-gray-900 bg-gray-50 px-2 py-1 rounded-lg text-sm whitespace-nowrap">
-                    {formatPrice(listing.price, listing.currency)}
+                    {formatPrice(listing.price, listing.currency, locale, tCommon('free'))}
                   </span>
                 </div>
 
@@ -197,14 +201,14 @@ export default function MyListingsPage() {
                     className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-gray-50 text-gray-700 font-medium text-sm hover:bg-gray-100 transition-colors"
                   >
                     <ExternalLink size={14} />
-                    View
+                    {t('view')}
                   </Link>
                   <Link
                     href={`/edit-listing?uri=${encodeURIComponent(listing.uri || '')}`}
                     className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border border-gray-200 text-gray-700 font-medium text-sm hover:bg-gray-50 transition-colors"
                   >
                     <Edit size={14} />
-                    Edit
+                    {t('edit')}
                   </Link>
                   <button
                     onClick={() => initiateDelete(listing.uri, listing.title)}
@@ -216,7 +220,7 @@ export default function MyListingsPage() {
                     ) : (
                       <Trash2 size={14} />
                     )}
-                    {deletingId === listing.uri ? 'Del...' : 'Delete'}
+                    {deletingId === listing.uri ? t('delShort') : t('delete')}
                   </button>
                 </div>
               </div>
@@ -230,9 +234,9 @@ export default function MyListingsPage() {
         isOpen={isModalOpen}
         onClose={cancelDelete}
         onConfirm={confirmDelete}
-        title="Delete Listing"
-        message={`Are you sure you want to delete "${listingToDelete?.title}"? This action cannot be undone.`}
-        confirmLabel="Delete"
+        title={t('deleteConfirmTitle')}
+        message={t('deleteConfirmMessage', { title: listingToDelete?.title || '' })}
+        confirmLabel={t('delete')}
         isDestructive={true}
         isLoading={!!deletingId}
       />

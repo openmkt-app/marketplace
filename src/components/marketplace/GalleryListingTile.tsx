@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import { Palette } from 'lucide-react';
@@ -16,6 +17,7 @@ interface GalleryListingTileProps {
 }
 
 export default function GalleryListingTile({ listing, flaggedUris, priority }: GalleryListingTileProps) {
+  const t = useTranslations('galleryTile');
   const [hovered, setHovered] = useState(false);
   const isNsfw = shouldBlurListing(listing.labels, listing.uri, flaggedUris);
   const [blurDismissed, setBlurDismissed] = useState(false);
@@ -60,7 +62,7 @@ export default function GalleryListingTile({ listing, flaggedUris, priority }: G
             setBlurDismissed(true);
           }}
         >
-          <span className="text-white text-xs font-bold bg-red-500/80 px-2 py-1 rounded-full">NSFW</span>
+          <span className="text-white text-xs font-bold bg-red-500/80 px-2 py-1 rounded-full">{t('nsfw')}</span>
         </div>
       )}
 
@@ -69,11 +71,11 @@ export default function GalleryListingTile({ listing, flaggedUris, priority }: G
         <div className="absolute top-2 left-2 z-10">
           {slots === 0 ? (
             <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded-full shadow-sm">
-              Waitlist
+              {t('waitlist')}
             </span>
           ) : (
             <span className="text-[10px] font-bold px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full shadow-sm">
-              Open
+              {t('open')}
             </span>
           )}
         </div>
@@ -85,10 +87,10 @@ export default function GalleryListingTile({ listing, flaggedUris, priority }: G
       >
         <p className="text-white text-xs font-semibold text-center line-clamp-2 mb-1">{listing.title}</p>
         <p className="text-white/80 text-xs mb-2">
-          {isCommission ? 'Starting at ' : ''}{formatPrice(listing.price, listing.currency)}
+          {isCommission ? t('startingAt') : ''}{formatPrice(listing.price, listing.currency)}
         </p>
         <span className="px-3 py-1 bg-white text-slate-900 text-xs font-bold rounded-full">
-          {isCommission ? 'View Commission' : 'Quick View'}
+          {isCommission ? t('viewCommission') : t('quickView')}
         </span>
       </div>
     </Link>

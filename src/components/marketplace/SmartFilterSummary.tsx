@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, Fragment } from 'react';
+import { useTranslations } from 'next-intl';
 import { X, Filter, ChevronDown, LayoutGrid, List } from 'lucide-react';
 import { CATEGORIES, CONDITIONS } from '@/lib/category-data';
 
@@ -47,29 +48,6 @@ interface SmartFilterSummaryProps {
   onViewOptionsChange: (mode: 'grid' | 'list' | 'map', perPage: number) => void;
 }
 
-const SORT_OPTIONS = [
-  { value: 'recency', label: 'Recently Listed' },
-  { value: 'price_asc', label: 'Price: Low to High' },
-  { value: 'price_desc', label: 'Price: High to Low' },
-  { value: 'distance', label: 'Distance' },
-];
-
-const PRICE_BRACKET_LABELS: Record<string, string> = {
-  'under_50': 'Under $50',
-  '50_100': '$50 - $100',
-  '100_250': '$100 - $250',
-  '250_500': '$250 - $500',
-  'over_500': 'Over $500',
-};
-
-const POSTED_WITHIN_LABELS: Record<string, string> = {
-  'day': 'Last 24 hours',
-  'week': 'Last week',
-  'month': 'Last month',
-  'quarter': 'Last 3 months',
-  'older': 'Older listings',
-};
-
 export default function SmartFilterSummary({
   itemCount,
   searchQuery,
@@ -95,29 +73,20 @@ export default function SmartFilterSummary({
   resultsPerPage,
   onViewOptionsChange,
 }: SmartFilterSummaryProps) {
+  const tBrowse = useTranslations('browse');
+  const tFilters = useTranslations('filters');
+  const tCats = useTranslations('categories');
+  const tConds = useTranslations('conditions');
   const [showSortDropdown, setShowSortDropdown] = useState(false);
 
-  // Build natural language summary (count, search query, and location)
-  const summaryText = useMemo(() => {
-    const parts: string[] = [];
+  const SORT_OPTIONS = [
+    { value: 'recency', label: tBrowse('sortRecent') },
+    { value: 'price_asc', label: tBrowse('sortPriceLow') },
+    { value: 'price_desc', label: tBrowse('sortPriceHigh') },
+    { value: 'distance', label: tBrowse('sortDistance') },
+  ];
 
-    // Result count
-    parts.push(`Showing ${itemCount} ${itemCount === 1 ? 'result' : 'results'}`);
-
-    // Search query
-    if (searchQuery) {
-      parts.push(`for "${searchQuery}"`);
-    }
-
-    // Location with radius (reads naturally in the summary)
-    if (locationName && locationRadius) {
-      parts.push(`within ${locationRadius} mi of ${locationName}`);
-    } else if (locationName) {
-      parts.push(`near ${locationName}`);
-    }
-
-    return parts.join(' ');
-  }, [itemCount, searchQuery, locationName, locationRadius]);
+  const currentSortLabel = SORT_OPTIONS.find(opt => opt.value === sortBy)?.label || tBrowse('sort');
 
   // Build filter chips for all active filters
   const filterChips = useMemo(() => {
@@ -125,7 +94,7 @@ export default function SmartFilterSummary({
 
     // Category chip
     if (selectedCategory && onClearCategory) {
-      const categoryName = CATEGORIES.find(c => c.id === selectedCategory)?.name;
+      const categoryName = tCats(selectedCategory);
       if (categoryName) {
         chips.push({
           id: 'category',
@@ -139,13 +108,13 @@ export default function SmartFilterSummary({
     if (priceRange) {
       let priceLabel = '';
       if (priceRange.bracket) {
-        priceLabel = PRICE_BRACKET_LABELS[priceRange.bracket] || priceRange.bracket;
+        priceLabel = tFilters(`price_${priceRange.bracket}`);
       } else if (priceRange.min !== undefined && priceRange.max !== undefined) {
-        priceLabel = `$${priceRange.min} - $${priceRange.max}`;
+        priceLabel = tFilters('price_range', { min: priceRange.min, max: priceRange.max });
       } else if (priceRange.min !== undefined) {
-        priceLabel = `Min $${priceRange.min}`;
+        priceLabel = tFilters('price_min', { min: priceRange.min });
       } else if (priceRange.max !== undefined) {
-        priceLabel = `Max $${priceRange.max}`;
+        priceLabel = tFilters('price_max', { max: priceRange.max });
       }
 
       if (priceLabel && onClearPrice) {
@@ -160,11 +129,11 @@ export default function SmartFilterSummary({
     // Condition filter chips
     if (conditions && conditions.length > 0 && onClearCondition) {
       conditions.forEach(conditionId => {
-        const condition = CONDITIONS.find(c => c.id === conditionId);
-        if (condition) {
+        const conditionLabel = tConds(conditionId);
+        if (conditionLabel) {
           chips.push({
             id: `condition-${conditionId}`,
-            label: condition.name,
+            label: conditionLabel,
             onRemove: () => onClearCondition(conditionId),
           });
         }
@@ -173,7 +142,7 @@ export default function SmartFilterSummary({
 
     // Posted within chip
     if (postedWithin && onClearPostedWithin) {
-      const label = POSTED_WITHIN_LABELS[postedWithin] || postedWithin;
+      const label = tFilters(`time_${postedWithin}`);
       chips.push({
         id: 'postedWithin',
         label: label,
@@ -182,7 +151,7 @@ export default function SmartFilterSummary({
     }
 
     return chips;
-  }, [selectedCategory, priceRange, conditions, postedWithin, onClearCategory, onClearPrice, onClearCondition, onClearPostedWithin]);
+  }, [selectedCategory, priceRange, conditions, postedWithin, onClearCategory, onClearPrice, onClearCondition, onClearPostedWithin, tCats, tConds, tFilters]);
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3 mb-5">
@@ -190,8 +159,19 @@ export default function SmartFilterSummary({
         {/* Left side - Summary text and filter chips */}
         <div className="flex-1 min-w-0">
           {/* Summary text */}
-          <p className="text-gray-900 font-medium text-sm">
-            {summaryText}
+          <p className="text-gray-900 font-medium text-sm flex flex-wrap gap-x-1">
+            <span>{tFilters('summary', { count: itemCount })}</span>
+            {searchQuery && (
+              <span>{tFilters('forQuery', { query: searchQuery })}</span>
+            )}
+            {locationName && (
+              <span>
+                {locationRadius 
+                  ? tFilters('withinRadius', { radius: locationRadius, location: locationName })
+                  : tFilters('nearLocation', { location: locationName })
+                }
+              </span>
+            )}
           </p>
 
           {/* Filter chips */}
@@ -214,7 +194,7 @@ export default function SmartFilterSummary({
                   onClick={onClearAllFilters}
                   className="text-xs text-gray-500 hover:text-gray-700 underline transition-colors"
                 >
-                  Clear all
+                  {tFilters('clearAll')}
                 </button>
               )}
             </div>
@@ -233,7 +213,7 @@ export default function SmartFilterSummary({
             }`}
           >
             <Filter size={14} />
-            Filters
+            {tBrowse('filters')}
             {hasActiveFilters && !showFilters && (
               <span className="w-1.5 h-1.5 bg-sky-600 rounded-full" />
             )}
@@ -245,7 +225,7 @@ export default function SmartFilterSummary({
               onClick={() => setShowSortDropdown(!showSortDropdown)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Sort
+              {currentSortLabel}
               <ChevronDown size={12} className={`transition-transform ${showSortDropdown ? 'rotate-180' : ''}`} />
             </button>
 

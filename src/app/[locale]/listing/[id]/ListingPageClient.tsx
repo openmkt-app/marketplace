@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { BskyAgent } from '@atproto/api';
 import { createBlueskyCdnImageUrls } from '@/lib/image-utils';
@@ -15,6 +16,7 @@ type Props = {
 };
 
 export default function ListingPageClient({ listingId, initialListing, isNewListing, isRemoved: initialIsRemoved }: Props) {
+  const t = useTranslations('listing');
   const [listing, setListing] = useState<any>(initialListing);
   const [isLoading, setIsLoading] = useState(!initialListing && !initialIsRemoved);
   const [error, setError] = useState<string | null>(null);
@@ -258,7 +260,7 @@ export default function ListingPageClient({ listingId, initialListing, isNewList
         if (msg.includes('Could not locate record')) {
           setIsRemoved(true);
         } else {
-          setError(`Failed to load listing: ${msg}`);
+          setError(t('fetchError', { message: msg }));
         }
       } finally {
         setIsLoading(false);
@@ -272,9 +274,9 @@ export default function ListingPageClient({ listingId, initialListing, isNewList
     return (
       <div className="max-w-4xl mx-auto p-4">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold">Loading...</h1>
+          <h1 className="text-2xl font-bold">{t('loading')}</h1>
           <Link href="/browse" className="text-primary-color hover:text-primary-light hover:underline">
-            Back to Listings
+            {t('backToListings')}
           </Link>
         </div>
         <div className="animate-pulse bg-neutral-light h-96 rounded-lg"></div>
@@ -291,7 +293,7 @@ export default function ListingPageClient({ listingId, initialListing, isNewList
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
-              Back to listings
+              {t('backToListings')}
             </Link>
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-10 text-center shadow-sm">
@@ -300,13 +302,13 @@ export default function ListingPageClient({ listingId, initialListing, isNewList
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </div>
-            <h1 className="text-2xl font-semibold text-gray-800 mb-2">This listing has been removed</h1>
-            <p className="text-gray-500 mb-6">The seller has deleted this listing. It is no longer available.</p>
+            <h1 className="text-2xl font-semibold text-gray-800 mb-2">{t('removedTitle')}</h1>
+            <p className="text-gray-500 mb-6">{t('removedBody')}</p>
             <Link
               href="/browse"
               className="inline-flex items-center gap-2 bg-primary-color hover:bg-primary-dark text-white font-medium px-5 py-2.5 rounded-lg transition-colors"
             >
-              Browse other listings
+              {t('browseOther')}
             </Link>
           </div>
         </div>
@@ -318,9 +320,9 @@ export default function ListingPageClient({ listingId, initialListing, isNewList
     return (
       <div className="max-w-4xl mx-auto p-4">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold text-text-primary">Error</h1>
+          <h1 className="text-2xl font-bold text-text-primary">{t('errorTitle')}</h1>
           <Link href="/browse" className="text-primary-color hover:text-primary-light hover:underline">
-            Back to Listings
+            {t('backToListings')}
           </Link>
         </div>
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -340,13 +342,13 @@ export default function ListingPageClient({ listingId, initialListing, isNewList
     return (
       <div className="max-w-4xl mx-auto p-4">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold text-text-primary">No Listing Found</h1>
+          <h1 className="text-2xl font-bold text-text-primary">{t('notFoundTitle')}</h1>
           <Link href="/browse" className="text-primary-color hover:text-primary-light hover:underline">
-            Back to Listings
+            {t('backToListings')}
           </Link>
         </div>
         <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
-          No listing data was found for this ID.
+          {t('notFoundBody')}
         </div>
       </div>
     );
@@ -364,8 +366,8 @@ export default function ListingPageClient({ listingId, initialListing, isNewList
                 </svg>
               </span>
               <div>
-                <p className="font-medium text-green-800">Your item is now live in the marketplace!</p>
-                <p className="text-sm text-green-700">Others can discover and engage with your listing right away.</p>
+                <p className="font-medium text-green-800">{t('successTitle')}</p>
+                <p className="text-sm text-green-700">{t('successBody')}</p>
               </div>
             </div>
             <button
@@ -389,7 +391,7 @@ export default function ListingPageClient({ listingId, initialListing, isNewList
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            Back to listings
+            {t('backToListings')}
           </Link>
         </div>
 

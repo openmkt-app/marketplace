@@ -1,6 +1,7 @@
 'use client';
 
 import { X, AlertTriangle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface ConfirmationModalProps {
     isOpen: boolean;
@@ -20,12 +21,16 @@ export default function ConfirmationModal({
     onConfirm,
     title,
     message,
-    confirmLabel = 'Confirm',
-    cancelLabel = 'Cancel',
+    confirmLabel,
+    cancelLabel,
     isDestructive = false,
     isLoading = false
 }: ConfirmationModalProps) {
+    const t = useTranslations('common');
     if (!isOpen) return null;
+
+    const finalConfirmLabel = confirmLabel || t('confirm');
+    const finalCancelLabel = cancelLabel || t('cancel');
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
@@ -58,7 +63,7 @@ export default function ConfirmationModal({
                         disabled={isLoading}
                         className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                        {cancelLabel}
+                        {finalCancelLabel}
                     </button>
                     <button
                         type="button"
@@ -72,7 +77,7 @@ export default function ConfirmationModal({
                         {isLoading && (
                             <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         )}
-                        {confirmLabel}
+                        {finalConfirmLabel}
                     </button>
                 </div>
             </div>

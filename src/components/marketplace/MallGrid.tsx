@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { Store, Plus, ShoppingBag } from 'lucide-react';
 import StoreCard, { SellerWithListings } from './StoreCard';
@@ -10,14 +11,15 @@ interface MallGridProps {
 }
 
 const CATEGORIES = [
-    { id: 'all', label: 'All Stores' },
-    { id: 'digital', label: 'Digital Art' },
-    { id: 'handmade', label: 'Handmade' },
-    { id: 'vintage', label: 'Vintage' },
-    { id: 'tech', label: 'Tech' },
+    { id: 'all', labelKey: 'categories.all' },
+    { id: 'digital', labelKey: 'categories.digital' },
+    { id: 'handmade', labelKey: 'categories.handmade' },
+    { id: 'vintage', labelKey: 'categories.vintage' },
+    { id: 'tech', labelKey: 'categories.tech' },
 ];
 
 export default function MallGrid({ sellers }: MallGridProps) {
+    const t = useTranslations('mallGrid');
     const [activeCategory, setActiveCategory] = useState('all');
     const [flaggedUris, setFlaggedUris] = useState<Set<string>>(new Set());
 
@@ -63,7 +65,7 @@ export default function MallGrid({ sellers }: MallGridProps) {
                                 : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                                 }`}
                         >
-                            {category.label}
+                            {t(category.labelKey as any)}
                         </button>
                     ))}
                 </div>
@@ -82,9 +84,9 @@ export default function MallGrid({ sellers }: MallGridProps) {
                         <div className="w-20 h-20 rounded-full bg-white shadow-sm flex items-center justify-center text-gray-300 group-hover:text-yellow-500 group-hover:scale-110 transition-all duration-300 mb-6">
                             <Plus size={40} />
                         </div>
-                        <h3 className="text-2xl font-bold text-slate-900 mb-2">Get Discovered on the Atmosphere</h3>
+                        <h3 className="text-2xl font-bold text-slate-900 mb-2">{t('ctaTitle')}</h3>
                         <p className="text-slate-500 text-sm max-w-xs mb-8">
-                            Don't rebuild your store from scratch. Setup your profile, use our Magic Link to index your existing shop, and start getting views in minutes.
+                            {t('ctaDescription')}
                         </p>
                         <div className="flex flex-col gap-3 w-full px-8">
                             <Link
@@ -92,7 +94,7 @@ export default function MallGrid({ sellers }: MallGridProps) {
                                 className="bg-slate-900 text-white w-full py-3 rounded-full font-bold text-sm shadow-lg hover:bg-yellow-400 hover:text-slate-900 hover:shadow-yellow-400/30 transition-all transform hover:-translate-y-1 inline-flex items-center justify-center gap-2"
                             >
                                 <Plus size={16} />
-                                Claim My Spot
+                                {t('claimSpot')}
                             </Link>
                             {/* Import from Etsy - Hidden until API Key is ready
                             <Link
@@ -100,7 +102,7 @@ export default function MallGrid({ sellers }: MallGridProps) {
                                 className="bg-white text-slate-900 border border-slate-200 w-full py-3 rounded-full font-bold text-sm hover:bg-slate-50 transition-all inline-flex items-center justify-center gap-2"
                             >
                                 <ShoppingBag size={16} />
-                                Import from Etsy
+                                {t('importEtsy')}
                             </Link>
                             */}
                         </div>
@@ -113,12 +115,12 @@ export default function MallGrid({ sellers }: MallGridProps) {
                     <div className="mx-auto h-12 w-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
                         <Store size={24} className="text-gray-400" />
                     </div>
-                    <p className="text-gray-500">No stores found in this category.</p>
+                    <p className="text-gray-500">{t('noStoresFound')}</p>
                     <button
                         onClick={() => setActiveCategory('all')}
                         className="mt-2 text-blue-600 text-sm font-medium hover:underline"
                     >
-                        View all stores
+                        {t('viewAllStores')}
                     </button>
                 </div>
             )}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { CATEGORIES } from '@/lib/category-data';
 
 interface CategoryFilterProps {
@@ -14,6 +15,8 @@ export default function CategoryFilter({
   selectedSubcategory,
   onChange
 }: CategoryFilterProps) {
+   const t = useTranslations('categories');
+   const tSubs = useTranslations('subcategories');
   const [category, setCategory] = useState<string | undefined>(selectedCategory);
   const [subcategory, setSubcategory] = useState<string | undefined>(selectedSubcategory);
   const isFirstRender = useRef(true);
@@ -80,7 +83,7 @@ export default function CategoryFilter({
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="font-medium text-text-primary mb-2">Categories</h3>
+        <h3 className="font-medium text-text-primary mb-2">{t('categoriesHeader')}</h3>
         <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
           {CATEGORIES.map((cat) => (
             <button
@@ -92,7 +95,7 @@ export default function CategoryFilter({
                   : 'bg-neutral-light text-text-primary hover:bg-neutral-medium'
               }`}
             >
-              {cat.name}
+              {t(cat.id)}
             </button>
           ))}
         </div>
@@ -101,7 +104,7 @@ export default function CategoryFilter({
       {/* Show subcategories if a category is selected */}
       {selectedCategoryObj && (
         <div>
-          <h3 className="font-medium text-text-primary mb-2">Subcategories</h3>
+          <h3 className="font-medium text-text-primary mb-2">{t('subcategoriesHeader')}</h3>
           <div className="grid grid-cols-2 gap-2">
             {selectedCategoryObj.subcategories.map((sub) => (
               <button
@@ -113,7 +116,7 @@ export default function CategoryFilter({
                     : 'bg-neutral-light text-text-primary hover:bg-neutral-medium'
                 }`}
               >
-                {sub.name}
+                 {tSubs(`${selectedCategoryObj.id}.${sub.id}`)}
               </button>
             ))}
           </div>

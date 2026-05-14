@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import { MapPin, ShoppingCart, Globe } from 'lucide-react';
@@ -31,6 +32,11 @@ interface ListingCardProps {
 }
 
 const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, priority = false }: ListingCardProps) => {
+  const t = useTranslations('listingCard');
+  const tCats = useTranslations('categories');
+  const tConds = useTranslations('conditions');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
   // NSFW blur state
   const isNsfw = shouldBlurListing(listing.labels, listing.uri, flaggedUris);
   const [blurDismissed, setBlurDismissed] = useState(false);
@@ -44,12 +50,12 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, prior
     : `/listing/${encodeURIComponent(listing.title)}`;
 
   // Format date
-  const postedDate = formatDate(listing.createdAt);
+  const postedDate = formatDate(listing.createdAt, locale);
 
   // Format location - clean up prefixes and abbreviate state
   const isOnline = listing.location ? isOnlineStore(listing.location) : false;
   const locationString = isOnline
-    ? 'Online Store'
+    ? t('onlineStore')
     : formatLocation(listing.location?.locality, listing.location?.state);
 
   return (
@@ -73,7 +79,7 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, prior
           size="thumbnail"
           height="100%"
           className="w-full h-full object-contain transform group-hover:scale-105 transition-transform duration-500"
-          fallbackText="No image"
+          fallbackText={t('noImage')}
           priority={priority}
         />
 
@@ -82,20 +88,20 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, prior
           {listing.category === COMMISSION_CATEGORY_ID ? (
             listing.metadata?.slotsAvailable === 0 || listing.metadata?.commissionStatus === 'waitlist' ? (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 shadow-sm">
-                Waitlist
+                {t('waitlist')}
               </span>
             ) : listing.metadata?.commissionStatus === 'closed' ? (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 shadow-sm">
-                Closed
+                {t('closed')}
               </span>
             ) : (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 shadow-sm">
-                Open
+                {t('open')}
               </span>
             )
           ) : (
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/90 backdrop-blur-sm text-slate-800 shadow-sm">
-              {formatConditionForDisplay(listing.condition)}
+              {tConds(listing.condition)}
             </span>
           )}
         </div>
@@ -105,7 +111,7 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, prior
           <div className="absolute top-3 right-3 z-20 pointer-events-none">
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-400 text-slate-800 shadow-sm">
               <ShoppingCart size={12} />
-              Buy Online
+              {t('buyOnline')}
             </span>
           </div>
         )}
@@ -113,7 +119,7 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, prior
         {/* Quick View Overlay - pointer-events-none so clicks pass through to the card link */}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex justify-center z-20 pointer-events-none">
           <span className="px-4 py-2 bg-white text-slate-900 rounded-lg font-medium text-sm shadow-lg">
-            Quick View
+            {t('quickView')}
           </span>
         </div>
 
@@ -128,7 +134,7 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, prior
             }}
           >
             <span className="text-white text-xs font-bold bg-red-500/80 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg">
-              NSFW — Click to reveal
+              {t('nsfwReveal')}
             </span>
           </div>
         )}
@@ -136,20 +142,18 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, prior
 
       {/* Content */}
       <div className="p-4 flex flex-col flex-grow relative z-20 pointer-events-none">
-        {listing.category && (
           <span className="text-[10px] font-medium text-sky-600 uppercase tracking-wider mb-1">
-            {getCategoryName(listing.category)}
+            {tCats(listing.category)}
           </span>
-        )}
         <h3 className="font-semibold text-slate-900 line-clamp-1 group-hover:text-sky-600 transition-colors">
           {listing.title}
         </h3>
 
         {listing.category === COMMISSION_CATEGORY_ID && (
-          <span className="text-xs text-slate-400 -mb-1 block">Starting at</span>
+          <span className="text-xs text-slate-400 -mb-1 block">{t('startingAt')}</span>
         )}
         <p className="text-xl font-bold text-slate-900 mb-2">
-          {formatPrice(listing.price, listing.currency)}
+          {formatPrice(listing.price, listing.currency, locale, tCommon('free'))}
         </p>
 
         <p className="text-sm text-slate-500 line-clamp-2 mb-4 flex-grow">

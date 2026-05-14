@@ -2,12 +2,14 @@
 'use client';
 
 import React from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import Image from 'next/image';
 import { Link } from '@/i18n/navigation';
 import type { MarketplaceListing } from '@/lib/marketplace-client';
 import ListingImageGallery from '../ListingImageGallery';
 import { formatConditionForDisplay } from '@/lib/condition-utils';
-import { formatPrice } from '@/lib/price-utils';
+import { formatPrice, formatDate } from '@/lib/price-utils';
+import { CATEGORIES } from '@/lib/category-data';
 import { extractSubcategoryFromDescription, formatCategoryDisplay, getCategoryName } from '@/lib/category-utils';
 import { getSellerDisplayName } from '@/lib/chat-utils';
 import { linkifyText } from '@/lib/linkify';
@@ -52,13 +54,15 @@ interface ListingDetailProps {
 }
 
 export default function ListingDetail({ listing, sellerProfile }: ListingDetailProps) {
+  const t = useTranslations('listingDetail');
+  const tCommon = useTranslations('common');
+  const tCats = useTranslations('categories');
+  const tSubs = useTranslations('subcategories');
+  const tConds = useTranslations('conditions');
+  const locale = useLocale();
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   // Format creation date
-  const createdDate = new Date(listing.createdAt);
-  const formattedDate = createdDate.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
+  const formattedDate = formatDate(listing.createdAt, locale);
 
   // Get clean description without subcategory text
   const { cleanDescription, subcategory } = extractSubcategoryFromDescription(listing.description);
@@ -87,7 +91,7 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
   const [isModFlagged, setIsModFlagged] = useState(false);
   const [isTogglingFlag, setIsTogglingFlag] = useState(false);
   const isNsfw = shouldBlurListing(listing.labels, listing.uri, isModFlagged ? new Set([listing.uri!]) : new Set());
-  const [nsfwRevealed, setNsfwRevealed] = useState(false);
+  const [isNsfwRevealed, setNsfwRevealed] = useState(false);
 
   // Admin check
   const isAdmin = user?.handle === 'openmkt.app';
@@ -164,11 +168,11 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
       if (success) {
         setIsFollowingBotState(true);
       } else {
-        alert('Failed to follow the bot. Please try again.');
+        alert(t('alerts.followBotFailed'));
       }
     } catch (e) {
       console.error('Follow bot error:', e);
-      alert('Error following bot');
+      alert(t('alerts.followBotError'));
     } finally {
       setIsLoadingFollowBot(false);
     }
@@ -183,11 +187,11 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
       if (success) {
         setIsFollowingSellerState(true);
       } else {
-        alert('Failed to follow the seller. Please try again.');
+        alert(t('alerts.followSellerFailed'));
       }
     } catch (e) {
       console.error('Follow seller error:', e);
-      alert('Error following seller');
+      alert(t('alerts.followSellerError'));
     } finally {
       setIsLoadingFollowSeller(false);
     }
@@ -233,13 +237,13 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
         });
       } else if (response.status === 429) {
         // Rate limit exceeded
-        setRateLimitError(data.message || `Rate limit exceeded. Please wait ${data.resetInMinutes || 60} minutes before trying again.`);
+        setRateLimitError(data.message || t('alerts.notifySellerFailed', { error: 'Rate limit exceeded' }));
       } else {
-        alert(`Failed to notify seller: ${data.error || 'Unknown error'}`);
+        alert(t('alerts.notifySellerFailed', { error: data.error || 'Unknown error' }));
       }
     } catch (error) {
       console.error('Error notifying seller:', error);
-      alert('Failed to send interest notification.');
+      alert(t('alerts.interestNotificationError'));
     } finally {
       setIsSendingInterest(false);
     }
@@ -261,7 +265,7 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
     } else {
       // Fallback: copy to clipboard
       await navigator.clipboard.writeText(window.location.href);
-      alert('Link copied to clipboard!');
+      alert(t('alerts.linkCopied'));
     }
   };
 
@@ -283,40 +287,44 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
       });
 
       if (response.ok) {
-        alert('Report submitted. An admin will review this listing shortly.');
+        alert(t('alerts.reportSubmitted'));
         setIsReportModalOpen(false);
         setReportDescription('');
         setReportReason('Spam');
       } else {
         const data = await response.json();
-        alert(`Failed to submit report: ${data.error || 'Unknown error'}`);
+        alert(t('alerts.reportFailed', { error: data.error || 'Unknown error' }));
       }
     } catch (error) {
       console.error('Error submitting report:', error);
-      alert('Failed to submit report. Please try again.');
+      alert(t('alerts.reportError'));
     } finally {
       setIsSubmittingReport(false);
     }
   };
 
   // Get category for badge display using proper formatting
-  const mainCategory = getCategoryName(listing.category);
-  const fullCategoryDisplay = formatCategoryDisplay(listing.category, listing);
+  const mainCategory = tCats(listing.category);
+
+  // Get localized subcategory
+  let subcategoryLocalized = subcategory;
+  if (listing.category && listing.metadata?.subcategory) {
+    const categoryObj = CATEGORIES.find(c => c.id === listing.category);
+    if (categoryObj) {
+      const subObj = categoryObj.subcategories.find(s => s.name === listing.metadata!.subcategory || s.id === listing.metadata!.subcategory);
+      if (subObj) {
+        subcategoryLocalized = tSubs(`${listing.category}.${subObj.id}`);
+      }
+    }
+  }
 
   // Get tags from category - use the formatted names
   const tags: string[] = [];
-  const categoryParts = listing.category?.split('/') || [];
-  if (categoryParts[0]) {
-    tags.push(getCategoryName(categoryParts[0]));
+  if (listing.category) {
+    tags.push(tCats(listing.category));
   }
-  if (subcategory) {
-    tags.push(subcategory);
-  } else if (categoryParts[1]) {
-    // Try to get the subcategory name from metadata or use the ID
-    const subName = listing.metadata?.subcategory || categoryParts[1];
-    if (subName && !tags.includes(subName)) {
-      tags.push(subName);
-    }
+  if (subcategoryLocalized) {
+    tags.push(subcategoryLocalized);
   }
 
   const sellerDisplayName = getSellerDisplayName(listing);
@@ -334,17 +342,17 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
               title={listing.title}
             />
             {/* NSFW Blur Overlay */}
-            {isNsfw && !nsfwRevealed && (
+            {isNsfw && !isNsfwRevealed && (
               <div
                 className="absolute inset-0 z-30 flex flex-col items-center justify-center cursor-pointer bg-black/10 backdrop-blur-2xl rounded-xl"
                 onClick={() => setNsfwRevealed(true)}
               >
                 <div className="flex flex-col items-center gap-3">
                   <span className="text-white text-sm font-bold bg-red-500/80 backdrop-blur-sm px-5 py-2.5 rounded-full shadow-lg">
-                    NSFW Content
+                    {t('nsfwContent')}
                   </span>
                   <span className="text-white/70 text-xs">
-                    Click to reveal
+                    {t('clickToReveal')}
                   </span>
                 </div>
               </div>
@@ -353,14 +361,14 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
         ) : (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="w-full h-[400px] bg-gray-100 flex items-center justify-center">
-              <span className="text-gray-500">No images available</span>
+              <span className="text-gray-500">{t('noImages')}</span>
             </div>
           </div>
         )}
 
         {/* Description Card */}
         <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">Description</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">{t('description')}</h2>
           <p className="text-gray-600 whitespace-pre-line leading-relaxed">
             {linkifyText(cleanDescription)}
           </p>
@@ -394,7 +402,7 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
             <button
               onClick={handleShare}
               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-              aria-label="Share listing"
+              aria-label={t('shareListing')}
             >
               <Share2 size={20} />
             </button>
@@ -404,10 +412,10 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
           <h1 className="text-2xl font-bold text-gray-900 mb-2">{listing.title}</h1>
           <div className="mb-6">
             {listing.category === COMMISSION_CATEGORY_ID && (
-              <p className="text-xs text-gray-400 mb-0.5">Starting at</p>
+              <p className="text-xs text-gray-400 mb-0.5">{t('startingAt')}</p>
             )}
             <p className={`text-2xl font-bold ${listing.category === COMMISSION_CATEGORY_ID ? 'text-rose-600' : 'text-blue-600'}`}>
-              {formatPrice(listing.price, listing.currency)}
+              {formatPrice(listing.price, listing.currency, locale, tCommon('free'))}
             </p>
           </div>
 
@@ -445,7 +453,7 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                     href={`/store/${sellerHandle}`}
                     className="flex-1 px-3 py-2 text-sm font-medium text-center text-white bg-primary-color rounded-lg hover:bg-primary-light hover:text-white transition-colors"
                   >
-                    View Store
+                    {t('viewStore')}
                   </Link>
                   <Link
                     href={`https://bsky.app/profile/${sellerHandle}`}
@@ -453,7 +461,7 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                     rel="noopener noreferrer"
                     className="flex-1 px-3 py-2 text-sm font-medium text-center text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors"
                   >
-                    Atmosphere Profile
+                    {t('atmosphereProfile')}
                   </Link>
                 </div>
               )}
@@ -464,12 +472,12 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
           <div className={`grid ${listing.condition && listing.category !== 'digital_arts' ? 'grid-cols-2' : 'grid-cols-1'} gap-3 mb-4`}>
             {listing.condition && listing.category !== 'digital_arts' && (
               <div className="p-3 bg-gray-50 rounded-lg">
-                <p className="text-xs text-gray-500 mb-1">Condition</p>
-                <p className="font-medium text-gray-900">{formatConditionForDisplay(listing.condition)}</p>
+                <p className="text-xs text-gray-500 mb-1">{t('condition')}</p>
+                <p className="font-medium text-gray-900">{tConds(listing.condition)}</p>
               </div>
             )}
             <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">Listed</p>
+              <p className="text-xs text-gray-500 mb-1">{t('listed')}</p>
               <div className="flex items-center gap-1.5">
                 <Calendar size={14} className="text-gray-400" />
                 <p className="font-medium text-gray-900">{formattedDate}</p>
@@ -482,14 +490,14 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
             <div className="space-y-2 mb-4">
               {listing.metadata?.slotsAvailable !== undefined && (
                 <div className="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
-                  <p className="text-xs text-gray-500">Commission Status</p>
+                  <p className="text-xs text-gray-500">{t('commissionStatus')}</p>
                   {listing.metadata.slotsAvailable === 0 ? (
                     <span className="text-sm font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
-                      Waitlist Only
+                      {t('waitlistOnly')}
                     </span>
                   ) : (
                     <span className="text-sm font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                      {listing.metadata.slotsAvailable} slot{listing.metadata.slotsAvailable !== 1 ? 's' : ''} open
+                      {t('slotsOpen', { count: listing.metadata.slotsAvailable })}
                     </span>
                   )}
                 </div>
@@ -498,7 +506,7 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                 <div className="p-3 bg-gray-50 rounded-lg flex items-center gap-2">
                   <Clock size={14} className="text-gray-400 shrink-0" />
                   <div>
-                    <p className="text-xs text-gray-500">Estimated Turnaround</p>
+                    <p className="text-xs text-gray-500">{t('estimatedTurnaround')}</p>
                     <p className="font-medium text-gray-900">{listing.metadata.turnaroundTime}</p>
                   </div>
                 </div>
@@ -509,7 +517,7 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
           {/* Location */}
           <div className="p-3 bg-gray-50 rounded-lg mb-6">
             <p className="text-xs text-gray-500 mb-1">
-              {listing.category === COMMISSION_CATEGORY_ID ? 'Timezone / Region' : 'Location'}
+              {listing.category === COMMISSION_CATEGORY_ID ? t('timezoneRegion') : t('location')}
             </p>
             <div className="flex items-center gap-1.5">
               {isOnlineStore(listing.location) ? (
@@ -535,10 +543,10 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                   className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-yellow-400 hover:bg-yellow-300 text-slate-900 text-lg font-bold rounded-xl shadow-sm hover:shadow-md transition-all transform hover:-translate-y-0.5 active:translate-y-0"
                 >
                   <ExternalLink size={24} />
-                  Buy on {getPlatformDisplayName(listing.externalUrl) || 'Website'}
+                  {t('buyOn', { platform: getPlatformDisplayName(listing.externalUrl) || 'Website' })}
                 </a>
                 <p className="text-center text-xs text-gray-500">
-                  Opens in a new tab on {getPlatformDisplayName(listing.externalUrl) || 'external website'}
+                  {t('opensInNewTab', { platform: getPlatformDisplayName(listing.externalUrl) || 'external website' })}
                 </p>
               </div>
             )}
@@ -548,12 +556,12 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                 {/* 1. Own Listing State */}
                 {isOwnListing ? (
                   <div className="p-5 bg-blue-50 border border-blue-100 rounded-xl text-center space-y-3">
-                    <p className="font-medium text-blue-800">This is your listing.</p>
+                    <p className="font-medium text-blue-800">{t('ownListing')}</p>
                     <Link
                       href="/my-listings"
                       className="inline-flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-800 hover:underline transition-colors"
                     >
-                      Click here to manage your listings
+                      {t('manageListings')}
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-right">
                         <path d="M5 12h14" />
                         <path d="m12 5 7 7-7 7" />
@@ -565,12 +573,12 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                   <div className="space-y-3">
                     <div className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-green-100 text-green-700 font-medium rounded-xl">
                       <CheckCircle size={20} />
-                      Interest Sent!
+                      {t('interestSent')}
                     </div>
                     <div className="flex items-start gap-2 p-3 bg-green-50 rounded-lg">
                       <Info size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
                       <p className="text-xs text-green-700">
-                        The seller has been notified of your interest. They will reach out to you via DM if interested.
+                        {t('interestSentBody')}
                       </p>
                     </div>
                   </div>
@@ -596,14 +604,14 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                       ) : (
                         <>
                           <MessageCircle size={24} />
-                          {listing.category === COMMISSION_CATEGORY_ID ? 'Request Commission' : "I'm Interested"}
+                          {listing.category === COMMISSION_CATEGORY_ID ? t('requestCommission') : t('imInterested')}
                         </>
                       )}
                     </button>
                     <p className="text-center text-xs text-gray-500">
                       {listing.category === COMMISSION_CATEGORY_ID
-                        ? 'Click to send a commission request via secure DM'
-                        : 'Click to contact the seller via secure DM'}
+                        ? t('requestCommissionHint')
+                        : t('imInterestedHint')}
                     </p>
                   </div>
                 )}
@@ -613,7 +621,7 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                   <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-200">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold text-gray-900">Contact Seller</h3>
+                        <h3 className="text-lg font-bold text-gray-900">{t('contactSeller')}</h3>
                         <button
                           onClick={() => setIsInterestModalOpen(false)}
                           className="text-gray-400 hover:text-gray-600"
@@ -624,13 +632,13 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
 
                       <div className="space-y-6">
                         <p className="text-sm text-gray-600">
-                          To protect privacy and ensure delivery, please complete these steps to enable secure messaging.
+                          {t('contactSellerHint')}
                         </p>
 
                         {/* Step 1: Follow Bot */}
                         <div className={`p-4 rounded-lg border ${isFollowingBotState ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'}`}>
                           <div className="flex items-center justify-between mb-2">
-                            <span className={`font-semibold ${isFollowingBotState ? 'text-green-700' : 'text-gray-900'}`}>1. Enable Notifications</span>
+                            <span className={`font-semibold ${isFollowingBotState ? 'text-green-700' : 'text-gray-900'}`}>{t('step1Title')}</span>
                             {isFollowingBotState && <CheckCircle size={18} className="text-green-600" />}
                           </div>
                           {!isFollowingBotState ? (
@@ -639,17 +647,17 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                               disabled={isLoadingFollowBot}
                               className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
                             >
-                              {isLoadingFollowBot ? <Loader2 size={16} className="animate-spin" /> : 'Follow Marketplace Bot'}
+                              {isLoadingFollowBot ? <Loader2 size={16} className="animate-spin" /> : t('followBot')}
                             </button>
                           ) : (
-                            <p className="text-xs text-green-700">You are following the bot.</p>
+                            <p className="text-xs text-green-700">{t('followingBot')}</p>
                           )}
                         </div>
 
                         {/* Step 2: Follow Seller */}
                         <div className={`p-4 rounded-lg border ${isFollowingSellerState ? 'bg-green-50 border-green-200' : isFollowingBotState ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-200 opacity-70'}`}>
                           <div className="flex items-center justify-between mb-2">
-                            <span className={`font-semibold ${isFollowingSellerState ? 'text-green-700' : 'text-gray-900'}`}>2. Connect with Seller</span>
+                            <span className={`font-semibold ${isFollowingSellerState ? 'text-green-700' : 'text-gray-900'}`}>{t('step2Title')}</span>
                             {isFollowingSellerState && <CheckCircle size={18} className="text-green-600" />}
                           </div>
                           {!isFollowingSellerState && (
@@ -659,13 +667,13 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                                 disabled={isLoadingFollowSeller}
                                 className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
                               >
-                                {isLoadingFollowSeller ? <Loader2 size={16} className="animate-spin" /> : 'Follow Seller'}
+                                {isLoadingFollowSeller ? <Loader2 size={16} className="animate-spin" /> : t('followSeller')}
                               </button>
                             ) : (
-                              <p className="text-xs text-gray-500">Complete step 1 first.</p>
+                              <p className="text-xs text-gray-500">{t('completeStep1')}</p>
                             )
                           )}
-                          {isFollowingSellerState && <p className="text-xs text-green-700">You are following the seller.</p>}
+                          {isFollowingSellerState && <p className="text-xs text-green-700">{t('followingSeller')}</p>}
                         </div>
 
                         {/* Step 3: Send Interest */}
@@ -690,12 +698,12 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                             {isSendingInterest ? (
                               <>
                                 <Loader2 size={20} className="animate-spin" />
-                                Sending...
+                                {t('sending')}
                               </>
                             ) : (
                               <>
                                 <Send size={20} />
-                                Send Interest
+                                {t('sendInterest')}
                               </>
                             )}
                           </button>
@@ -713,12 +721,12 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                   className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
                 >
                   <MessageCircle size={20} />
-                  Log in to Show Interest
+                  {t('loginToInterest')}
                 </Link>
                 <div className="flex items-start gap-2 p-3 bg-gray-50 rounded-lg">
                   <Info size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
                   <p className="text-xs text-gray-600">
-                    Log in with your Atmosphere account to contact the seller.
+                    {t('loginHint')}
                   </p>
                 </div>
               </>
@@ -731,37 +739,37 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
           <div className="flex items-center gap-2 mb-3">
             <ShieldCheck size={20} className={listing.category === COMMISSION_CATEGORY_ID ? 'text-rose-500' : 'text-blue-600'} />
             <h3 className="font-semibold text-gray-900">
-              {listing.category === COMMISSION_CATEGORY_ID ? 'Commission Tips' : 'Marketplace Safety'}
+              {listing.category === COMMISSION_CATEGORY_ID ? t('commissionTips') : t('safetyTips')}
             </h3>
           </div>
           {listing.category === COMMISSION_CATEGORY_ID ? (
             <ul className="space-y-2 text-sm text-gray-600">
               <li className="flex items-start gap-2">
                 <span className="text-gray-400 mt-1">•</span>
-                <span>Discuss your requirements clearly before paying.</span>
+                <span>{t('commissionTips_1')}</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-gray-400 mt-1">•</span>
-                <span>Ask for a sketch or rough draft before the final delivery.</span>
+                <span>{t('commissionTips_2')}</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-gray-400 mt-1">•</span>
-                <span>Use a trusted payment platform (PayPal, Ko-fi, etc.).</span>
+                <span>{t('commissionTips_3')}</span>
               </li>
             </ul>
           ) : (
             <ul className="space-y-2 text-sm text-gray-600">
               <li className="flex items-start gap-2">
                 <span className="text-gray-400 mt-1">•</span>
-                <span>Meet in a public place.</span>
+                <span>{t('safetyTips_1')}</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-gray-400 mt-1">•</span>
-                <span>Check the item before paying.</span>
+                <span>{t('safetyTips_2')}</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-gray-400 mt-1">•</span>
-                <span>Payment happens outside this app (Cash/Zelle).</span>
+                <span>{t('safetyTips_3')}</span>
               </li>
             </ul>
           )}
@@ -775,7 +783,7 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                 <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
                 <line x1="4" y1="22" x2="4" y2="15"></line>
               </svg>
-              Report this listing
+              {t('reportListing')}
             </button>
           </div>
 
@@ -816,7 +824,7 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                 ) : (
                   <ShieldCheck size={14} />
                 )}
-                {isModFlagged ? 'Remove NSFW Flag' : 'Flag as NSFW (Admin)'}
+                {isModFlagged ? t('removeNsfwFlag') : t('flagNsfwAdmin')}
               </button>
             </div>
           )}
@@ -827,28 +835,28 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
       {isReportModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Report Listing</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">{t('reportModalTitle')}</h3>
             <form onSubmit={handleReportSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('reason')}</label>
                 <select
                   value={reportReason}
                   onChange={(e) => setReportReason(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 >
-                  <option value="Spam">Spam</option>
-                  <option value="Scam">Scam / Fraud</option>
-                  <option value="Illegal">Illegal Goods</option>
-                  <option value="Offensive">Offensive Content</option>
-                  <option value="Other">Other</option>
+                  <option value="Spam">{t('reasons.spam')}</option>
+                  <option value="Scam">{t('reasons.scam')}</option>
+                  <option value="Illegal">{t('reasons.illegal')}</option>
+                  <option value="Offensive">{t('reasons.offensive')}</option>
+                  <option value="Other">{t('reasons.other')}</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('descriptionOptional')}</label>
                 <textarea
                   value={reportDescription}
                   onChange={(e) => setReportDescription(e.target.value)}
-                  placeholder="Please provide more details..."
+                  placeholder={t('placeholderDetails')}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
                 />

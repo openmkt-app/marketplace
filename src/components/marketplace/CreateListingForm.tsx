@@ -1,5 +1,6 @@
 // src/components/marketplace/CreateListingForm.tsx
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import MarketplaceClient, { ListingImage, MarketplaceListing } from '@/lib/marketplace-client';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { LocationFilterValue } from './filters/LocationFilter';
@@ -33,6 +34,10 @@ interface CreateListingFormProps {
 }
 
 export default function CreateListingForm({ client, onSuccess, initialData, mode = 'create' }: CreateListingFormProps) {
+  const tCreate = useTranslations('createListing');
+  const tCats = useTranslations('categories');
+  const tSubs = useTranslations('subcategories');
+  const tConds = useTranslations('conditions');
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -207,7 +212,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         // Clear error if related to bot
         if (error && error.includes('Marketplace Bot')) setError(null);
       } else {
-        setError('Failed to follow the bot. Please try again.');
+        setError(tCreate('errors.followBot'));
       }
     } catch (e) {
       console.error('Follow bot error:', e);
@@ -311,7 +316,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
     // Check if adding these images would exceed the 10 image limit
     if (images.length + newImages.length > 10) {
-      setError("You can only upload a maximum of 10 images. Please remove some images first.");
+      setError(tCreate('errors.maxImages'));
       return;
     }
 
@@ -423,7 +428,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   // Get user's current location using browser geolocation API
   const getCurrentLocation = async () => {
     if (!navigator.geolocation) {
-      setError("Geolocation is not supported by your browser");
+      setError(tCreate('errors.geoNotSupported'));
       return;
     }
 
@@ -433,7 +438,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         // Cast to any to avoid TypeScript issues if PermissionName doesn't include 'geolocation' in some envs
         const result = await navigator.permissions.query({ name: 'geolocation' as any });
         if (result.state === 'denied') {
-          setError("Location access is blocked. Please check your browser settings (usually the lock icon in the address bar) to allow location access for this site.");
+          setError(tCreate('errors.geoBlocked'));
           return;
         }
       }
@@ -513,7 +518,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
         } catch (err) {
           console.error("Error getting location details:", err);
-          setError("Could not determine your location details. Please enter them manually.");
+          setError(tCreate('errors.geoDetails'));
           setGeoSuccess(false);
         } finally {
           setIsGeolocating(false);
@@ -527,16 +532,16 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         // Provide user-friendly error messages
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            setError("Location access was denied. Please check your browser settings (lock icon in address bar) to allow location access.");
+            setError(tCreate('errors.geoDenied'));
             break;
           case error.POSITION_UNAVAILABLE:
-            setError("Location information is unavailable. Please try again or enter your location manually.");
+            setError(tCreate('errors.geoUnavailable'));
             break;
           case error.TIMEOUT:
-            setError("Location request timed out. Please try again or enter your location manually.");
+            setError(tCreate('errors.geoTimeout'));
             break;
           default:
-            setError("An unknown error occurred while getting your location. Please enter it manually.");
+            setError(tCreate('errors.geoUnknown'));
         }
       },
       { timeout: 10000, enableHighAccuracy: false }
@@ -922,7 +927,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
     try {
       // 0. Check if following bot
       if (!isFollowingBotState) {
-        setError("You must follow the Marketplace Bot to create listings. This ensures buyers can contact you.");
+        setError(tCreate('errors.followRequired'));
         setIsSubmitting(false);
         window.scrollTo(0, 0);
         return;
@@ -983,14 +988,14 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
       // Validate location data (skip for online store mode which has preset values)
       if (!isOnlineStore && (!locationData.state || !locationData.county || !locationData.locality)) {
-        setError("Please provide complete location information (state, county, and city/town).");
+        setError(tCreate('errors.locationRequired'));
         setIsSubmitting(false);
         return;
       }
 
       // Validate price input before formatting
       if (!priceInput.trim()) {
-        setError("Please enter a price for your listing.");
+        setError(tCreate('errors.priceRequired'));
         setIsSubmitting(false);
         return;
       }
@@ -1003,14 +1008,14 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       if (priceValue === 0) {
         // If price is zero, category must be "Free Stuff"
         if (categoryId !== 'free') {
-          setError("Items with price $0.00 must be listed in the 'Free Stuff' category. Please change either the price or the category.");
+          setError(tCreate('errors.freeCategoryPrice'));
           setIsSubmitting(false);
           return;
         }
       } else {
         // If price is not zero, category cannot be "Free Stuff"
         if (categoryId === 'free') {
-          setError("Items in the 'Free Stuff' category must have a price of $0.00.");
+          setError(tCreate('errors.freePriceCategory'));
           setIsSubmitting(false);
           return;
         }
@@ -1124,7 +1129,10 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         price: listingDataRaw.price
       });
     } catch (err) {
-      setError(`Failed to ${mode === 'edit' ? 'update' : 'create'} listing: ${err instanceof Error ? err.message : String(err)}`);
+      setError(tCreate('errors.submitFailed', { 
+        action: mode === 'edit' ? tCreate('errors.actionUpdate') : tCreate('errors.actionCreate'),
+        message: err instanceof Error ? err.message : String(err)
+      }));
     } finally {
       setIsSubmitting(false);
     }
@@ -1156,9 +1164,9 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
             {showFreeConfirmation && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                 <div className="bg-white rounded-lg p-6 max-w-md mx-4">
-                  <h3 className="text-lg font-bold mb-2">Change to Free Stuff category?</h3>
+                  <h3 className="text-lg font-bold mb-2">{tCreate('freeConfirmTitle')}</h3>
                   <p className="mb-4 text-text-secondary">
-                    Changing to the &ldquo;Free Stuff&rdquo; category will set your item&apos;s price to $0.00. Do you want to continue?
+                    {tCreate('freeConfirmBody')}
                   </p>
                   <div className="flex space-x-3 justify-end">
                     <button
@@ -1166,14 +1174,14 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                       onClick={() => handleFreeConfirmation(false)}
                       className="px-4 py-2 border border-neutral-light rounded-md hover:bg-neutral-light/50"
                     >
-                      Cancel
+                      {tCreate('cancel')}
                     </button>
                     <button
                       type="button"
                       onClick={() => handleFreeConfirmation(true)}
                       className="px-4 py-2 bg-primary-color hover:bg-primary-light text-white rounded-md"
                     >
-                      Confirm
+                      {tCreate('confirm')}
                     </button>
                   </div>
                 </div>
@@ -1190,11 +1198,10 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                     </svg>
                   </div>
                   <div className="ml-3 flex-1">
-                    <h3 className="text-sm font-medium text-blue-800">Enable Buyer Notifications</h3>
+                    <h3 className="text-sm font-medium text-blue-800">{tCreate('botFollowTitle')}</h3>
                     <div className="mt-2 text-sm text-blue-700">
                       <p>
-                        To receive inquiries from interested buyers, you need to follow our Introduction Bot.
-                        Listing creation is disabled until you follow.
+                        {tCreate('botFollowBody')}
                       </p>
                     </div>
                     <div className="mt-4">
@@ -1203,7 +1210,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                         onClick={handleFollowBot}
                         className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                       >
-                        Follow Marketplace Bot
+                        {tCreate('botFollowButton')}
                       </button>
                     </div>
                   </div>
@@ -1214,7 +1221,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
             <form id="listing-form" onSubmit={handleSubmit} className="space-y-8">
               {/* Listing Type Selector */}
               <div className="bg-white p-6 rounded-lg shadow-sm border border-neutral-light">
-                <h2 className="text-xl font-semibold mb-4 text-text-primary">I&apos;m selling</h2>
+                <h2 className="text-xl font-semibold mb-4 text-text-primary">{tCreate('sellingHeader')}</h2>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
@@ -1232,9 +1239,9 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                     }`}
                   >
                     <Package size={24} />
-                    <span className="font-semibold text-sm">Physical Product</span>
+                    <span className="font-semibold text-sm">{tCreate('physicalProduct')}</span>
                     <span className={`text-xs text-center leading-tight ${!isCommissionCategory ? 'text-slate-300' : 'text-text-secondary'}`}>
-                      Goods, handmade items, vintage finds
+                      {tCreate('physicalProductDesc')}
                     </span>
                   </button>
                   <button
@@ -1254,9 +1261,9 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                     }`}
                   >
                     <Palette size={24} />
-                    <span className="font-semibold text-sm">Digital Arts</span>
+                    <span className="font-semibold text-sm">{tCreate('digitalArts')}</span>
                     <span className={`text-xs text-center leading-tight ${isCommissionCategory ? 'text-rose-200' : 'text-text-secondary'}`}>
-                      Commissions, illustrations, design
+                      {tCreate('digitalArtsDesc')}
                     </span>
                   </button>
                 </div>
@@ -1268,17 +1275,17 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                   <div className="p-1.5 bg-amber-200 rounded-lg text-amber-700">
                     <Wand2 size={18} />
                   </div>
-                  <h3 className="font-bold text-gray-900">Magic Import</h3>
-                  <span className="bg-amber-600 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-full tracking-wide">Beta</span>
+                  <h3 className="font-bold text-gray-900">{tCreate('magicImport')}</h3>
+                  <span className="bg-amber-600 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-full tracking-wide">{tCreate('magicImportBeta')}</span>
                 </div>
                 <p className="text-sm text-gray-600 mb-4">
-                  Paste a link from Amazon, Shopify, Etsy, or other stores to auto-fill details.
+                  {tCreate('magicImportDesc')}
                 </p>
 
                 <div className="flex gap-2">
                   <input
                     type="url"
-                    placeholder="https://amazon.com/dp/..."
+                    placeholder={tCreate('magicImportPlaceholder')}
                     value={magicLinkUrl}
                     onChange={(e) => setMagicLinkUrl(e.target.value)}
                     className="flex-1 rounded-xl border-amber-300 focus:border-amber-500 focus:ring-amber-500 bg-white text-gray-900 placeholder-gray-400"
@@ -1292,12 +1299,12 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                     {isMagicLoading ? (
                       <>
                         <Loader2 size={16} className="animate-spin" />
-                        Fetching...
+                        {tCreate('magicImportLoading')}
                       </>
                     ) : (
                       <>
                         <Sparkles size={16} />
-                        Auto-Fill
+                        {tCreate('magicImportButton')}
                       </>
                     )}
                   </button>
@@ -1363,7 +1370,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
               {/* Error Message */}
               <div className="bg-white p-6 rounded-lg shadow-sm border border-neutral-light">
-                <h2 className="text-xl font-semibold mb-4 text-text-primary">Images</h2>
+                <h2 className="text-xl font-semibold mb-4 text-text-primary">{tCreate('imagesHeader')}</h2>
 
                 <div className="flex flex-wrap gap-2 mb-3">
                   {previewUrls.map((url, index) => (
@@ -1409,20 +1416,20 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                   className="hidden"
                 />
                 <p className="text-xs text-text-secondary">
-                  Upload up to 10 crystal-clear photos so buyers can see what they&apos;re getting. The first image will be used as the cover photo.
+                  {tCreate('imagesDesc')}
                 </p>
               </div>
 
               {/* Item Details */}
               <div className="bg-white p-6 rounded-lg shadow-sm border border-neutral-light">
                 <h2 className="text-xl font-semibold mb-4 text-text-primary">
-                  {isCommissionCategory ? 'Commission Details' : 'Item Details'}
+                  {isCommissionCategory ? tCreate('detailsHeaderCommission') : tCreate('detailsHeader')}
                 </h2>
 
                 <div className="space-y-4">
                   <div>
                     <label htmlFor="title" className="block text-sm font-medium text-text-secondary mb-1">
-                      {isCommissionCategory ? 'Commission Type' : 'Title'} <span className="text-red-500">*</span>
+                      {isCommissionCategory ? tCreate('labelTitleCommission') : tCreate('labelTitle')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -1431,14 +1438,14 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                       required
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      placeholder={isCommissionCategory ? 'e.g. Full Body Character Illustration' : 'What are you selling?'}
+                      placeholder={isCommissionCategory ? tCreate('placeholderTitleCommission') : tCreate('placeholderTitle')}
                       className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
                     />
                   </div>
 
                   <div>
                     <label htmlFor="price" className="block text-sm font-medium text-text-secondary mb-1">
-                      {isCommissionCategory ? 'Starting At' : 'Price'} <span className="text-red-500">*</span>
+                      {isCommissionCategory ? tCreate('labelPriceCommission') : tCreate('labelPrice')} <span className="text-red-500">*</span>
                     </label>
                     <div className="flex rounded-md shadow-sm">
                       <select
@@ -1465,10 +1472,10 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
                   <div>
                     <label htmlFor="category" className="block text-sm font-medium text-text-secondary mb-1">
-                      Category <span className="text-red-500">*</span>
+                      {tCreate('labelCategory')} <span className="text-red-500">*</span>
                       {isPriceZero && priceInput !== '' && (
                         <span className="ml-2 text-xs text-primary-color">
-                          ($0.00 = Free Stuff category only - Change price to unlock)
+                          {tCreate('labelCategoryFreeInfo')}
                         </span>
                       )}
                     </label>
@@ -1481,13 +1488,13 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                       onChange={handleCategoryChange}
                       disabled={isPriceZero && priceInput !== ''}
                     >
-                      <option value="">Select a category</option>
+                      <option value="">{tCreate('selectCategory')}</option>
                       {CATEGORIES.map(category => (
                         <option
                           key={category.id}
                           value={category.id}
                         >
-                          {category.name}
+                          {tCats(category.id)}
                         </option>
                       ))}
                     </select>
@@ -1495,7 +1502,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
                   <div>
                     <label htmlFor="subcategory" className="block text-sm font-medium text-text-secondary mb-1">
-                      Subcategory
+                      {tCreate('labelSubcategory')}
                     </label>
                     <select
                       id="subcategory"
@@ -1504,10 +1511,10 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                       onChange={(e) => setSelectedSubcategory(e.target.value)}
                       className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
                     >
-                      <option value="">Select subcategory (optional)</option>
+                      <option value="">{tCreate('selectSubcategory')}</option>
                       {subcategories.map(subcategory => (
                         <option key={subcategory.id} value={subcategory.id}>
-                          {subcategory.name}
+                          {tSubs(`${selectedCategory}.${subcategory.id}`)}
                         </option>
                       ))}
                     </select>
@@ -1515,11 +1522,11 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
                   {isCommissionCategory && (
                     <div className="space-y-4 p-4 bg-rose-50 border border-rose-100 rounded-lg">
-                      <p className="text-sm font-semibold text-rose-800">Commission Settings</p>
+                      <p className="text-sm font-semibold text-rose-800">{tCreate('commissionSettings')}</p>
                       <div>
                         <label className="block text-sm font-medium text-text-secondary mb-1">
-                          Open Slots{' '}
-                          <span className="text-xs font-normal text-text-secondary">(optional — leave blank for unlimited)</span>
+                          {tCreate('openSlots')}{' '}
+                          <span className="text-xs font-normal text-text-secondary">{tCreate('openSlotsDesc')}</span>
                         </label>
                         <input
                           type="number"
@@ -1530,19 +1537,19 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                           className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
                         />
                         {slotsAvailable !== '' && parseInt(slotsAvailable, 10) === 0 && (
-                          <p className="text-xs text-amber-600 mt-1">Slots set to 0 — listing will display as &quot;Waitlist&quot;.</p>
+                          <p className="text-xs text-amber-600 mt-1">{tCreate('waitlistNote')}</p>
                         )}
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-text-secondary mb-1">
-                          Turnaround Time{' '}
-                          <span className="text-xs font-normal text-text-secondary">(optional)</span>
+                          {tCreate('turnaroundTime')}{' '}
+                          <span className="text-xs font-normal text-text-secondary">{tCreate('openSlotsDesc')}</span>
                         </label>
                         <input
                           type="text"
                           value={turnaroundTime}
                           onChange={(e) => setTurnaroundTime(e.target.value)}
-                          placeholder="e.g. 2 weeks, 3–5 business days"
+                          placeholder={tCreate('turnaroundTimePlaceholder')}
                           className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
                         />
                       </div>
@@ -1552,7 +1559,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                   {!isCommissionCategory && (
                   <div>
                     <label htmlFor="condition" className="block text-sm font-medium text-text-secondary mb-1">
-                      Condition <span className="text-red-500">*</span>
+                      {tCreate('labelCondition')} <span className="text-red-500">*</span>
                     </label>
                     <select
                       id="condition"
@@ -1562,10 +1569,10 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                       required
                       className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
                     >
-                      <option value="">Select condition</option>
+                      <option value="">{tCreate('selectCondition')}</option>
                       {CONDITIONS.map(condition => (
                         <option key={condition.id} value={condition.id}>
-                          {condition.name}
+                          {tConds(condition.id)}
                         </option>
                       ))}
                     </select>
@@ -1574,7 +1581,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
                   <div>
                     <label htmlFor="description" className="block text-sm font-medium text-text-secondary mb-1">
-                      {isCommissionCategory ? 'Guidelines & TOS' : 'Description'} <span className="text-red-500">*</span>
+                      {isCommissionCategory ? tCreate('labelDescriptionCommission') : tCreate('labelDescription')} <span className="text-red-500">*</span>
                     </label>
                     <textarea
                       id="description"
@@ -1584,15 +1591,15 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                       required
                       rows={4}
                       placeholder={isCommissionCategory
-                        ? "Describe your commission process, what you will/won't draw, payment terms, and any other important guidelines."
-                        : "Describe your item in detail. Include features, specifications, and why you're selling. The more details you provide, the more likely buyers will be interested."}
+                        ? tCreate('placeholderDescriptionCommission')
+                        : tCreate('placeholderDescription')}
                       className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
                     />
                   </div>
 
                   <div>
                     <label htmlFor="externalUrl" className="block text-sm font-medium text-text-secondary mb-1">
-                      External Buy Link (optional)
+                      {tCreate('externalLink')}
                     </label>
                     <input
                       type="url"
@@ -1612,11 +1619,11 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
-                        Detected: {detectedPlatform}
+                        {tCreate('detectedPlatform', { platform: detectedPlatform })}
                       </p>
                     )}
                     <p className="text-xs text-text-secondary mt-1">
-                      Link to where buyers can purchase this item (Amazon, eBay, Etsy, etc.). A &quot;Buy on Website&quot; button will appear on your listing.
+                      {tCreate('externalLinkDesc')}
                     </p>
                   </div>
                 </div>
@@ -1631,25 +1638,25 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                   <div className="flex-1">
                     <div className="flex items-center">
                       <h2 className="text-xl font-semibold text-text-primary">
-                        {isCommissionCategory ? 'Timezone / Region' : 'Location'}
+                        {isCommissionCategory ? tCreate('locationHeaderCommission') : tCreate('locationHeader')}
                       </h2>
                       {locationSaved && (
                         <span className="ml-3 animate-pulse text-sm text-green-600 bg-green-50 rounded-full px-3 py-0.5">
-                          Location saved!
+                          {tCreate('locationSaved')}
                         </span>
                       )}
                     </div>
                     {isOnlineStore ? (
                       <p className="text-sm text-text-secondary mt-1">
                         <span className="font-medium text-blue-600">
-                          {isCommissionCategory ? 'Global / Remote Work' : 'Online Store'}
+                          {isCommissionCategory ? 'Global / Remote Work' : tCreate('onlineStoreToggle')}
                         </span>
                       </p>
                     ) : selectedLocation && (
                       <p className="text-sm text-text-secondary mt-1">
                         <span className="font-medium">{selectedLocation.name}</span>
                         {selectedLocation.zipPrefix && (
-                          <span> ({formatZipPrefix(selectedLocation.zipPrefix)})</span>
+                          <span> ({tCreate('zipAreaInfo', { area: formatZipPrefix(selectedLocation.zipPrefix) })})</span>
                         )}
                       </p>
                     )}
@@ -1681,10 +1688,10 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                         />
                         <div className="flex-1">
                           <label htmlFor="onlineStore" className="font-medium text-blue-900 cursor-pointer">
-                            Online / Store Listing
+                            {tCreate('onlineStoreToggle')}
                           </label>
                           <p className="text-sm text-blue-700 mt-1">
-                            Check this if you are linking to an external store (Etsy, Shopify, etc.). We will hide your specific location and mark the item as &quot;Online Store&quot;.
+                            {tCreate('onlineStoreDesc')}
                           </p>
                         </div>
                       </div>
@@ -1695,46 +1702,46 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                       <>
                         {/* Geolocation Button - add more padding at the top */}
                         <div className="mb-4 mt-3">
-                          <button
-                            type="button"
-                            onClick={getCurrentLocation}
-                            disabled={isGeolocating}
-                            className="flex items-center px-4 py-2 bg-primary-color hover:bg-primary-light text-white rounded-md transition-colors"
-                          >
-                            {isGeolocating ? (
-                              <>
-                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Detecting your location...
-                              </>
-                            ) : (
-                              <>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                Use my current location
-                              </>
-                            )}
-                          </button>
+                            <button
+                              type="button"
+                              onClick={getCurrentLocation}
+                              disabled={isGeolocating}
+                              className="flex items-center px-4 py-2 bg-primary-color hover:bg-primary-light text-white rounded-md transition-colors"
+                            >
+                              {isGeolocating ? (
+                                <>
+                                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                  {tCreate('detectingLocation')}
+                                </>
+                              ) : (
+                                <>
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  </svg>
+                                  {tCreate('detectLocation')}
+                                </>
+                              )}
+                            </button>
 
-                          {geoSuccess === true && (
-                            <p className="text-sm text-green-600 mt-2">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                              Location detected successfully!
-                            </p>
-                          )}
-                        </div>
+                            {geoSuccess === true && (
+                              <p className="text-sm text-green-600 mt-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                {tCreate('locationDetected')}
+                              </p>
+                            )}
+                          </div>
 
                         {/* Saved Locations */}
                         {savedLocations.length > 0 && (
                           <div className="mb-4">
                             <label className="block text-sm font-medium text-text-secondary mb-2">
-                              Your Saved Locations
+                              {tCreate('savedLocationsHeader')}
                             </label>
                             <div className="flex flex-wrap gap-2">
                               {savedLocations.map((location, index) => (
@@ -1757,7 +1764,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label htmlFor="state" className="block text-sm font-medium text-text-secondary mb-1">
-                              State
+                              {tCreate('labelState')}
                             </label>
                             <input
                               type="text"
@@ -1773,7 +1780,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
                           <div>
                             <label htmlFor="county" className="block text-sm font-medium text-text-secondary mb-1">
-                              County
+                              {tCreate('labelCounty')}
                             </label>
                             <input
                               type="text"
@@ -1789,7 +1796,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
                           <div>
                             <label htmlFor="locality" className="block text-sm font-medium text-text-secondary mb-1">
-                              City/Town/Village
+                              {tCreate('labelLocality')}
                             </label>
                             <input
                               type="text"
@@ -1805,7 +1812,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
                           <div>
                             <label htmlFor="zipPrefix" className="block text-sm font-medium text-text-secondary mb-1">
-                              ZIP Code (first 3 digits, optional)
+                              {tCreate('labelZip')}
                             </label>
                             <input
                               type="text"
@@ -1820,15 +1827,14 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                             />
                             {selectedLocation?.zipPrefix && (
                               <p className="text-xs text-text-secondary mt-1">
-                                Full ZIP code area: {formatZipPrefix(selectedLocation.zipPrefix)}
+                              {tCreate('zipAreaInfo', { area: formatZipPrefix(selectedLocation.zipPrefix) })}
                               </p>
                             )}
                           </div>
                         </div>
 
                         <p className="text-xs text-text-secondary mt-3">
-                          Location information helps buyers find items near them. More specific location details
-                          will make your listing appear in more relevant searches.
+                          {tCreate('locationHelp')}
                         </p>
                       </>
                     )}
@@ -1838,12 +1844,12 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
               {/* Privacy Options */}
               <div className="bg-white p-6 rounded-lg shadow-sm border border-neutral-light">
-                <h2 className="text-xl font-semibold mb-4 text-text-primary">Visibility Options</h2>
+                <h2 className="text-xl font-semibold mb-4 text-text-primary">{tCreate('visibilityHeader')}</h2>
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="font-medium text-text-secondary">Hide from friends</span>
-                    <p className="text-sm text-text-secondary">When enabled, this listing won&apos;t appear in feeds of people who follow you on the AT Protocol network (Bluesky, this marketplace, etc.). This helps keep certain listings private from people you know.</p>
+                    <span className="font-medium text-text-secondary">{tCreate('hideFromFriends')}</span>
+                    <p className="text-sm text-text-secondary">{tCreate('hideFromFriendsDesc')}</p>
                   </div>
                   <label className="inline-flex items-center cursor-pointer">
                     <input
@@ -1859,10 +1865,10 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                 <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-100">
                   <div>
                     <span className="font-medium text-text-secondary items-center flex gap-2">
-                      Mark as NSFW
+                      {tCreate('markNsfw')}
                     </span>
                     <p className="text-sm text-text-secondary max-w-[85%]">
-                      Label this listing as containing graphic, sexual, or mature content. The images will be explicitly blurred for viewers until clicked.
+                      {tCreate('markNsfwDesc')}
                     </p>
                   </div>
                   <label className="inline-flex items-center cursor-pointer">
@@ -1892,10 +1898,10 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                   </div>
                   <div className="ml-3 text-sm">
                     <label htmlFor="postToBluesky" className="font-medium text-blue-900">
-                      Share to your feed
+                      {tCreate('shareToFeed')}
                     </label>
                     <p className="text-blue-700">
-                      Automatically create a post on your Atmosphere feed to let your followers know about this listing.
+                      {tCreate('shareToFeedDesc')}
                     </p>
                   </div>
                 </div>
@@ -1903,7 +1909,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
               <div className="bg-gray-50 p-4 rounded-md">
                 <p className="text-sm text-text-secondary mb-4">
-                  Your listing will be visible to the entire AT Protocol community. Please note that we don&apos;t allow listings for live animals, controlled substances, weapons, counterfeit items, or anything that violates intellectual property rights. Keep it legal and community-friendly!
+                  {tCreate('legalWarning')}
                 </p>
 
                 <button
@@ -1912,8 +1918,8 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                   className="w-full py-3 px-4 bg-primary-color hover:bg-primary-light text-white font-medium rounded-md focus:outline-none focus:ring-4 focus:ring-primary-light disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {isSubmitting
-                    ? (mode === 'edit' ? 'Updating listing...' : 'Creating listing...')
-                    : (mode === 'edit' ? 'Update Listing' : 'Create Listing')}
+                    ? (mode === 'edit' ? tCreate('submitLoading') : tCreate('submitLoading'))
+                    : (mode === 'edit' ? tCreate('submitEdit') : tCreate('submitCreate'))}
                 </button>
               </div>
             </form>

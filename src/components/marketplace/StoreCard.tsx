@@ -1,4 +1,5 @@
 import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { ShoppingBag, Globe, MapPin } from 'lucide-react';
 import { MarketplaceListing } from '@/lib/marketplace-client';
@@ -77,6 +78,7 @@ function detectSellerPlatforms(seller: SellerWithListings): string[] {
 }
 
 export default function StoreCard({ seller, flaggedUris }: StoreCardProps) {
+    const t = useTranslations('mallGrid');
     const displayName = seller.displayName || seller.handle;
     const shortHandle = seller.handle.replace('.bsky.social', '');
 
@@ -85,8 +87,10 @@ export default function StoreCard({ seller, flaggedUris }: StoreCardProps) {
 
     // Get location from first listing if available
     const firstListingLocation = seller.listings?.[0]?.location;
-    const location = firstListingLocation ? formatLocationShort(firstListingLocation) : null;
     const isOnline = firstListingLocation ? isOnlineStore(firstListingLocation) : false;
+    const location = firstListingLocation 
+        ? (isOnline ? t('onlineStore') : formatLocationShort(firstListingLocation)) 
+        : null;
 
     // Bluesky follow intent URL - opens Bluesky app/web to follow the user
     const followUrl = `https://bsky.app/intent/follow?uri=at://${seller.did}`;
@@ -195,7 +199,7 @@ export default function StoreCard({ seller, flaggedUris }: StoreCardProps) {
                     {/* Latest Arrivals Section */}
                     <div className="border-t border-gray-50 pt-3 pb-4">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                            Latest Arrivals
+                            {t('latestArrivals')}
                         </p>
 
                         {seller.listings && seller.listings.length > 0 ? (
@@ -234,7 +238,7 @@ export default function StoreCard({ seller, flaggedUris }: StoreCardProps) {
                             </div>
                         ) : (
                             <div className="h-16 flex items-center justify-center bg-gray-50 rounded-lg border border-dashed border-slate-200 text-xs text-slate-400">
-                                No active listings
+                                {t('noActiveListings')}
                             </div>
                         )}
                     </div>
@@ -243,7 +247,7 @@ export default function StoreCard({ seller, flaggedUris }: StoreCardProps) {
                 {/* Visit Store Button */}
                 <div className="bg-gray-50 p-3 border-t border-gray-100 group-hover:bg-blue-50/50 transition-colors mt-auto">
                     <span className="w-full flex items-center justify-center gap-2 text-xs font-bold text-slate-700 group-hover:text-blue-700 transition-colors">
-                        Visit Store
+                        {t('visitStore')}
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-right" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
                     </span>
                 </div>

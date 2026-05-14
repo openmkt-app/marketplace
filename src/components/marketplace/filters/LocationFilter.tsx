@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 
 export interface LocationFilterValue {
   latitude?: number;
@@ -18,6 +19,7 @@ export default function LocationFilter({
   initialValue,
   onFilterChange
 }: LocationFilterProps) {
+  const t = useTranslations('filters.locationFilter');
   const [filter, setFilter] = useState<LocationFilterValue>(initialValue || { radius: undefined });
   const [isGeolocating, setIsGeolocating] = useState(false);
   const [geoSuccess, setGeoSuccess] = useState<boolean | null>(null);
@@ -103,7 +105,7 @@ export default function LocationFilter({
   // Get user's current location using browser geolocation API
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
-      setGeoError("Geolocation is not supported by your browser");
+      setGeoError(t('errors.notSupported'));
       return;
     }
 
@@ -131,7 +133,7 @@ export default function LocationFilter({
           // Extract location name from OpenStreetMap response
           const city = data.address.city || data.address.town || data.address.village || '';
           const state = data.address.state || data.address.region || '';
-          const locationName = city && state ? `${city}, ${state}` : 'Current Location';
+          const locationName = city && state ? `${city}, ${state}` : t('currentLocation');
 
           // Update filter with detected location
           const newFilter = {
@@ -149,7 +151,7 @@ export default function LocationFilter({
 
         } catch (err) {
           console.error("Error getting location details:", err);
-          setGeoError("Could not determine your location. Please try again.");
+          setGeoError(t('errors.couldNotDetermine'));
           setGeoSuccess(false);
         } finally {
           setIsGeolocating(false);
@@ -163,16 +165,16 @@ export default function LocationFilter({
         // Provide user-friendly error messages
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            setGeoError("Location access was denied. Please allow location access in your browser settings.");
+            setGeoError(t('errors.denied'));
             break;
           case error.POSITION_UNAVAILABLE:
-            setGeoError("Location information is unavailable. Please try again.");
+            setGeoError(t('errors.unavailable'));
             break;
           case error.TIMEOUT:
-            setGeoError("Location request timed out. Please try again.");
+            setGeoError(t('errors.timeout'));
             break;
           default:
-            setGeoError("An unknown error occurred while getting your location.");
+            setGeoError(t('errors.unknown'));
         }
       },
       { timeout: 10000, enableHighAccuracy: true }
@@ -219,15 +221,15 @@ export default function LocationFilter({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               <div>
-                <span className="text-xs font-semibold uppercase tracking-wider text-green-600 block">Current Location</span>
-                <span className="font-medium block">{filter.locationName || 'Detected Location'}</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-green-600 block">{t('currentLocation')}</span>
+                <span className="font-medium block">{filter.locationName || t('detectedLocation')}</span>
               </div>
             </div>
             <button
               onClick={getCurrentLocation}
               className="text-xs font-medium text-green-600 hover:text-green-800 underline px-2 py-1"
             >
-              Update
+              {t('update')}
             </button>
           </div>
         ) : (
@@ -240,7 +242,7 @@ export default function LocationFilter({
             {isGeolocating ? (
               <>
                 <div className="animate-spin h-5 w-5 mr-2 border-2 border-white border-t-transparent rounded-full"></div>
-                Detecting location...
+                {t('detecting')}
               </>
             ) : (
               <>
@@ -248,7 +250,7 @@ export default function LocationFilter({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                Use my current location
+                {t('useCurrent')}
               </>
             )}
           </button>
@@ -268,7 +270,7 @@ export default function LocationFilter({
       {filter.latitude && filter.longitude && (
         <div>
           <label className="block text-sm font-medium text-text-primary mb-2">
-            Search Radius
+            {t('searchRadius')}
           </label>
           <div className="grid grid-cols-3 gap-2">
             {radiusOptions.map((radius) => (
@@ -281,7 +283,7 @@ export default function LocationFilter({
                   : 'bg-neutral-light text-text-secondary hover:bg-neutral-medium'
                   }`}
               >
-                {radius} mi
+                {t('miles', { radius })}
               </button>
             ))}
           </div>

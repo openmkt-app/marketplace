@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useTranslations, useLocale } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { AtpAgent } from '@atproto/api';
 import MarketplaceClient, { MarketplaceListing, ListingLocation, fetchPublicListings } from '@/lib/marketplace-client';
@@ -67,6 +68,7 @@ async function filterListingsByDistance(
  * Toast component for new listings notification
  */
 const NewListingsToast = ({ count, onClick }: { count: number, onClick: () => void }) => {
+  const t = useTranslations('browse');
   if (count === 0) return null;
 
   return (
@@ -77,8 +79,8 @@ const NewListingsToast = ({ count, onClick }: { count: number, onClick: () => vo
       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
       </svg>
-      <span className="font-semibold">{count} new listing{count > 1 ? 's' : ''} found!</span>
-      <span className="ml-2 text-xs bg-white text-primary-color px-2 py-0.5 rounded-full">Click to show</span>
+      <span className="font-semibold">{t('newListings', { count })}</span>
+      <span className="ml-2 text-xs bg-white text-primary-color px-2 py-0.5 rounded-full">{t('clickToShow')}</span>
     </div>
   );
 };
@@ -327,6 +329,7 @@ function sortListings(
 
 // Hero section component for when we have few listings
 const HeroSection = ({ listingCount, locationName }: { listingCount: number; locationName?: string }) => {
+  const t = useTranslations('browse');
   return (
     <div className="relative z-10 px-8 py-16 sm:px-12 sm:py-20 flex flex-col lg:flex-row items-center justify-between gap-12 bg-slate-900 rounded-3xl overflow-hidden mb-12">
       {/* Background Glow */}
@@ -335,21 +338,21 @@ const HeroSection = ({ listingCount, locationName }: { listingCount: number; loc
       <div className="max-w-xl text-center lg:text-left space-y-6">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 backdrop-blur-md text-xs font-semibold tracking-wider uppercase text-sky-100 mx-auto lg:mx-0">
           <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
-          Live on AT Protocol
+          {t('liveOnAtp')}
         </div>
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight text-white">
-          The <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-200 to-yellow-200">Open Market</span> <br />
-          is Finally Here.
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-200 to-yellow-200">{t('heroTitleLine1')}</span> <br />
+          {t('heroTitleLine2')}
         </h1>
         <p className="text-lg text-slate-300 leading-relaxed font-light">
-          Buy, sell, and connect directly with your community. No middlemen, no hidden fees, just pure decentralized commerce.
+          {t('heroSubtitle')}
         </p>
         <div className="flex flex-col sm:flex-row items-center gap-4 pt-4 justify-center lg:justify-start">
           <Link
             href="/create-listing"
             className="w-full sm:w-auto px-8 py-4 bg-yellow-400 text-slate-900 rounded-full font-bold text-sm shadow-lg hover:shadow-yellow-400/20 hover:bg-yellow-300 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-2"
           >
-            Start Selling
+            {t('startSelling')}
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-right" aria-hidden="true">
               <path d="M5 12h14"></path>
               <path d="m12 5 7 7-7 7"></path>
@@ -359,7 +362,7 @@ const HeroSection = ({ listingCount, locationName }: { listingCount: number; loc
             href="/login"
             className="w-full sm:w-auto px-8 py-4 bg-transparent border border-white/20 text-white rounded-full font-bold text-sm hover:bg-white/10 transition-all backdrop-blur-sm flex items-center justify-center gap-2"
           >
-            Sign In
+            {t('signIn')}
           </Link>
         </div>
       </div>
@@ -383,7 +386,7 @@ const HeroSection = ({ listingCount, locationName }: { listingCount: number; loc
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-700"
-              alt="Product"
+              alt={t('productAlt')}
               src="/images/headphone-hero.jpg"
             />
             <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-3 flex justify-end">
@@ -395,7 +398,7 @@ const HeroSection = ({ listingCount, locationName }: { listingCount: number; loc
             <div className="h-4 bg-white/10 rounded w-1/2"></div>
           </div>
           <div className="w-full py-3 bg-sky-600 text-white rounded-lg font-semibold text-sm shadow-lg shadow-sky-900/20 text-center cursor-default">
-            Buy Now
+            {t('buyNow')}
           </div>
         </div>
 
@@ -406,8 +409,8 @@ const HeroSection = ({ listingCount, locationName }: { listingCount: number; loc
             </svg>
           </div>
           <div>
-            <div className="text-xs font-bold">New Offer!</div>
-            <div className="text-[10px] text-gray-500">Just now</div>
+            <div className="text-xs font-bold">{t('newOffer')}</div>
+            <div className="text-[10px] text-gray-500">{t('justNow')}</div>
           </div>
         </div>
       </div>
@@ -416,6 +419,12 @@ const HeroSection = ({ listingCount, locationName }: { listingCount: number; loc
 };
 
 const BrowsePageClient = () => {
+  const t = useTranslations('browse');
+  const tCommon = useTranslations('common');
+  const tCats = useTranslations('categories');
+  const tSubs = useTranslations('subcategories');
+  const tConds = useTranslations('conditions');
+  const locale = useLocale();
   // Get search params for debug mode and listing status
   const searchParams = useSearchParams();
   const debugMode = searchParams.get('debug') === 'true';
@@ -728,7 +737,7 @@ const BrowsePageClient = () => {
         }
       } catch (err) {
         console.error('Failed to fetch listings:', err);
-        setError('Failed to load listings. Please try again.');
+        setError(t('loadError'));
         setAllListings([]);
         setFilteredListings([]);
       } finally {
@@ -910,8 +919,8 @@ const BrowsePageClient = () => {
                   </svg>
                 </span>
                 <div>
-                  <p className="font-medium text-green-800">Your item has been listed in the marketplace!</p>
-                  <p className="text-sm text-green-700">Your listing is now visible to the community. Check it out below!</p>
+                  <p className="font-medium text-green-800">{t('listingSuccessTitle')}</p>
+                  <p className="text-sm text-green-700">{t('listingSuccessBody')}</p>
                 </div>
               </div>
               <button
@@ -939,8 +948,8 @@ const BrowsePageClient = () => {
 
         {/* Page Header */}
         <div className="mb-4">
-          <h1 className="text-2xl font-bold text-gray-900">Browse Listings</h1>
-          <p className="text-sm text-gray-500 mt-1">Discover what the community is selling.</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t('subtitle')}</p>
         </div>
 
         {/* Listing Type Tabs */}
@@ -952,7 +961,7 @@ const BrowsePageClient = () => {
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
           >
-            All
+            {t('filterAll')}
           </button>
           <button
             onClick={() => setListingTypeFilter('online')}
@@ -962,7 +971,7 @@ const BrowsePageClient = () => {
               }`}
           >
             <Globe size={14} />
-            Online Stores
+            {t('filterOnline')}
           </button>
           <button
             onClick={() => setListingTypeFilter('community')}
@@ -972,7 +981,7 @@ const BrowsePageClient = () => {
               }`}
           >
             <MapPin size={14} />
-            Local / Community
+            {t('filterLocal')}
           </button>
         </div>
 
@@ -1022,7 +1031,7 @@ const BrowsePageClient = () => {
         {!initialized || isLoading ? (
           <div className="text-center py-10">
             <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-color border-r-transparent"></div>
-            <p className="mt-2 text-text-primary">Loading listings...</p>
+            <p className="mt-2 text-text-primary">{t('loading')}</p>
           </div>
         ) : filteredListings.length > 0 ? (
           <div>
@@ -1033,9 +1042,9 @@ const BrowsePageClient = () => {
             {!auth.isLoggedIn && allListings.length < 10 && allListings.length > 0 && (
               <div className="mb-6">
                 <h2 className="text-xl font-bold text-gray-900">
-                  {locationDisplayName ? `Just Listed in ${locationDisplayName}` : 'Just Listed'}
+                  {locationDisplayName ? t('justListedIn', { location: locationDisplayName }) : t('justListed')}
                 </h2>
-                <p className="text-sm text-gray-500 mt-1">Check out these items from our community</p>
+                <p className="text-sm text-gray-500 mt-1">{t('justListedSubtitle')}</p>
               </div>
             )}
             {filters.viewMode === 'grid' && (
@@ -1072,17 +1081,27 @@ const BrowsePageClient = () => {
                   // Get tags - show category and subcategory
                   const tags: string[] = [];
                   if (listing.category) {
-                    tags.push(getCategoryName(listing.category));
+                    tags.push(tCats(listing.category));
                   }
-                  if (subcategory && !tags.includes(subcategory)) {
-                    tags.push(subcategory);
+                  if (subcategory) {
+                    // Try to translate subcategory if it's an ID, otherwise use as is
+                    const subId = subcategory.toLowerCase().replace(/\s+/g, '_');
+                    try {
+                      const translatedSub = tSubs(subId);
+                      tags.push(translatedSub);
+                    } catch (e) {
+                      tags.push(subcategory);
+                    }
                   }
 
                   // Format date
-                  const postedDate = formatDate(listing.createdAt);
+                  const postedDate = formatDate(listing.createdAt, locale);
 
                   // Format location - clean up prefixes and abbreviate state
-                  const locationString = formatLocation(listing.location.locality, listing.location.state);
+                  const isOnline = isOnlineStore(listing.location);
+                  const locationString = isOnline 
+                    ? `${tCommon('onlineStore')}, ${tCommon('online')}` 
+                    : formatLocation(listing.location.locality, listing.location.state);
 
                   const listingHref = `/listing/${encodeURIComponent(listing.uri || listing.title)}`;
 
@@ -1100,12 +1119,12 @@ const BrowsePageClient = () => {
                           size="thumbnail"
                           height="100%"
                           className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
-                          fallbackText="No image"
+                          fallbackText={t('noImage')}
                         />
                         {/* Condition Badge */}
                         <div className="absolute top-3 left-3">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-white/95 backdrop-blur-sm text-slate-800 shadow-sm">
-                            {formatConditionForDisplay(listing.condition)}
+                            {tConds(listing.condition)}
                           </span>
                         </div>
                       </div>
@@ -1117,14 +1136,14 @@ const BrowsePageClient = () => {
                           <div className="flex justify-between items-start mb-2">
                             <div>
                               <span className="text-xs font-bold text-sky-600 uppercase tracking-wide mb-1 block">
-                                {getCategoryName(listing.category)}
+                                {tCats(listing.category)}
                               </span>
                               <h2 className="text-xl font-bold text-slate-900 group-hover:text-sky-600 transition-colors line-clamp-1">
                                 {listing.title}
                               </h2>
                             </div>
                             <span className="text-2xl font-bold text-slate-900 flex-shrink-0 ml-4">
-                              {formatPrice(listing.price, listing.currency)}
+                              {formatPrice(listing.price, listing.currency, locale)}
                             </span>
                           </div>
 
@@ -1160,7 +1179,7 @@ const BrowsePageClient = () => {
                             <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
-                            <span>{(listing as any).authorDisplayName || (listing as any).authorHandle || 'Unknown'}</span>
+                            <span>{(listing as any).authorDisplayName || (listing as any).authorHandle || t('unknownAuthor')}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1174,7 +1193,7 @@ const BrowsePageClient = () => {
                       {/* Action Button - separate column, centered */}
                       <div className="hidden sm:flex flex-col justify-center items-center px-8 border-l border-gray-50 bg-gray-50/30 min-w-[160px]">
                         <span className="flex items-center gap-2 bg-sky-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md shadow-sky-200 group-hover:bg-sky-700 group-hover:shadow-sky-300 transition-all whitespace-nowrap">
-                          View Details
+                          {t('viewDetails')}
                         </span>
                       </div>
                     </Link>
@@ -1186,7 +1205,7 @@ const BrowsePageClient = () => {
             {filters.viewMode === 'map' && (
               <div className="bg-neutral-light rounded-lg p-4 min-h-[400px] flex items-center justify-center">
                 <p className="text-text-secondary">
-                  Map view is coming soon! Listings will be displayed on an interactive map.
+                  {t('mapViewComingSoon')}
                 </p>
               </div>
             )}
@@ -1198,9 +1217,9 @@ const BrowsePageClient = () => {
               <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-neutral-medium mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
               </svg>
-              <h2 className="text-xl font-semibold mb-2 text-text-primary">No Listings Yet</h2>
+              <h2 className="text-xl font-semibold mb-2 text-text-primary">{t('noListingsTitle')}</h2>
               <p className="text-text-secondary mb-6">
-                Be the first to list an item on the decentralized marketplace!
+                {t('noListingsBody')}
               </p>
               <Link
                 href="/create-listing"
@@ -1209,7 +1228,7 @@ const BrowsePageClient = () => {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                List Your First Item
+                {t('listFirstItem')}
               </Link>
             </div>
           </div>
@@ -1219,9 +1238,9 @@ const BrowsePageClient = () => {
             <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-neutral-medium mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <h2 className="text-xl font-semibold mb-2 text-text-primary">No Matching Listings</h2>
+            <h2 className="text-xl font-semibold mb-2 text-text-primary">{t('noResultsTitle')}</h2>
             <p className="text-text-secondary mb-6">
-              We couldn&apos;t find any listings matching your current filters. Try adjusting your search criteria.
+              {t('noResultsBody')}
             </p>
             <button
               onClick={() => setFilters({
@@ -1231,7 +1250,7 @@ const BrowsePageClient = () => {
               })}
               className="btn-primary"
             >
-              Reset Filters
+              {t('resetFilters')}
             </button>
           </div>
         )}

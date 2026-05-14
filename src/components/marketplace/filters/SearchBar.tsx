@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface SearchBarProps {
   initialValue?: string;
@@ -12,9 +13,10 @@ interface SearchBarProps {
 export default function SearchBar({
   initialValue,
   onSearchChange,
-  placeholder = "Search...",
+  placeholder,
   className = ""
 }: SearchBarProps) {
+  const t = useTranslations('search');
   const [query, setQuery] = useState(initialValue || '');
 
   const isFirstRender = useRef(true);
@@ -88,7 +90,7 @@ export default function SearchBar({
           type="text"
           value={query}
           onChange={handleInputChange}
-          placeholder="Search listings..."
+          placeholder={placeholder || t('placeholder')}
           className="block w-full pl-10 pr-24 py-2.5 border border-gray-200 rounded-full leading-5 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-primary-color/20 focus:border-primary-color transition-all duration-300 shadow-sm"
         />
         {query && (
@@ -115,7 +117,7 @@ export default function SearchBar({
           type="submit"
           className="absolute inset-y-1 right-1 bg-primary-color text-white px-5 rounded-full text-sm font-medium hover:bg-primary-light transition-colors shadow-sm"
         >
-          Search
+          {t('button')}
         </button>
       </div>
     </form>

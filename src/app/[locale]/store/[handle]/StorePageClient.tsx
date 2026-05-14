@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { BskyAgent } from '@atproto/api';
 import { MarketplaceListing } from '@/lib/marketplace-client';
@@ -31,6 +32,7 @@ type Props = {
 };
 
 export default function StorePageClient({ handle: encodedHandle, initialProfile, initialListingsCount }: Props) {
+  const t = useTranslations('store');
   const handle = decodeURIComponent(encodedHandle);
 
   const [profile, setProfile] = useState<SellerProfile | null>(initialProfile);
@@ -61,7 +63,7 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
         const profileResult = await agent.getProfile({ actor: handle });
 
         if (!profileResult.success) {
-          throw new Error('Failed to fetch profile');
+          throw new Error(t('fetchProfileError'));
         }
 
         const profileData = profileResult.data;
@@ -136,14 +138,14 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
         }
       } catch (err) {
         console.error('Failed to fetch store data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load store');
+        setError(err instanceof Error ? err.message : t('loadError'));
       } finally {
         setLoading(false);
       }
     }
 
     fetchStoreData();
-  }, [handle]);
+  }, [handle, t]);
 
   // Extract avatar CID from Bluesky CDN URL
   function extractAvatarCid(avatarUrl: string): string | undefined {
@@ -191,15 +193,15 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Store Not Found</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('notFoundTitle')}</h1>
           <p className="text-gray-500 mb-6">
-            {error || `We couldn't find a store for @${handle}. The user may not exist or may not have any marketplace listings.`}
+            {error || t('notFoundBody', { handle })}
           </p>
           <Link
             href="/browse"
             className="inline-flex items-center px-6 py-3 bg-primary-color text-white rounded-xl font-medium hover:bg-primary-light transition-colors"
           >
-            Browse Marketplace
+            {t('browseMarketplace')}
           </Link>
         </div>
       </div>
@@ -215,7 +217,7 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
           {profile.banner ? (
             <Image
               src={profile.banner}
-              alt={`${profile.displayName || profile.handle}'s banner`}
+              alt={t('bannerAlt', { name: profile.displayName || profile.handle })}
               fill
               className="object-cover"
               priority
@@ -287,12 +289,12 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
               <div className="hidden sm:flex items-center space-x-6 sm:pt-10">
                 <div className="text-center">
                   <p className="text-2xl font-bold text-gray-900">{listings.length}</p>
-                  <p className="text-sm text-gray-500">Listings</p>
+                  <p className="text-sm text-gray-500">{t('listingsCount')}</p>
                 </div>
                 {profile.followersCount !== undefined && (
                   <div className="text-center">
                     <p className="text-2xl font-bold text-gray-900">{profile.followersCount.toLocaleString()}</p>
-                    <p className="text-sm text-gray-500">Followers</p>
+                    <p className="text-sm text-gray-500">{t('followersCount')}</p>
                   </div>
                 )}
               </div>
@@ -310,10 +312,10 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
               <div className="mt-3 flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-100 text-rose-700 text-xs font-semibold rounded-full">
                   <Palette size={12} />
-                  Commission Artist
+                  {t('commissionArtist')}
                 </span>
                 <Link href="/gallery" className="text-xs text-rose-600 hover:underline">
-                  View in The Gallery
+                  {t('viewInGallery')}
                 </Link>
               </div>
             )}
@@ -322,9 +324,9 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
             <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-500">
               {/* Mobile stats */}
               <div className="flex sm:hidden items-center gap-4">
-                <span><strong className="text-gray-900">{listings.length}</strong> listings</span>
+                <span><strong className="text-gray-900">{listings.length}</strong> {t('listingsCount').toLowerCase()}</span>
                 {profile.followersCount !== undefined && (
-                  <span><strong className="text-gray-900">{profile.followersCount.toLocaleString()}</strong> followers</span>
+                  <span><strong className="text-gray-900">{profile.followersCount.toLocaleString()}</strong> {t('followersCount').toLowerCase()}</span>
                 )}
               </div>
 
@@ -332,7 +334,7 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
               {profile.createdAt && (
                 <div className="flex items-center gap-1">
                   <Calendar size={14} />
-                  <span>Joined {formatJoinDate(profile.createdAt)}</span>
+                  <span>{t('joinedDate', { date: formatJoinDate(profile.createdAt) })}</span>
                 </div>
               )}
             </div>
@@ -360,8 +362,8 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900">
                   {galleryMode
-                    ? `${listings.length} Commission Type${listings.length !== 1 ? 's' : ''}`
-                    : listings.length > 0 ? `${listings.length} Item${listings.length !== 1 ? 's' : ''} for Sale` : 'Items for Sale'}
+                    ? t('commissionTypesCount', { count: listings.length })
+                    : listings.length > 0 ? t('itemsForSaleCount', { count: listings.length }) : t('itemsForSale')}
                 </h2>
               </div>
 
@@ -377,7 +379,7 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
                     }`}
                   >
                     <Globe size={14} />
-                    Store ({onlineListings.length})
+                    {t('storeTab', { count: onlineListings.length })}
                   </button>
                   <button
                     onClick={() => setActiveTab('local')}
@@ -388,7 +390,7 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
                     }`}
                   >
                     <MapPin size={14} />
-                    Local ({localListings.length})
+                    {t('localTab', { count: localListings.length })}
                   </button>
                 </div>
               )}
@@ -400,9 +402,9 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                     </svg>
                   </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-1">No listings yet</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">{t('noListingsTitle')}</h3>
                   <p className="text-gray-500 max-w-md mx-auto">
-                    This seller hasn&apos;t listed any items for sale yet. Check back later!
+                    {t('noListingsBody')}
                   </p>
                 </div>
               ) : galleryMode ? (

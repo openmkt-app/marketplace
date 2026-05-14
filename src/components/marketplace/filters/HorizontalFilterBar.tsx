@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Filter, ChevronDown, LayoutGrid, List, X } from 'lucide-react';
 import { CATEGORIES } from '@/lib/category-data';
 
@@ -21,19 +22,12 @@ interface HorizontalFilterBarProps {
 
 // Simplified category list for the main pills - show only most common categories
 const FEATURED_CATEGORIES = [
-    { id: 'electronics', name: 'Electronics' },
-    { id: 'garden', name: 'Garden & Outdoor' },
-    { id: 'home', name: 'Home' },
-    { id: 'apparel', name: 'Clothing' },
-    { id: 'vehicles', name: 'Vehicles' },
-    { id: 'other', name: 'Other' },
-];
-
-const SORT_OPTIONS = [
-    { value: 'recency', label: 'Recently Listed' },
-    { value: 'price_asc', label: 'Price: Low to High' },
-    { value: 'price_desc', label: 'Price: High to Low' },
-    { value: 'distance', label: 'Distance' },
+    { id: 'electronics' },
+    { id: 'garden' },
+    { id: 'home_goods' }, // Matching ID from category-data
+    { id: 'apparel' },
+    { id: 'auto' }, // Matching ID from category-data
+    { id: 'other' },
 ];
 
 const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
@@ -50,10 +44,19 @@ const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
     onResetFilters,
     hasActiveFilters
 }) => {
+    const tBrowse = useTranslations('browse');
+    const tCats = useTranslations('categories');
     const [showSortDropdown, setShowSortDropdown] = useState(false);
     const [showAllCategories, setShowAllCategories] = useState(false);
 
-    const currentSortLabel = SORT_OPTIONS.find(opt => opt.value === sortBy)?.label || 'Sort';
+    const SORT_OPTIONS = [
+        { value: 'recency', label: tBrowse('sortRecent') },
+        { value: 'price_asc', label: tBrowse('sortPriceLow') },
+        { value: 'price_desc', label: tBrowse('sortPriceHigh') },
+        { value: 'distance', label: tBrowse('sortDistance') },
+    ];
+
+    const currentSortLabel = SORT_OPTIONS.find(opt => opt.value === sortBy)?.label || tBrowse('sort');
 
     // Check if selected category is in featured list
     const isSelectedInFeatured = !selectedCategory || FEATURED_CATEGORIES.some(c => c.id === selectedCategory);
@@ -72,7 +75,7 @@ const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                                 : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300'
                         }`}
                     >
-                        All
+                        {tBrowse('filterAll')}
                     </button>
 
                     {/* Featured Categories */}
@@ -86,7 +89,7 @@ const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                                     : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300'
                             }`}
                         >
-                            {cat.name}
+                            {tCats(cat.id)}
                         </button>
                     ))}
 
@@ -101,8 +104,8 @@ const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                             }`}
                         >
                             {!isSelectedInFeatured
-                                ? CATEGORIES.find(c => c.id === selectedCategory)?.name || 'More'
-                                : 'More'
+                                ? tCats(selectedCategory || '') || tBrowse('more')
+                                : tBrowse('more')
                             }
                             <ChevronDown size={14} className={`transition-transform ${showAllCategories ? 'rotate-180' : ''}`} />
                         </button>
@@ -125,7 +128,7 @@ const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                                                 selectedCategory === cat.id ? 'text-blue-600 font-medium' : 'text-gray-700'
                                             }`}
                                         >
-                                            {cat.name}
+                                            {tCats(cat.id)}
                                         </button>
                                     ))}
                                 </div>
@@ -137,7 +140,10 @@ const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                 {/* Right side - Item count and controls */}
                 <div className="flex items-center gap-3 flex-shrink-0">
                     <span className="text-gray-500 text-sm hidden sm:inline-block">
-                        Showing <span className="font-medium text-gray-900">{itemCount}</span> items
+                        {tBrowse.rich('showingItems', {
+                            count: itemCount,
+                            countTag: (chunks) => <span className="font-medium text-gray-900">{chunks}</span>
+                        })}
                     </span>
 
                     {/* Filters Button */}
@@ -150,7 +156,7 @@ const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                         }`}
                     >
                         <Filter size={16} />
-                        Filters
+                        {tBrowse('filters')}
                         {hasActiveFilters && (
                             <span className="w-2 h-2 bg-blue-600 rounded-full" />
                         )}
@@ -162,7 +168,7 @@ const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                             onClick={() => setShowSortDropdown(!showSortDropdown)}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
                         >
-                            Sort
+                            {currentSortLabel}
                             <ChevronDown size={14} className={`transition-transform ${showSortDropdown ? 'rotate-180' : ''}`} />
                         </button>
 
@@ -228,7 +234,7 @@ const HorizontalFilterBar: React.FC<HorizontalFilterBarProps> = ({
                         className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm rounded-full transition-colors"
                     >
                         <X size={14} />
-                        Clear filters
+                        {tBrowse('clearFilters')}
                     </button>
                 </div>
             )}

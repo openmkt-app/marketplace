@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { CONDITIONS } from '@/lib/category-data';
-import { formatConditionForDisplay } from '@/lib/condition-utils';
 
 interface ConditionFilterProps {
   selectedConditions?: string[];
@@ -24,28 +24,12 @@ const mapOldToNewConditionId = (oldId: string): string => {
   return mapping[oldId] || oldId;
 };
 
-// Use condition options directly from category-data.ts shared data
-const conditionOptions = CONDITIONS.map(condition => ({
-  id: condition.id,
-  label: formatConditionForDisplay(condition.id)
-}));
-
-// Available age options - commented out for now, will revisit later
-/*
-const ageOptions = [
-  { id: 'any', label: 'Any age' },
-  { id: 'last-month', label: 'Last month' },
-  { id: 'last-6-months', label: 'Last 6 months' },
-  { id: 'last-year', label: 'Last year' },
-  { id: 'over-1-year', label: 'Over 1 year' }
-];
-*/
-
 export default function ConditionFilter({
   selectedConditions = [],
   // selectedAge, - commented out for now, will revisit later
   onChange
 }: ConditionFilterProps) {
+  const t = useTranslations('conditions');
   // Map any old-format IDs in the selectedConditions to the new format
   const mappedSelectedConditions = selectedConditions.map(mapOldToNewConditionId);
   const [conditions, setConditions] = useState<string[]>(mappedSelectedConditions);
@@ -65,17 +49,6 @@ export default function ConditionFilter({
       }
     });
   };
-
-  // Set age selection - commented out for now, will revisit later
-  /*
-  const handleAgeChange = (ageId: string) => {
-    if (age === ageId) {
-      setAge(undefined);
-    } else {
-      setAge(ageId);
-    }
-  };
-  */
 
   // Update parent component when selections change (only for internal changes)
   useEffect(() => {
@@ -102,9 +75,9 @@ export default function ConditionFilter({
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="font-medium text-text-primary mb-2">Condition</h3>
+        <h3 className="font-medium text-text-primary mb-2">{t('conditionHeader')}</h3>
         <div className="space-y-2">
-          {conditionOptions.map((cond) => (
+          {CONDITIONS.map((cond) => (
             <label key={cond.id} className="flex items-center">
               <input
                 type="checkbox"
@@ -112,7 +85,7 @@ export default function ConditionFilter({
                 onChange={() => toggleCondition(cond.id)}
                 className="h-4 w-4 text-primary-color rounded"
               />
-              <span className="ml-2 text-text-primary">{cond.label}</span>
+              <span className="ml-2 text-text-primary">{t(cond.id)}</span>
             </label>
           ))}
         </div>

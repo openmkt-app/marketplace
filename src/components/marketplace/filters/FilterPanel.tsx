@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import LocationFilter, { LocationFilterValue } from './LocationFilter';
 import PriceFilter from './PriceFilter';
 import CategoryFilter from './CategoryFilter';
@@ -69,6 +70,7 @@ export default function FilterPanel({
   savedFilters = [],
   onSaveFilter
 }: FilterPanelProps) {
+  const tFilters = useTranslations('filters');
   // Use a ref to track if this is the first render
   const isFirstRender = useRef(true);
   // Use a ref to track if changes are from internal state updates
@@ -214,7 +216,7 @@ export default function FilterPanel({
     <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
       {/* Advanced Filters Header */}
       <div className="px-4 py-2 border-b bg-gray-50">
-        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Advanced Filters</h3>
+        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">{tFilters('advancedFilters')}</h3>
       </div>
 
       {/* Filter Sections */}
@@ -230,7 +232,7 @@ export default function FilterPanel({
                 : 'text-text-secondary hover:text-text-primary'
                 }`}
             >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tFilters(`tabs.${tab}`)}
             </button>
           ))}
         </div>
@@ -289,7 +291,7 @@ export default function FilterPanel({
         {/* Saved Filters and Save Button */}
         <div className="p-4 bg-neutral-light/50 flex justify-between items-center">
           <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium text-text-primary">Saved Filters:</span>
+            <span className="text-sm font-medium text-text-primary">{tFilters('savedFilters')}</span>
             <div className="flex space-x-2">
               {savedFilters.length > 0 ? (
                 savedFilters.map((savedFilter, index) => (
@@ -302,7 +304,7 @@ export default function FilterPanel({
                   </button>
                 ))
               ) : (
-                <span className="text-sm text-text-secondary">None saved</span>
+                <span className="text-sm text-text-secondary">{tFilters('noneSaved')}</span>
               )}
             </div>
           </div>
@@ -311,7 +313,7 @@ export default function FilterPanel({
             onClick={() => setShowSaveDialog(true)}
             className="text-primary-color hover:text-primary-light text-sm font-medium"
           >
-            Save Current Filter
+            {tFilters('saveCurrent')}
           </button>
         </div>
 
@@ -323,7 +325,7 @@ export default function FilterPanel({
                 type="text"
                 value={filterName}
                 onChange={(e) => setFilterName(e.target.value)}
-                placeholder="Filter name"
+                placeholder={tFilters('filterNamePlaceholder')}
                 className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-color"
               />
               <button
@@ -334,13 +336,13 @@ export default function FilterPanel({
                   : 'bg-primary-color text-white hover:bg-primary-light'
                   }`}
               >
-                Save
+                {tFilters('save')}
               </button>
               <button
                 onClick={() => setShowSaveDialog(false)}
                 className="px-4 py-2 bg-neutral-light text-text-primary hover:bg-neutral-medium rounded-md"
               >
-                Cancel
+                {tFilters('cancel')}
               </button>
             </div>
           </div>

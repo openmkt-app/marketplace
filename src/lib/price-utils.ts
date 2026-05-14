@@ -27,9 +27,11 @@ export const CURRENCIES = [
  * Formats a price string with proper currency symbols and thousands separators
  * @param price The price string (with or without currency symbols)
  * @param currencyCode The ISO 4217 currency code (defaults to 'USD')
+ * @param locale The locale to use for formatting (defaults to 'en-US')
+ * @param freeLabel The label to use for zero prices (defaults to 'Free')
  * @returns Formatted price string with currency symbol and thousands separators
  */
-export function formatPrice(price: string, currencyCode: string = 'USD'): string {
+export function formatPrice(price: string, currencyCode: string = 'USD', locale: string = 'en-US', freeLabel: string = 'Free'): string {
   // Remove any non-numeric characters except dots and minus signs
   const cleanPrice = price.replace(/[^\d.-]/g, '');
   const numericValue = parseFloat(cleanPrice);
@@ -38,10 +40,10 @@ export function formatPrice(price: string, currencyCode: string = 'USD'): string
 
   // Check for zero price (Free)
   if (numericValue === 0) {
-    return 'Free';
+    return freeLabel;
   }
-
-  const formatter = new Intl.NumberFormat('en-US', {
+  
+  const formatter = new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: currencyCode,
     minimumFractionDigits: 2,
@@ -55,10 +57,11 @@ export function formatPrice(price: string, currencyCode: string = 'USD'): string
  * Formats a numeric price value to a currency string with thousands separators
  * @param value The numeric price value
  * @param currencyCode The ISO 4217 currency code (defaults to 'USD')
+ * @param locale The locale to use for formatting (defaults to 'en-US')
  * @returns Formatted price string with currency symbol, thousands separators, and 2 decimal places
  */
-export function formatNumericPrice(value: number, currencyCode: string = 'USD'): string {
-  const formatter = new Intl.NumberFormat('en-US', {
+export function formatNumericPrice(value: number, currencyCode: string = 'USD', locale: string = 'en-US'): string {
+  const formatter = new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: currencyCode,
     minimumFractionDigits: 2,
@@ -71,12 +74,21 @@ export function formatNumericPrice(value: number, currencyCode: string = 'USD'):
 /**
  * Formats a date to "MMM D, YYYY" format (e.g., "Jan 15, 2026")
  * @param date The date to format (Date object or string)
+ * @param locale The locale to use for formatting (defaults to 'en-US')
  * @returns Formatted date string
  */
-export function formatDate(date: Date | string): string {
+export function formatDate(date: Date | string, locale: string = 'en-US'): string {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
 
-  return dateObj.toLocaleDateString('en-US', {
+  if (locale === 'pt') {
+    // Custom format for Portuguese to keep it short and remove "de"
+    const day = dateObj.getDate();
+    const month = dateObj.toLocaleDateString('pt', { month: 'short' }).replace('.', '');
+    const year = dateObj.getFullYear();
+    return `${day} ${month} ${year}`;
+  }
+
+  return dateObj.toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',

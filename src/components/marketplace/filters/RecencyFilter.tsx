@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface RecencyFilterProps {
   postedWithin?: string;
@@ -10,11 +11,11 @@ interface RecencyFilterProps {
 
 // Time frame options updated to match market requirements
 const timeFrames = [
-  { id: 'day', label: 'Last 24 hours' },
-  { id: 'week', label: 'Last week' },
-  { id: 'month', label: 'Last month' },
-  { id: 'quarter', label: 'Last 3 months' },
-  { id: 'older', label: 'Older listings' }
+  { id: 'day' },
+  { id: 'week' },
+  { id: 'month' },
+  { id: 'quarter' },
+  { id: 'older' }
 ];
 
 export default function RecencyFilter({
@@ -22,6 +23,8 @@ export default function RecencyFilter({
   recentlyViewed = false,
   onChange
 }: RecencyFilterProps) {
+  const t = useTranslations('filters.recencyFilter');
+  const tGen = useTranslations('filters');
   const [selectedTimeFrame, setSelectedTimeFrame] = useState<string | undefined>(postedWithin);
   const [showRecentlyViewed, setShowRecentlyViewed] = useState<boolean>(recentlyViewed);
   const isFirstRender = useRef(true);
@@ -78,7 +81,7 @@ export default function RecencyFilter({
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="font-medium text-text-primary mb-2">Posted Within</h3>
+        <h3 className="font-medium text-text-primary mb-2">{t('postedWithin')}</h3>
         <div className="space-y-1">
           {timeFrames.map(timeFrame => (
             <button
@@ -90,7 +93,7 @@ export default function RecencyFilter({
                   : 'bg-neutral-light text-text-primary hover:bg-neutral-medium'
               }`}
             >
-              {timeFrame.label}
+              {tGen(`time_${timeFrame.id}`)}
             </button>
           ))}
         </div>
@@ -104,7 +107,7 @@ export default function RecencyFilter({
             onChange={handleRecentlyViewedChange}
             className="h-4 w-4 text-primary-color rounded"
           />
-          <span className="ml-2 text-text-primary">Show recently viewed first</span>
+          <span className="ml-2 text-text-primary">{t('recentlyViewed')}</span>
         </label>
       </div>
     </div>

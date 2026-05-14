@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import Image from 'next/image';
 import { MapPin } from 'lucide-react';
 import { formatConditionForDisplay } from '@/lib/condition-utils';
@@ -36,13 +37,18 @@ const LiveListingPreview = ({
     currency,
     isNsfw
 }: LiveListingPreviewProps) => {
+    const t = useTranslations('livePreview');
+    const tCats = useTranslations('categories');
+    const tConds = useTranslations('conditions');
+    const tCommon = useTranslations('common');
+    const locale = useLocale();
 
     const isCommission = category === COMMISSION_CATEGORY_ID;
 
-    const displayPrice = formatPrice(price, currency);
+    const displayPrice = formatPrice(price, currency, locale, tCommon('free'));
 
     // Format date (always today for preview)
-    const today = new Date().toLocaleDateString();
+    const today = new Date().toLocaleDateString(locale);
 
     return (
         <div className="sticky top-24">
@@ -52,7 +58,7 @@ const LiveListingPreview = ({
                         <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
                         <circle cx="12" cy="12" r="3" />
                     </svg>
-                    Live Preview
+                    {t('livePreview')}
                 </div>
 
                 {/* Card Mockup */}
@@ -69,7 +75,7 @@ const LiveListingPreview = ({
                                 />
                             ) : (
                                 <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-100">
-                                    <span className="text-4xl mb-2 font-light">No Image</span>
+                                    <span className="text-4xl mb-2 font-light">{t('noImage')}</span>
                                 </div>
                             )}
 
@@ -84,14 +90,14 @@ const LiveListingPreview = ({
                                                 : 'bg-emerald-100 text-emerald-700'
                                     }`}>
                                         {slotsAvailable === '' || slotsAvailable === undefined
-                                            ? 'Open'
+                                            ? t('open')
                                             : slotsAvailable === '0'
-                                                ? 'Waitlist'
-                                                : `${slotsAvailable} slot${slotsAvailable === '1' ? '' : 's'} open`}
+                                                ? t('waitlist')
+                                                : t('slotsOpen', { count: parseInt(slotsAvailable) })}
                                     </span>
                                 ) : (
                                     <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-white/95 backdrop-blur-sm text-slate-800 shadow-sm">
-                                        {condition ? formatConditionForDisplay(condition) : 'Condition'}
+                                        {condition ? tConds(condition) : t('condition')}
                                     </span>
                                 )}
                             </div>
@@ -100,7 +106,7 @@ const LiveListingPreview = ({
                             {isNsfw && (
                               <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/10 backdrop-blur-xl">
                                 <span className="text-white text-xs font-bold bg-red-500/80 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg">
-                                  NSFW Content
+                                  {t('nsfwContent')}
                                 </span>
                               </div>
                             )}
@@ -111,15 +117,15 @@ const LiveListingPreview = ({
                             <div className="flex justify-between items-start mb-2">
                                 <div>
                                     <span className="text-xs font-bold text-sky-600 uppercase tracking-wide mb-1 block">
-                                        {category ? getCategoryName(category) : 'Category'}
+                                        {category ? tCats(category) : t('category')}
                                     </span>
                                     <h3 className="text-xl font-bold text-gray-900 line-clamp-1 mb-1">
-                                        {title || 'Item Title'}
+                                        {title || t('itemTitle')}
                                     </h3>
                                 </div>
                                 <div className="text-right ml-4">
                                     {isCommission && (
-                                        <span className="text-[10px] text-gray-400 block">Starting at</span>
+                                        <span className="text-[10px] text-gray-400 block">{t('startingAt')}</span>
                                     )}
                                     <span className="text-2xl font-bold text-gray-900 whitespace-nowrap">
                                         {displayPrice}
@@ -128,7 +134,7 @@ const LiveListingPreview = ({
                             </div>
 
                             <p className="text-gray-500 text-sm line-clamp-2 mb-4 leading-relaxed h-10">
-                                {description || 'No description provided yet.'}
+                                {description || t('noDescription')}
                             </p>
 
                             {/* Footer Meta */}
@@ -145,7 +151,7 @@ const LiveListingPreview = ({
                                             <span className="truncate">
                                                 {location.locality && location.state
                                                     ? `${location.locality}, ${location.state}`
-                                                    : 'Location'}
+                                                    : t('location')}
                                             </span>
                                         </>
                                     )}
@@ -166,7 +172,7 @@ const LiveListingPreview = ({
                 </div>
 
                 <p className="text-xs text-slate-500 mt-4 text-center">
-                    This is how your listing will appear in search results
+                    {t('appearanceHint')}
                 </p>
             </div>
         </div>
