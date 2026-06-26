@@ -1,0 +1,29 @@
+{
+  "name": "Open Market - Buy, Sell, and Trade Locally",
+  "short_name": "Open Market",
+  "description": "Buy, sell, and trade locally without fees. A community-owned marketplace built on the open web.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B6FA7",
+  "theme_color": "#0B6FA7",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

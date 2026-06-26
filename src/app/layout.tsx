@@ -4,10 +4,20 @@ import { GoogleAnalytics } from '@next/third-parties/google'
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' })
 
+export const viewport = {
+  themeColor: '#0B6FA7',
+}
+
 export const metadata = {
   metadataBase: new URL('https://openmkt.app'),
   title: 'Open Market - Buy, Sell, and Trade Locally',
   description: 'Buy, sell, and trade locally without fees. Open Market is a community-owned marketplace built on the open web. Discover unique items from verified neighbors.',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    title: 'Open Market',
+    statusBarStyle: 'default',
+  },
   openGraph: {
     title: 'Open Market - Buy, Sell, and Trade Locally',
     description: 'Buy, sell, and trade locally without fees. Open Market is a community-owned marketplace built on the open web.',

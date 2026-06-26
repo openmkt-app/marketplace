@@ -10,6 +10,6 @@ export const config = {
   // (e.g. `/store/auad.bsky.social`) and at:// listing URIs that contain
   // literal dots in the path (`app.openmkt.marketplace.listing`).
   matcher: [
-    '/((?!api|xrpc|oauth|oauth-client-metadata\\.json|\\.well-known|_next|_vercel|.*\\.(?:ico|png|jpg|jpeg|gif|webp|svg|css|js|mjs|map|json|xml|txt|html|woff|woff2|ttf|otf|eot|pdf|mp4|webm|avif)$).*)',
+    '/((?!api|xrpc|oauth|oauth-client-metadata\\.json|\\.well-known|_next|_vercel|.*\\.(?:ico|png|jpg|jpeg|gif|webp|svg|css|js|mjs|map|json|webmanifest|xml|txt|html|woff|woff2|ttf|otf|eot|pdf|mp4|webm|avif)$).*)',
   ],
 };
