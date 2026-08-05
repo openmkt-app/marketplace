@@ -1,0 +1,3 @@
+{ "$type": "app.temp.commerce.review", "subject": "at://did:plc:abc/app.temp.commerce.shop/self",
+  "rating": 4, "title": "Reliable seller", "body": "Shipped next day, well packed.",
+  "createdAt": "2026-06-14T10:00:00Z" }

@@ -1,0 +1,5 @@
+{ "$type": "app.temp.commerce.shop", "name": "Acme Goods", "description": "Quality widgets",
+  "handlingTime": "1-3 business days", "defaultCurrency": "USD", "shipsTo": ["US","CA","GB"],
+  "policies": { "returns": "30 day returns, buyer pays postage",
+                "shipping": "https://acme.example/shipping" },
+  "createdAt": "2026-06-13T10:00:00Z" }

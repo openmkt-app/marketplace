@@ -180,3 +180,6 @@ PROJECT_TRACKER.md
 TODO-*.md
 # Local scripts
 *.py
+
+# Source archive for commerce-lexicon-master; the files are tracked, the zip is not
+Commerce Lexicon.zip

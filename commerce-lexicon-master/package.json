@@ -1,0 +1,12 @@
+{
+  "name": "commerce-lexicon",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "validate": "node scripts/validate-lexicon.js"
+  },
+  "dependencies": {
+    "@atproto/lexicon": "^0.4.10"
+  }
+}

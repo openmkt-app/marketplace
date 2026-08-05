@@ -1,0 +1,8 @@
+{ "$type": "app.temp.commerce.listing", "type": "goods", "title": "parent",
+  "pricing": { "regularPrice": 2500, "currency": "USD", "taxInclusive": false },
+  "category": "apparel",
+  "shopRef": "at://did:plc:abc/app.temp.commerce.shop/self",
+  "partOf": "at://did:plc:abc/app.temp.commerce.productGroup/xyz",
+  "variantProperties": [ {"axis":"Color","value":"Red"}, {"axis":"Size"} ],
+  "sku": "TEE-RED-ANY", "manageStock": true, "quantity": 4,
+  "createdAt": "2026-06-13T10:00:00Z" }

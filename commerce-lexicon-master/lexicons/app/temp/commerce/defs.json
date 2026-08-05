@@ -1,0 +1,205 @@
+{
+  "lexicon": 1,
+  "id": "app.temp.commerce.defs",
+  "defs": {
+    "price": {
+      "type": "object",
+      "description": "A standalone monetary amount. For listing prices use #pricing instead.",
+      "required": ["amount", "currency"],
+      "properties": {
+        "amount": {
+          "type": "integer",
+          "description": "Amount in minor currency units. The number of minor units per major unit is defined per-currency by ISO 4217 and is NOT always 100: JPY has no minor unit (1000 = ¥1000), KWD and BHD have three (1000 = 1.000 KWD). Zero indicates free."
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3,
+          "description": "ISO 4217 currency code"
+        }
+      }
+    },
+    "pricing": {
+      "type": "object",
+      "description": "Full price state for a listing. A single currency covers both amounts so a regular and sale price can never disagree on currency.",
+      "required": ["regularPrice", "currency"],
+      "properties": {
+        "regularPrice": {
+          "type": "integer",
+          "description": "Normal price in minor currency units. See #price for the minor-unit rule. Zero indicates free."
+        },
+        "salePrice": {
+          "type": "integer",
+          "description": "Discounted price in minor currency units. When present and within the sale window, this is the effective price."
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3,
+          "description": "ISO 4217 currency code, applying to both amounts"
+        },
+        "taxInclusive": {
+          "type": "boolean",
+          "description": "True if the amounts already include tax (common in the EU/UK), false if tax is added at checkout (common in the US). Apps cannot compare prices across sellers without this."
+        },
+        "saleStartsAt": {
+          "type": "string",
+          "format": "datetime",
+          "description": "When the sale price takes effect. Absent means immediately."
+        },
+        "saleEndsAt": {
+          "type": "string",
+          "format": "datetime",
+          "description": "When the sale price stops applying. Absent means indefinitely."
+        }
+      }
+    },
+    "groupedItem": {
+      "type": "object",
+      "description": "One item included in a grouped listing. Carries a denormalized title so the parent renders without fetching every child, same principle as the review variant snapshot.",
+      "required": ["item", "quantity"],
+      "properties": {
+        "item": {
+          "type": "string",
+          "format": "at-uri",
+          "description": "AT URI of the listing or productGroup included"
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Suggested quantity of this item in the group"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Denormalized title of the included item, so the group stays readable if the referenced record is unreachable or deleted"
+        }
+      }
+    },
+    "specification": {
+      "type": "object",
+      "description": "A product property that does not vary between variants (e.g. Material, Model). Distinct from #optionAxis, which drives variant selection.",
+      "required": ["name", "value"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "value": {
+          "type": "string",
+          "maxLength": 500
+        }
+      }
+    },
+    "dimensions": {
+      "type": "object",
+      "description": "Package dimensions in millimetres. Unit is fixed by the Lexicon rather than carried per-record.",
+      "properties": {
+        "length": { "type": "integer", "minimum": 0 },
+        "width": { "type": "integer", "minimum": 0 },
+        "height": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "location": {
+      "type": "object",
+      "properties": {
+        "countryCode": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 2,
+          "description": "ISO 3166-1 alpha-2 country code"
+        },
+        "region": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "State, province, or administrative region"
+        },
+        "locality": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "City or town"
+        },
+        "postalPrefix": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Postal/ZIP code prefix for approximate location"
+        },
+        "isRemote": {
+          "type": "boolean",
+          "description": "True if this is a remote/online-only operation with no physical location"
+        }
+      }
+    },
+    "variantProperty": {
+      "type": "object",
+      "required": ["axis"],
+      "properties": {
+        "axis": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Option axis name (e.g. Color, Size)"
+        },
+        "value": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Selected value for this axis. Omit to mean 'any value on this axis' — e.g. a Red variant available in every size."
+        }
+      }
+    },
+    "taxonomyRef": {
+      "type": "object",
+      "description": "Pointer to a category in an externally maintained taxonomy, for depth beyond the coarse categorySlug. Keeping the deep tree outside the Lexicon means adding a category is not a schema change requiring agreement across apps.",
+      "required": ["scheme", "id"],
+      "properties": {
+        "scheme": {
+          "type": "string",
+          "maxLength": 100,
+          "knownValues": ["google", "gpc", "ebay", "etsy"],
+          "description": "Which taxonomy this id belongs to. Open value set; 'google' is the Google Product Taxonomy used across the product-feed industry."
+        },
+        "id": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Category identifier within that taxonomy (e.g. Google's '499954')"
+        },
+        "version": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Taxonomy version or release date, since these trees are revised over time"
+        },
+        "path": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Human-readable path for display and debugging (e.g. 'Cameras & Optics > Cameras > Film Cameras'). Advisory — the id is authoritative."
+        }
+      }
+    },
+    "categorySlug": {
+      "type": "string",
+      "knownValues": [
+        "apparel", "auto", "baby", "books", "business", "collectibles",
+        "electronics", "entertainment", "furniture", "garden", "health",
+        "hobbies", "home_goods", "home_improvement", "kids", "musical",
+        "office", "pets", "sporting", "video_games", "other"
+      ],
+      "description": "Coarse top-level category. Deliberately small: every added slug is a change independent apps must agree on, so depth belongs in #taxonomyRef rather than here. Open/advisory knownValues — apps maintain canonical registries. Single source of truth for listing and productGroup."
+    },
+    "optionAxis": {
+      "type": "object",
+      "required": ["name", "values"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Axis name (e.g. Color, Size)"
+        },
+        "values": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 200 },
+          "maxLength": 100,
+          "description": "Available values for this axis"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "$type": "app.temp.commerce.listing",
+  "type": "goods",
+  "title": "Classic Tee",
+  "shortDescription": "Heavyweight cotton tee, ethically made",
+  "pricing": {
+    "regularPrice": 3000,
+    "salePrice": 2400,
+    "currency": "USD",
+    "taxInclusive": false,
+    "saleStartsAt": "2026-08-01T00:00:00Z",
+    "saleEndsAt": "2026-08-14T00:00:00Z"
+  },
+  "category": "apparel",
+  "tags": [
+    "organic",
+    "unisex"
+  ],
+  "brand": "Acme",
+  "gtin": "0012345678905",
+  "shopRef": "at://did:plc:abc/app.temp.commerce.shop/self",
+  "availability": "in_stock",
+  "manageStock": true,
+  "quantity": 12,
+  "lowStockThreshold": 3,
+  "soldIndividually": false,
+  "condition": "new",
+  "specifications": [
+    {
+      "name": "Material",
+      "value": "100% organic cotton"
+    }
+  ],
+  "taxStatus": "taxable",
+  "taxCategory": "standard",
+  "catalogVisibility": "visible",
+  "reviewsAllowed": true,
+  "details": {
+    "$type": "app.temp.commerce.listing#goodsDetails",
+    "shippingWeight": 200,
+    "dimensions": {
+      "length": 300,
+      "width": 200,
+      "height": 20
+    },
+    "shippingClass": "light",
+    "shippingRequired": true
+  },
+  "labels": {
+    "$type": "com.atproto.label.defs#selfLabels",
+    "values": [
+      {
+        "val": "handmade"
+      }
+    ]
+  },
+  "createdAt": "2026-06-13T10:00:00Z",
+  "taxonomy": {
+    "scheme": "google",
+    "version": "2021-09-21",
+    "id": "1604",
+    "path": "Apparel & Accessories > Clothing > Shirts & Tops"
+  }
+}

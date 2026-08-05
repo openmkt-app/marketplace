@@ -1,0 +1,9 @@
+{ "$type": "app.temp.commerce.listing", "type": "digital", "title": "Icon Pack",
+  "pricing": { "regularPrice": 1200, "currency": "EUR", "taxInclusive": true },
+  "category": "hobbies", "manageStock": false,
+  "shopRef": "at://did:plc:abc/app.temp.commerce.shop/self",
+  "details": { "$type": "app.temp.commerce.listing#digitalDetails",
+               "fileFormats": ["SVG","PNG","AI"], "fileSize": 4194304,
+               "downloadLimit": -1, "downloadExpiryDays": 365,
+               "deliveryMethod": "Instant download link after purchase" },
+  "createdAt": "2026-06-13T10:00:00Z" }

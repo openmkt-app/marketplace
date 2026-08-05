@@ -1,0 +1,276 @@
+{
+  "lexicon": 1,
+  "id": "app.temp.commerce.listing",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["type", "title", "pricing", "category", "shopRef", "createdAt"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "knownValues": ["goods", "service", "digital"],
+            "description": "Listing type discriminator"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 300,
+            "description": "When partOf is set, may be the literal string 'parent' to inherit the productGroup's title."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 3000
+          },
+          "shortDescription": {
+            "type": "string",
+            "maxLength": 300,
+            "description": "One-line summary for cards and feeds, so apps do not each truncate the long description differently."
+          },
+          "pricing": {
+            "type": "ref",
+            "ref": "app.temp.commerce.defs#pricing"
+          },
+          "availability": {
+            "type": "string",
+            "knownValues": ["in_stock", "out_of_stock", "backorder", "pre_order", "discontinued"],
+            "description": "Availability status; can be computed from quantity or set independently. 'backorder' is out of stock but still orderable; 'pre_order' is not yet released."
+          },
+          "manageStock": {
+            "type": "boolean",
+            "description": "Whether the seller tracks inventory for this listing. When false, quantity is meaningless and should be ignored — this distinguishes untracked stock (print-on-demand, digital, services) from a quantity the seller simply did not fill in."
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Available inventory count. Only meaningful when manageStock is true."
+          },
+          "lowStockThreshold": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Quantity at or below which the listing counts as low stock"
+          },
+          "soldIndividually": {
+            "type": "boolean",
+            "description": "Only one of this item may be bought per order"
+          },
+          "condition": {
+            "type": "string",
+            "knownValues": ["new", "openBox", "likeNew", "good", "fair", "forParts", "notApplicable"]
+          },
+          "category": {
+            "type": "ref",
+            "ref": "app.temp.commerce.defs#categorySlug"
+          },
+          "subcategory": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Free-text subcategory; vocabulary maintained outside the Lexicon"
+          },
+          "taxonomy": {
+            "type": "ref",
+            "ref": "app.temp.commerce.defs#taxonomyRef",
+            "description": "Optional deep category in an external taxonomy. Apps that do not use it fall back to the coarse category slug."
+          },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string", "maxLength": 100 },
+            "maxLength": 20,
+            "description": "Free-text discovery tags. Relieves pressure on the fixed category vocabulary — a seller whose niche has no slug tags it instead."
+          },
+          "brand": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "specifications": {
+            "type": "array",
+            "items": {
+              "type": "ref",
+              "ref": "app.temp.commerce.defs#specification"
+            },
+            "maxLength": 50,
+            "description": "Properties that do not vary between variants (e.g. Material, Model). Machine-readable so apps can filter on them, unlike prose in the description."
+          },
+          "sku": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Seller-defined SKU for this variant. May be the literal string 'parent' to inherit the productGroup's SKU."
+          },
+          "gtin": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "Global trade item number — GTIN, UPC, EAN, or ISBN. The join key that lets two apps recognise the same product listed by different sellers."
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "blob",
+              "accept": ["image/*"],
+              "maxSize": 1000000
+            },
+            "maxLength": 10
+          },
+          "shopRef": {
+            "type": "string",
+            "format": "at-uri",
+            "description": "AT URI of the parent shop record"
+          },
+          "partOf": {
+            "type": "string",
+            "format": "at-uri",
+            "description": "AT URI of the parent productGroup, if this listing is a variant"
+          },
+          "groupedItems": {
+            "type": "array",
+            "items": {
+              "type": "ref",
+              "ref": "app.temp.commerce.defs#groupedItem"
+            },
+            "maxLength": 50,
+            "description": "Other listings sold together as one offering (e.g. a desk setup of keyboard plus webcam). This listing states its own pricing, so no app has to compute a total from records held on other servers. Per-item discount rules are deliberately absent for that reason. Whether the buyer must take everything or may pick and choose is a checkout concern, not a schema one."
+          },
+          "variantProperties": {
+            "type": "array",
+            "items": {
+              "type": "ref",
+              "ref": "app.temp.commerce.defs#variantProperty"
+            },
+            "maxLength": 10,
+            "description": "Concrete variant property tuple (e.g. [{axis: Color, value: Red}, {axis: Size, value: M}])"
+          },
+          "details": {
+            "type": "union",
+            "refs": ["#goodsDetails", "#serviceDetails", "#digitalDetails"],
+            "description": "Type-specific fields matching the type discriminator"
+          },
+          "externalUrl": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 2000,
+            "description": "External URL for purchasing (e.g. Amazon, eBay link)"
+          },
+          "checkoutUrl": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 2000,
+            "description": "Direct checkout URL if supported by seller platform"
+          },
+          "location": {
+            "type": "ref",
+            "ref": "app.temp.commerce.defs#location",
+            "description": "Where this item is, when it differs from the shop's location — local pickup, or a seller with stock in more than one place. Falls back to the shop record."
+          },
+          "taxStatus": {
+            "type": "string",
+            "knownValues": ["taxable", "shipping", "none"],
+            "description": "Whether this item is taxed. Classification only — rate tables and tax calculation are out of scope."
+          },
+          "taxCategory": {
+            "type": "string",
+            "maxLength": 100,
+            "knownValues": ["standard", "reduced", "zero"],
+            "description": "Tax classification the seller's own rate table keys on. Open value set."
+          },
+          "hideFromFriends": {
+            "type": "boolean",
+            "description": "Social privacy: hide this listing from friends/followers"
+          },
+          "catalogVisibility": {
+            "type": "string",
+            "knownValues": ["visible", "catalog", "search", "hidden"],
+            "description": "Where this listing surfaces. Distinct from hideFromFriends, which is social privacy: 'hidden' still resolves by direct link but is kept out of browse and search."
+          },
+          "reviewsAllowed": {
+            "type": "boolean",
+            "description": "Whether the seller accepts reviews on this listing"
+          },
+          "labels": {
+            "type": "union",
+            "refs": ["com.atproto.label.defs#selfLabels"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    },
+    "goodsDetails": {
+      "type": "object",
+      "description": "Type-specific fields for physical goods. Describes what is being shipped, never what shipping costs — rates depend on the buyer's location and belong off-protocol.",
+      "properties": {
+        "shippingWeight": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Weight in grams"
+        },
+        "dimensions": {
+          "type": "ref",
+          "ref": "app.temp.commerce.defs#dimensions"
+        },
+        "shippingClass": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Seller-defined shipping grouping (e.g. 'bulky', 'fragile') that their own rate table keys on"
+        },
+        "shippingRequired": {
+          "type": "boolean",
+          "description": "Whether this item ships at all. Explicit rather than inferred from type, since services and digital goods can also be listed as goods."
+        }
+      }
+    },
+    "serviceDetails": {
+      "type": "object",
+      "description": "Type-specific fields for services and commissions",
+      "properties": {
+        "slotsAvailable": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of service slots currently available"
+        },
+        "turnaroundTime": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Expected turnaround or delivery time"
+        }
+      }
+    },
+    "digitalDetails": {
+      "type": "object",
+      "description": "Type-specific fields for digital goods. Download limits and expiry are terms of sale the buyer needs before purchase. The file itself is never published here — the record is public.",
+      "properties": {
+        "fileFormats": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 50 },
+          "maxLength": 20,
+          "description": "File formats included (e.g. PNG, SVG, AI). An asset pack is usually several."
+        },
+        "fileSize": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total download size in bytes"
+        },
+        "downloadLimit": {
+          "type": "integer",
+          "minimum": -1,
+          "description": "How many times the buyer may download. -1 for unlimited."
+        },
+        "downloadExpiryDays": {
+          "type": "integer",
+          "minimum": -1,
+          "description": "Days after purchase the download stays available. -1 for never expires."
+        },
+        "deliveryMethod": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "How the digital good is delivered"
+        }
+      }
+    }
+  }
+}
