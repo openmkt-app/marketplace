@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { AtpAgent } from '@atproto/api';
+import { fetchListings as fetchListingsFromAppView, isAppViewEnabled } from '@/lib/commerce/appview';
 import { READ_COLLECTIONS } from '@/lib/commerce/collections';
 import { normalizeListings } from '@/lib/commerce/hydrate';
 import { toLegacyListings } from '@/lib/commerce/legacy';
@@ -89,11 +90,28 @@ async function fetchListingsForDID(did: string, pdsHint?: string): Promise<any[]
     }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
+        // ?source=appview|fanout forces one path, so the two can be compared
+        // side by side on the same deployment without flipping the flag.
+        const forced = new URL(request.url).searchParams.get('source');
+        const useAppView = forced === 'appview' || (forced !== 'fanout' && isAppViewEnabled());
+
+        if (useAppView) {
+            // One indexed query instead of a fan-out to every seller's PDS.
+            // Returns null on any failure, which drops through to fan-out below
+            // rather than failing the request — an index that is down must not
+            // mean a marketplace that is down.
+            const indexed = await fetchListingsFromAppView({ limit: 100 });
+            if (indexed) {
+                const listings = toLegacyListings(indexed);
+                return NextResponse.json({ listings, count: listings.length, source: 'appview' });
+            }
+        }
+
         const cached = getCachedListings();
         if (cached) {
-            return NextResponse.json({ listings: cached, count: cached.length });
+            return NextResponse.json({ listings: cached, count: cached.length, source: 'fanout-cached' });
         }
 
         // Get seller DIDs — prefer the already-warm sellers cache
@@ -144,7 +162,7 @@ export async function GET() {
 
         setListingsCache(allListings);
 
-        return NextResponse.json({ listings: allListings, count: allListings.length });
+        return NextResponse.json({ listings: allListings, count: allListings.length, source: 'fanout' });
     } catch (error) {
         console.error('[listings] error:', error);
         return NextResponse.json({ listings: [], count: 0 }, { status: 200 });
