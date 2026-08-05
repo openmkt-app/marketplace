@@ -1,0 +1,94 @@
+{
+  "lexicon": 1,
+  "id": "app.openmkt.commerce.productGroup",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "tid",
+      "description": "Groups variant listings. Deliberately carries no price: the group's price is a range computed from its children, and apps own that aggregation.",
+      "record": {
+        "type": "object",
+        "required": ["title", "shopRef", "optionAxes", "category", "type", "createdAt"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 3000
+          },
+          "shopRef": {
+            "type": "string",
+            "format": "at-uri",
+            "description": "AT URI of the parent shop record"
+          },
+          "optionAxes": {
+            "type": "array",
+            "items": {
+              "type": "ref",
+              "ref": "app.openmkt.commerce.defs#optionAxis"
+            },
+            "minLength": 1,
+            "maxLength": 10,
+            "description": "Variant axes declared on this group (e.g. Color, Size)"
+          },
+          "defaultVariant": {
+            "type": "array",
+            "items": {
+              "type": "ref",
+              "ref": "app.openmkt.commerce.defs#variantProperty"
+            },
+            "maxLength": 10,
+            "description": "Variant properties preselected when the product is first shown (e.g. [{axis: Color, value: Red}])"
+          },
+          "sku": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Seller-defined SKU for the group as a whole; variants may inherit it with the 'parent' sentinel"
+          },
+          "specifications": {
+            "type": "array",
+            "items": {
+              "type": "ref",
+              "ref": "app.openmkt.commerce.defs#specification"
+            },
+            "maxLength": 50,
+            "description": "Properties shared by every variant in this group"
+          },
+          "category": {
+            "type": "ref",
+            "ref": "app.openmkt.commerce.defs#categorySlug"
+          },
+          "taxonomy": {
+            "type": "ref",
+            "ref": "app.openmkt.commerce.defs#taxonomyRef",
+            "description": "Optional deep category in an external taxonomy, shared by every variant in this group"
+          },
+          "type": {
+            "type": "string",
+            "knownValues": ["goods", "service", "digital"],
+            "description": "Listing type for all variants in this group. Source of truth; variant listings mirror this value."
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "blob",
+              "accept": ["image/*"],
+              "maxSize": 1000000
+            },
+            "maxLength": 10
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "$type": "app.openmkt.marketplace.listing",
+  "title": "Vintage Leather Armchair",
+  "description": "Mid-century armchair, reupholstered in tan leather.",
+  "price": "1250.00",
+  "currency": "USD",
+  "category": "furniture",
+  "condition": "good",
+  "location": {
+    "state": "CA",
+    "county": "Alameda",
+    "locality": "Oakland",
+    "zipPrefix": "946",
+    "isOnlineStore": false
+  },
+  "metadata": {
+    "subcategory": "Living Room"
+  },
+  "externalUrl": "https://example.com/listing/123",
+  "hideFromFriends": false,
+  "labels": {
+    "$type": "com.atproto.label.defs#selfLabels",
+    "values": [{ "val": "handmade" }]
+  },
+  "createdAt": "2026-04-21T10:00:00Z"
+}

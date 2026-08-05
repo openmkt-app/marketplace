@@ -1,0 +1,10 @@
+{
+  "lexicon": 1,
+  "id": "app.openmkt.commerce.listListings",
+  "defs": {
+    "main": {
+      "type": "query",
+      "description": "Cross-seller listing feed. Merges the v2 commerce collection with the legacy v1 marketplace collection, normalizing both into one shape. Backed by scripts/listListings.lua."
+    }
+  }
+}

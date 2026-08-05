@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { AtpAgent } from '@atproto/api';
-import { MARKETPLACE_COLLECTION } from '@/lib/constants';
+import { READ_COLLECTIONS } from '@/lib/commerce/collections';
+import { normalizeListings } from '@/lib/commerce/hydrate';
+import { toLegacyListings } from '@/lib/commerce/legacy';
 import { getCachedListings, setListingsCache, getCachedSellers, getCachedPDS, setCachedPDS } from '@/lib/mall-cache';
 import { getBotAgent } from '@/lib/bot-client';
 
@@ -50,23 +52,38 @@ async function fetchListingsForDID(did: string, pdsHint?: string): Promise<any[]
         const pds = pdsHint ?? await resolvePDS(did);
         const agent = new AtpAgent({ service: pds });
 
-        const result = await agent.api.com.atproto.repo.listRecords({
-            repo: did,
-            collection: MARKETPLACE_COLLECTION,
-            limit: 50,
-        });
+        // A seller's listings can live in either collection: v2 for anything
+        // created or edited since the migration, v1 for everything they have
+        // not touched since. Both are read; neither is authoritative over the
+        // other.
+        const results = await Promise.all(
+            READ_COLLECTIONS.map(collection =>
+                agent.api.com.atproto.repo
+                    .listRecords({ repo: did, collection, limit: 50 })
+                    .catch(() => null)
+            )
+        );
 
-        if (!result.success || !result.data.records.length) return [];
+        const records = results.flatMap(result =>
+            result?.success ? result.data.records : []
+        );
+        if (!records.length) return [];
 
         const handle = await getHandleFromDID(did);
 
-        return result.data.records.map(record => ({
-            ...(record.value as any),
-            authorDid: did,
-            authorHandle: handle,
-            uri: record.uri,
-            cid: record.cid,
-        }));
+        // normalizeListings collapses both record shapes into one canonical
+        // form; toLegacyListings maps that onto the shape the UI still expects.
+        // Nothing downstream needs to know which collection a listing came from.
+        return toLegacyListings(
+            normalizeListings(
+                records.map(record => ({
+                    record: record.value as any,
+                    uri: record.uri,
+                    cid: record.cid,
+                    authorDid: did,
+                }))
+            )
+        ).map(listing => ({ ...listing, authorHandle: handle }));
     } catch {
         return [];
     }

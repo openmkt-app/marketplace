@@ -1,0 +1,57 @@
+{
+  "lexicon": 1,
+  "id": "app.openmkt.commerce.review",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["subject", "rating", "createdAt"],
+        "properties": {
+          "subject": {
+            "type": "string",
+            "format": "at-uri",
+            "description": "AT URI of what is being reviewed: a productGroup or standalone listing (durable, product-level anchor), or a shop record for a seller review. Seller reputation was the founding motivation for this Lexicon, so shop subjects are first-class, not a workaround."
+          },
+          "rating": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 5000
+          },
+          "variantSnapshot": {
+            "type": "array",
+            "items": {
+              "type": "ref",
+              "ref": "app.openmkt.commerce.defs#variantProperty"
+            },
+            "maxLength": 10,
+            "description": "Denormalized variant properties captured at review time (e.g. [{axis: Color, value: Red}])"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "blob",
+              "accept": ["image/*"],
+              "maxSize": 1000000
+            },
+            "maxLength": 10,
+            "description": "Buyer photos of the item as received"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    }
+  }
+}

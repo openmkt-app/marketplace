@@ -1,0 +1,34 @@
+{
+  "$type": "app.openmkt.commerce.listing",
+  "type": "goods",
+  "title": "Home Office Tech Starter Pack",
+  "shortDescription": "Complete desk setup",
+  "pricing": {
+    "regularPrice": 18998,
+    "salePrice": 16999,
+    "currency": "USD",
+    "taxInclusive": false
+  },
+  "category": "electronics",
+  "shopRef": "at://did:plc:abc/app.openmkt.commerce.shop/self",
+  "availability": "in_stock",
+  "manageStock": true,
+  "quantity": 30,
+  "details": {
+    "$type": "app.openmkt.commerce.listing#goodsDetails",
+    "shippingRequired": true
+  },
+  "createdAt": "2026-08-04T10:00:00Z",
+  "groupedItems": [
+    {
+      "item": "at://did:plc:abc/app.openmkt.commerce.listing/kb01",
+      "quantity": 1,
+      "title": "Custom Mechanical Keyboard"
+    },
+    {
+      "item": "at://did:plc:abc/app.openmkt.commerce.listing/cam01",
+      "quantity": 1,
+      "title": "1080p HD Pro Webcam"
+    }
+  ]
+}
