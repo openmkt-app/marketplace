@@ -1,80 +1,82 @@
-const fs = require('fs');
-const path = require('path');
-const { Lexicons } = require('@atproto/lexicon');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { Lexicons } from '@atproto/lexicon';
 
-// Path to your lexicon files
-const lexiconDir = path.join(__dirname, '..', 'lexicons');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const root = path.join(__dirname, '..');
+const lexiconDir = path.join(root, 'lexicons');
+const fixtureDir = path.join(root, 'test', 'fixtures');
 
-// Function to validate a lexicon file
-function validateLexicon(filePath) {
-  try {
-    const content = fs.readFileSync(filePath, 'utf8');
-    const lexiconDoc = JSON.parse(content);
-    
-    // Create a new Lexicons instance
-    const lexicons = new Lexicons();
-    
-    // Add the lexicon document to the collection
-    lexicons.add(lexiconDoc);
-    
-    console.log(`✅ Valid lexicon: ${filePath}`);
-    return true;
-  } catch (error) {
-    console.error(`❌ Invalid lexicon: ${filePath}`);
-    console.error(error);
-    return false;
-  }
-}
-
-// Recursively walk directories to find all lexicon files
 function walkDir(dir) {
   let results = [];
-  const list = fs.readdirSync(dir);
-  
-  list.forEach(file => {
+  for (const file of fs.readdirSync(dir)) {
     const filePath = path.join(dir, file);
-    const stat = fs.statSync(filePath);
-    
-    if (stat.isDirectory()) {
-      // Recursively walk through directories
-      results = results.concat(walkDir(filePath));
-    } else if (file.endsWith('.json')) {
-      // Add JSON files to results
-      results.push(filePath);
-    }
-  });
-  
+    if (fs.statSync(filePath).isDirectory()) results = results.concat(walkDir(filePath));
+    else if (file.endsWith('.json')) results.push(filePath);
+  }
   return results;
 }
 
-// Find and validate all lexicon files
-function validateAllLexicons() {
-  if (!fs.existsSync(lexiconDir)) {
-    console.error(`Directory not found: ${lexiconDir}`);
-    process.exit(1);
-  }
-  
-  const lexiconFiles = walkDir(lexiconDir);
-  
-  if (lexiconFiles.length === 0) {
-    console.log('No lexicon files found.');
-    return;
-  }
-  
-  let validCount = 0;
-  
-  for (const file of lexiconFiles) {
-    if (validateLexicon(file)) {
-      validCount++;
-    }
-  }
-  
-  console.log(`\nValidation complete: ${validCount}/${lexiconFiles.length} lexicons are valid.`);
-  
-  // Exit with error code if any lexicons are invalid
-  if (validCount < lexiconFiles.length) {
-    process.exit(1);
+// Phase 1: register every Lexicon into ONE instance. The previous version built a
+// fresh Lexicons() per file, so cross-file refs (app.openmkt.commerce.defs#pricing)
+// could never resolve and a broken ref would pass silently.
+const lexicons = new Lexicons();
+const lexiconFiles = walkDir(lexiconDir);
+let schemaErrors = 0;
+console.log('--- Schema registration ---\n');
+for (const file of lexiconFiles) {
+  const rel = path.relative(lexiconDir, file);
+  try {
+    lexicons.add(JSON.parse(fs.readFileSync(file, 'utf8')));
+    console.log(`  ✅ ${rel}`);
+  } catch (e) {
+    console.error(`  ❌ ${rel}\n     ${e.message}`);
+    schemaErrors++;
   }
 }
 
-validateAllLexicons();
+// Phase 2: validate sample records. Registration alone never exercises refs,
+// unions, or required fields — only validating a real record does.
+console.log('\n--- Record validation ---\n');
+let recordErrors = 0;
+let recordCount = 0;
+if (!fs.existsSync(fixtureDir)) {
+  console.error('  ❌ no test/fixtures/ directory — record validation cannot run');
+  recordErrors++;
+} else {
+  const fixtures = fs.readdirSync(fixtureDir).filter((f) => f.endsWith('.json'));
+  for (const file of fixtures) {
+    try {
+      const record = JSON.parse(fs.readFileSync(path.join(fixtureDir, file), 'utf8'));
+      const nsid = record.$type;
+      if (!nsid) {
+        console.error(`  ❌ ${file}: missing $type`);
+        recordErrors++;
+        continue;
+      }
+      lexicons.assertValidRecord(nsid.split('#')[0], record);
+      console.log(`  ✅ ${file} (${nsid})`);
+      recordCount++;
+    } catch (e) {
+      console.error(`  ❌ ${file}\n     ${e.message}`);
+      recordErrors++;
+    }
+  }
+  // A run that validated nothing is a failure, not a pass — otherwise deleting
+  // the fixtures would turn this script into a no-op that still exits 0.
+  if (recordCount === 0) {
+    console.error('  ❌ no records validated — fixtures are required');
+    recordErrors++;
+  }
+}
+
+console.log(`\nSchemas: ${lexiconFiles.length - schemaErrors}/${lexiconFiles.length} valid`);
+console.log(`Records: ${recordCount} valid`);
+const totalErrors = schemaErrors + recordErrors;
+if (totalErrors > 0) {
+  console.log(`\n${totalErrors} error(s) found.`);
+  process.exit(1);
+}
+console.log('\nAll checks passed.');

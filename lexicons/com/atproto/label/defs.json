@@ -1,0 +1,19 @@
+{
+  "lexicon": 1,
+  "id": "com.atproto.label.defs",
+  "defs": {
+    "selfLabels": {
+      "type": "object",
+      "description": "Self-labels published by the author within the record. Vendored subset of the official com.atproto.label.defs — sync from upstream atproto.",
+      "required": ["values"],
+      "properties": {
+        "values": { "type": "array", "items": { "type": "ref", "ref": "#selfLabel" }, "maxLength": 10 }
+      }
+    },
+    "selfLabel": {
+      "type": "object",
+      "required": ["val"],
+      "properties": { "val": { "type": "string", "maxLength": 128 } }
+    }
+  }
+}

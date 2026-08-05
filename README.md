@@ -142,8 +142,14 @@ src/
 └── components/
     └── marketplace/           # Listing cards, filters, gallery tiles
 lexicons/
-├── app/openmkt/marketplace/listing.json     # Production lexicon
-└── app/atprotomkt/marketplace/listing.json  # Dev/test lexicon
+├── app/openmkt/marketplace/listing.json  # v1 listing — read-only, being migrated away from
+├── app/openmkt/commerce/                 # v2 commerce schemas
+│   ├── defs.json                         #   shared types: pricing, location, specs, taxonomy
+│   ├── listing.json                      #   product / service / digital listing
+│   ├── productGroup.json                 #   variant grouping (not yet authored in-app)
+│   ├── review.json                       #   product and seller reviews
+│   └── shop.json                         #   commerce identity and policies
+└── com/atproto/label/defs.json           # vendored, for validation only
 ```
 
 ---
