@@ -6,7 +6,7 @@ import { normalizeListings } from '@/lib/commerce/hydrate';
 import { toLegacyListings } from '@/lib/commerce/legacy';
 import {
     getCachedListings, setListingsCache,
-    getCachedAppViewListings, setAppViewListingsCache,
+    getAppViewCacheEntry, setAppViewListingsCache, refreshAppViewInBackground,
     getCachedSellers, getCachedPDS, setCachedPDS,
 } from '@/lib/mall-cache';
 import { getBotAgent } from '@/lib/bot-client';
@@ -103,12 +103,21 @@ export async function GET(request: Request) {
         const useAppView = forced === 'appview' || (forced !== 'fanout' && isAppViewEnabled());
 
         if (useAppView) {
-            const cachedIndexed = getCachedAppViewListings();
-            if (cachedIndexed) {
+            const entry = getAppViewCacheEntry();
+            if (entry) {
+                // Serve immediately, refresh behind the response. The visitor
+                // never waits on the NAS; the data is at most a minute old.
+                if (entry.needsRefresh) {
+                    refreshAppViewInBackground(async () => {
+                        const { listings } = await fetchListingsFromAppView({ limit: 100 });
+                        return listings ? toLegacyListings(listings) : null;
+                    });
+                }
                 return NextResponse.json({
-                    listings: cachedIndexed,
-                    count: cachedIndexed.length,
-                    source: 'appview-cached',
+                    listings: entry.listings,
+                    count: entry.listings.length,
+                    source: entry.needsRefresh ? 'appview-stale' : 'appview-cached',
+                    ageMs: entry.ageMs,
                 });
             }
 

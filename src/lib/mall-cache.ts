@@ -96,16 +96,43 @@ export function invalidateListingsCache(): void {
 // The TTL exists mainly to protect the origin. The index runs on a home NAS
 // behind a tunnel, so one request per page load is load worth avoiding.
 
-const APPVIEW_CACHE_TTL = 60 * 1000; // 1 minute
+// Stale-while-revalidate.
+//
+// A cache miss used to cost the visitor the full round trip to the NAS, which
+// measured 0.7s to 3.8s from Netlify and is highly variable — it crosses the
+// public internet to a home connection. So every 60 seconds one unlucky visitor
+// paid for everyone else's freshness.
+//
+// Instead: serve what we have immediately and refresh behind the response. Data
+// is at most a minute or so old, and nobody ever waits on the origin.
+
+/** Past this, the entry is refreshed — but still served while that happens. */
+const APPVIEW_REFRESH_AFTER = 60 * 1000;
+
+/**
+ * Past this, the entry is too old to serve and the caller must wait.
+ *
+ * Deliberately much longer than the refresh interval: if the NAS is unreachable,
+ * ten-minute-old listings beat dropping to a fan-out that takes 8.7 seconds.
+ */
+const APPVIEW_MAX_STALE = 10 * 60 * 1000;
 
 let appViewCache: PublicListing[] | null = null;
 let appViewCachedAt = 0;
 
-export function getCachedAppViewListings(): PublicListing[] | null {
-  if (appViewCache && Date.now() - appViewCachedAt < APPVIEW_CACHE_TTL) {
-    return appViewCache;
-  }
-  return null;
+export type AppViewCacheEntry = {
+  listings: PublicListing[];
+  ageMs: number;
+  /** Served now, but a refresh should be started. */
+  needsRefresh: boolean;
+};
+
+/** Returns anything still within the max-stale window, fresh or not. */
+export function getAppViewCacheEntry(): AppViewCacheEntry | null {
+  if (!appViewCache) return null;
+  const ageMs = Date.now() - appViewCachedAt;
+  if (ageMs > APPVIEW_MAX_STALE) return null;
+  return { listings: appViewCache, ageMs, needsRefresh: ageMs > APPVIEW_REFRESH_AFTER };
 }
 
 export function setAppViewListingsCache(listings: PublicListing[]): void {
@@ -116,4 +143,30 @@ export function setAppViewListingsCache(listings: PublicListing[]): void {
 export function invalidateAppViewListingsCache(): void {
   appViewCache = null;
   appViewCachedAt = 0;
+}
+
+// One shared in-flight refresh. Without this, a burst of requests arriving on a
+// stale entry would each start their own fetch and stampede the NAS.
+let inFlightRefresh: Promise<void> | null = null;
+
+/**
+ * Start a background refresh unless one is already running.
+ *
+ * Not awaited by the caller. On a serverless platform the function may be frozen
+ * after responding, so this is best-effort — if it does not finish, the next
+ * request simply tries again. That is acceptable because a stale entry is still
+ * being served either way.
+ */
+export function refreshAppViewInBackground(refresh: () => Promise<PublicListing[] | null>): void {
+  if (inFlightRefresh) return;
+  inFlightRefresh = refresh()
+    .then((listings) => {
+      if (listings) setAppViewListingsCache(listings);
+    })
+    .catch(() => {
+      // Keep serving the stale entry; the next request retries.
+    })
+    .finally(() => {
+      inFlightRefresh = null;
+    });
 }
