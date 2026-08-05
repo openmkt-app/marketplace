@@ -7,6 +7,7 @@ import { toLegacyListings } from '@/lib/commerce/legacy';
 import {
     getCachedListings, setListingsCache,
     getAppViewCacheEntry, setAppViewListingsCache, refreshAppViewInBackground,
+    getCachedHandle, setCachedHandle,
     getCachedSellers, getCachedPDS, setCachedPDS,
 } from '@/lib/mall-cache';
 import { getBotAgent } from '@/lib/bot-client';
@@ -34,6 +35,35 @@ async function resolvePDS(did: string): Promise<string> {
     } catch {
         return 'https://bsky.social';
     }
+}
+
+/**
+ * Attach author handles to listings that came from the AppView.
+ *
+ * The index stores DIDs; the UI needs handles for author names and store links.
+ * Without this the AppView path silently drops authorHandle, which shows up as
+ * missing names and broken store links rather than as an error.
+ *
+ * One lookup per unique seller, cached for a day, all in parallel.
+ */
+async function attachHandles(listings: any[]): Promise<any[]> {
+    const dids = Array.from(new Set(listings.map(l => l.authorDid).filter(Boolean)));
+    const resolved = new Map<string, string>();
+
+    await Promise.all(
+        dids.map(async (did) => {
+            const cached = getCachedHandle(did);
+            if (cached) {
+                resolved.set(did, cached);
+                return;
+            }
+            const handle = await getHandleFromDID(did);
+            if (handle && handle !== did) setCachedHandle(did, handle);
+            resolved.set(did, handle);
+        })
+    );
+
+    return listings.map(l => ({ ...l, authorHandle: resolved.get(l.authorDid) ?? l.authorDid }));
 }
 
 async function getHandleFromDID(did: string): Promise<string> {
@@ -110,7 +140,7 @@ export async function GET(request: Request) {
                 if (entry.needsRefresh) {
                     refreshAppViewInBackground(async () => {
                         const { listings } = await fetchListingsFromAppView({ limit: 100 });
-                        return listings ? toLegacyListings(listings) : null;
+                        return listings ? attachHandles(toLegacyListings(listings)) : null;
                     });
                 }
                 return NextResponse.json({
@@ -127,7 +157,7 @@ export async function GET(request: Request) {
             // mean a marketplace that is down.
             const { listings: indexed, error, url } = await fetchListingsFromAppView({ limit: 100 });
             if (indexed) {
-                const listings = toLegacyListings(indexed);
+                const listings = await attachHandles(toLegacyListings(indexed));
                 setAppViewListingsCache(listings);
                 return NextResponse.json({ listings, count: listings.length, source: 'appview' });
             }

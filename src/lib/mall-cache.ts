@@ -145,6 +145,27 @@ export function invalidateAppViewListingsCache(): void {
   appViewCachedAt = 0;
 }
 
+// --- DID -> handle cache ---
+//
+// The AppView returns DIDs, not handles, but the UI needs handles for author
+// names and for links to store pages. Resolving them means one PLC lookup per
+// unique seller, so they are cached for a day — handles change rarely, and a
+// stale one costs a wrong display name rather than a broken page.
+
+const HANDLE_CACHE_TTL = 24 * 60 * 60 * 1000;
+
+const handleCache = new Map<string, { handle: string; at: number }>();
+
+export function getCachedHandle(did: string): string | null {
+  const hit = handleCache.get(did);
+  if (hit && Date.now() - hit.at < HANDLE_CACHE_TTL) return hit.handle;
+  return null;
+}
+
+export function setCachedHandle(did: string, handle: string): void {
+  handleCache.set(did, { handle, at: Date.now() });
+}
+
 // One shared in-flight refresh. Without this, a burst of requests arriving on a
 // stale entry would each start their own fetch and stampede the NAS.
 let inFlightRefresh: Promise<void> | null = null;

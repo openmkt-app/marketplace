@@ -528,7 +528,36 @@ export class MarketplaceClient {
    * Get all marketplace listings from known DIDs
    * This is the optimized approach - directly fetch from the DID registry
    */
+  /**
+   * All listings for the browse page.
+   *
+   * Prefers the indexed API, which is a single same-origin request. The old
+   * behaviour — fanning out from the browser to every seller's PDS at
+   * concurrency 5 — is kept as a fallback but is dramatically slower: it
+   * resolves a PDS and calls listRecords per seller, serially in batches, so
+   * first paint waited on the whole network round trip. Measured at ~13s
+   * against ~0.2s for the indexed path.
+   *
+   * The privacy filter still runs client-side either way. hideFromFriends needs
+   * the viewer's own follow graph, which the server does not have.
+   */
   async getAllListings(): Promise<MarketplaceListing[]> {
+    try {
+      const indexed = await fetchPublicListings();
+      if (indexed.length > 0) {
+        logger.info(`Fetched ${indexed.length} listings via the indexed API`);
+        return await this.filterHiddenListings(indexed as any);
+      }
+      logger.warn('Indexed API returned nothing; falling back to per-DID fan-out');
+    } catch (error) {
+      logger.warn('Indexed API failed; falling back to per-DID fan-out', error as Error);
+    }
+
+    return this.getAllListingsByFanOut();
+  }
+
+  /** Original per-seller fan-out. Fallback only — see getAllListings. */
+  private async getAllListingsByFanOut(): Promise<MarketplaceListing[]> {
     try {
       logger.info('Fetching all marketplace listings from known DIDs');
 
