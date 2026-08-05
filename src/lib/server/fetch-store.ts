@@ -2,7 +2,9 @@
 // Server-side utility for fetching store/seller data (used by generateMetadata)
 
 import { BskyAgent } from '@atproto/api';
-import { MARKETPLACE_COLLECTION } from '../constants';
+import { READ_COLLECTIONS } from '../commerce/collections';
+import { normalizeListings } from '../commerce/hydrate';
+import { toLegacyListing } from '../commerce/legacy';
 
 export type SellerProfile = {
   did: string;
@@ -35,19 +37,6 @@ export type StoreData = {
   listings: StoreListing[];
   listingsCount: number;
 };
-
-function extractImageCids(rawJson: string): string[] {
-  const cidMatches = rawJson.match(/bafk(?:re)?[a-zA-Z0-9]{44,60}/g) || [];
-  return Array.from(new Set(cidMatches));
-}
-
-function formatImageUrls(cids: string[], did: string) {
-  return cids.map(cid => ({
-    thumbnail: `https://cdn.bsky.app/img/feed_thumbnail/plain/${did}/${cid}@jpeg`,
-    fullsize: `https://cdn.bsky.app/img/feed_fullsize/plain/${did}/${cid}@jpeg`,
-    mimeType: 'image/jpeg',
-  }));
-}
 
 export async function fetchStoreByHandle(handle: string): Promise<StoreData | null> {
   try {
@@ -99,37 +88,41 @@ export async function fetchStoreByHandle(handle: string): Promise<StoreData | nu
     // Create an agent for the user's PDS
     const pdsAgent = new BskyAgent({ service: pdsEndpoint });
 
-    // Fetch listings from the marketplace collection
-    const listingsResult = await pdsAgent.api.com.atproto.repo.listRecords({
-      repo: profileData.did,
-      collection: MARKETPLACE_COLLECTION,
-      limit: 50,
-    });
+    // A store's listings span both collections during the migration.
+    const listingsResults = await Promise.all(
+      READ_COLLECTIONS.map(collection =>
+        pdsAgent.api.com.atproto.repo
+          .listRecords({ repo: profileData.did, collection, limit: 50 })
+          .catch(() => null)
+      )
+    );
 
-    const listings: StoreListing[] = [];
+    const rawRecords = listingsResults.flatMap(result =>
+      result?.success ? result.data.records : []
+    );
 
-    if (listingsResult.success && listingsResult.data.records.length > 0) {
-      for (const record of listingsResult.data.records) {
-        const listing = record.value as any;
-        const rawJson = JSON.stringify(record);
-        const imageCids = extractImageCids(rawJson);
-        const formattedImages = formatImageUrls(imageCids, profileData.did);
+    // Images come from the normalized `images` array rather than a regex over
+    // the stringified record, which matched any CID anywhere in it.
+    const listings: StoreListing[] = normalizeListings(
+      rawRecords.map(record => ({
+        record: record.value as any,
+        uri: record.uri,
+        cid: record.cid,
+        authorDid: profileData.did,
+      }))
+    ).map(listing => ({
+      title: listing.title,
+      description: listing.description,
+      price: toLegacyListing(listing).price,
+      uri: listing.uri,
+      createdAt: listing.createdAt,
+      formattedImages: listing.formattedImages ?? [],
+    }));
 
-        listings.push({
-          title: listing.title || 'Untitled',
-          description: listing.description || '',
-          price: listing.price || '',
-          uri: record.uri,
-          createdAt: listing.createdAt || new Date().toISOString(),
-          formattedImages,
-        });
-      }
-
-      // Sort by creation date (newest first)
-      listings.sort((a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-    }
+    // Sort by creation date (newest first)
+    listings.sort((a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
     return {
       profile,

@@ -2,7 +2,9 @@
 // Server-side utility for fetching listing data (used by generateMetadata and server components)
 
 import { BskyAgent } from '@atproto/api';
-import { MARKETPLACE_COLLECTION } from '../constants';
+import { isListingCollection } from '../commerce/collections';
+import { normalizeAndHydrate } from '../commerce/hydrate';
+import { toLegacyListing } from '../commerce/legacy';
 
 export type ListingData = {
   title: string;
@@ -38,19 +40,6 @@ export type ListingData = {
   }>;
 };
 
-function extractImageCids(rawJson: string): string[] {
-  const cidMatches = rawJson.match(/bafk(?:re)?[a-zA-Z0-9]{44,60}/g) || [];
-  return Array.from(new Set(cidMatches)); // Remove duplicates
-}
-
-function formatImageUrls(cids: string[], did: string) {
-  return cids.map(cid => ({
-    thumbnail: `https://cdn.bsky.app/img/feed_thumbnail/plain/${did}/${cid}@jpeg`,
-    fullsize: `https://cdn.bsky.app/img/feed_fullsize/plain/${did}/${cid}@jpeg`,
-    mimeType: 'image/jpeg',
-  }));
-}
-
 export async function fetchListingById(id: string): Promise<ListingData | 'removed' | null> {
   try {
     const decodedId = decodeURIComponent(id);
@@ -71,8 +60,10 @@ export async function fetchListingById(id: string): Promise<ListingData | 'remov
     const collection = parts[3];
     const rkey = parts[4];
 
-    // Verify this is a marketplace listing
-    if (collection !== MARKETPLACE_COLLECTION) {
+    // Accept both collections. Existing feed-index entries store full AT URIs
+    // including the collection segment, so a v1-only check here would turn every
+    // old feed entry into a 404 once writes move to the commerce collection.
+    if (!isListingCollection(collection)) {
       console.error('Not a marketplace listing:', collection);
       return null;
     }
@@ -110,12 +101,17 @@ export async function fetchListingById(id: string): Promise<ListingData | 'remov
       return null;
     }
 
-    const value = record.data.value as any;
-
-    // Extract image CIDs from raw JSON
-    const rawJson = JSON.stringify(record.data);
-    const imageCids = extractImageCids(rawJson);
-    const formattedImages = formatImageUrls(imageCids, did);
+    // Normalize whichever shape came back, then read the images off the
+    // `images` array. The old path regex-matched `bafk…` against the entire
+    // stringified record, which picks up any CID anywhere in it — a non-image
+    // blob or a nested ref would have rendered as a product photo.
+    const listing = normalizeAndHydrate(record.data.value as any, {
+      uri: record.data.uri,
+      cid: record.data.cid,
+      authorDid: did,
+    });
+    const value = toLegacyListing(listing);
+    const formattedImages = listing.formattedImages ?? [];
 
     // Fetch seller profile
     let authorHandle: string | undefined;

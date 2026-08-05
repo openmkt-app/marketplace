@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { BskyAgent } from '@atproto/api';
-import { createBlueskyCdnImageUrls } from '@/lib/image-utils';
+import { normalizeAndHydrate } from '@/lib/commerce/hydrate';
+import { toLegacyListing } from '@/lib/commerce/legacy';
 import ListingDetail from '@/components/marketplace/ListingDetail';
 import type { ListingData } from '@/lib/server/fetch-listing';
 
@@ -96,80 +97,21 @@ export default function ListingPageClient({ listingId, initialListing, isNewList
           rkey: rkey
         });
 
-        const listingData = {
-          ...record.data.value,
+        // Normalize whichever record shape came back, then map onto the shape
+        // ListingDetail expects. Image URLs come from the `images` array — the
+        // previous code regex-matched `bafk…` over the whole stringified record,
+        // so any CID in it (not just image blobs) was rendered as a photo.
+        const normalized = normalizeAndHydrate(record.data.value as any, {
           uri: record.data.uri,
           cid: record.data.cid,
-          authorDid: did
+          authorDid: did,
+        });
+
+        const listingData = {
+          ...toLegacyListing(normalized),
+          images: normalized.images ?? [],
+          formattedImages: normalized.formattedImages ?? [],
         } as any;
-
-        // Extract image CIDs from raw data
-        try {
-          const rawJson = JSON.stringify(record.data);
-          const cidMatches = rawJson.match(/bafk(?:re)?[a-zA-Z0-9]{44,60}/g) || [];
-
-          if (cidMatches.length > 0) {
-            const directUrls = cidMatches.map(cid => ({
-              thumbnail: `https://cdn.bsky.app/img/feed_thumbnail/plain/${did}/${cid}@jpeg`,
-              fullsize: `https://cdn.bsky.app/img/feed_fullsize/plain/${did}/${cid}@jpeg`,
-              mimeType: 'image/jpeg',
-              extractedCid: cid
-            }));
-
-            listingData.extractedImageUrls = directUrls;
-            listingData.formattedImages = directUrls;
-          }
-        } catch (error) {
-          console.error('Failed to extract CIDs from raw data:', error);
-        }
-
-        if (!listingData.authorDid) {
-          listingData.authorDid = did;
-        }
-
-        if (listingData.images && Array.isArray(listingData.images)) {
-          listingData.images = listingData.images.filter((image: any) => {
-            if (!image) {
-              return false;
-            }
-
-            if (image.$type === 'blob' || image.mimeType) {
-              if (image.ref) return true;
-            }
-
-            if (typeof image === 'object' && image.$link) {
-              return true;
-            }
-
-            return false;
-          });
-
-          if (listingData.images.length > 0) {
-            if (!listingData.formattedImages || listingData.formattedImages.length === 0) {
-              const processedImages = [];
-
-              for (let i = 0; i < listingData.images.length; i++) {
-                const image = listingData.images[i];
-
-                try {
-                  const imageUrls = createBlueskyCdnImageUrls(image, listingData.authorDid, image.mimeType);
-
-                  processedImages.push({
-                    thumbnail: imageUrls.thumbnail,
-                    fullsize: imageUrls.fullsize,
-                    mimeType: image.mimeType || 'image/jpeg'
-                  });
-                } catch (err) {
-                  console.error(`Error processing image ${i}:`, err);
-                }
-              }
-
-              listingData.formattedImages = processedImages;
-            }
-          }
-        } else {
-          listingData.images = [];
-        }
 
         setListing(listingData);
 

@@ -9,6 +9,7 @@
 
 export * from './collections.ts';
 export * from './hydrate.ts';
+export * from './legacy.ts';
 export * from './money.ts';
 export * from './normalize.ts';
 export * from './serialize.ts';
