@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { AtpAgent } from '@atproto/api';
-import { fetchListings as fetchListingsFromAppView, isAppViewEnabled } from '@/lib/commerce/appview';
+import { fetchListingsWithDiagnostics as fetchListingsFromAppView, isAppViewEnabled } from '@/lib/commerce/appview';
 import { READ_COLLECTIONS } from '@/lib/commerce/collections';
 import { normalizeListings } from '@/lib/commerce/hydrate';
 import { toLegacyListings } from '@/lib/commerce/legacy';
@@ -99,6 +99,7 @@ export async function GET(request: Request) {
         // ?source=appview|fanout forces one path, so the two can be compared
         // side by side on the same deployment without flipping the flag.
         const forced = new URL(request.url).searchParams.get('source');
+        let appViewError: { error?: string; url?: string } | undefined;
         const useAppView = forced === 'appview' || (forced !== 'fanout' && isAppViewEnabled());
 
         if (useAppView) {
@@ -115,17 +116,22 @@ export async function GET(request: Request) {
             // Returns null on any failure, which drops through to fan-out below
             // rather than failing the request — an index that is down must not
             // mean a marketplace that is down.
-            const indexed = await fetchListingsFromAppView({ limit: 100 });
+            const { listings: indexed, error, url } = await fetchListingsFromAppView({ limit: 100 });
             if (indexed) {
                 const listings = toLegacyListings(indexed);
                 setAppViewListingsCache(listings);
                 return NextResponse.json({ listings, count: listings.length, source: 'appview' });
             }
+            // Only when the path was forced, so a normal fallback stays silent
+            // rather than leaking internals into every response.
+            if (forced === 'appview') {
+                appViewError = { error, url };
+            }
         }
 
         const cached = getCachedListings();
         if (cached) {
-            return NextResponse.json({ listings: cached, count: cached.length, source: 'fanout-cached' });
+            return NextResponse.json({ listings: cached, count: cached.length, source: 'fanout-cached', ...appViewError });
         }
 
         // Get seller DIDs — prefer the already-warm sellers cache
@@ -176,7 +182,7 @@ export async function GET(request: Request) {
 
         setListingsCache(allListings);
 
-        return NextResponse.json({ listings: allListings, count: allListings.length, source: 'fanout' });
+        return NextResponse.json({ listings: allListings, count: allListings.length, source: 'fanout', ...appViewError });
     } catch (error) {
         console.error('[listings] error:', error);
         return NextResponse.json({ listings: [], count: 0 }, { status: 200 });

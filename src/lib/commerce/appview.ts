@@ -145,17 +145,44 @@ export type ListOptions = {
  * which is different from an empty array meaning "the index has nothing".
  */
 export async function fetchListings(options: ListOptions = {}): Promise<Listing[] | null> {
+  return (await fetchListingsWithDiagnostics(options)).listings;
+}
+
+/**
+ * Same as fetchListings, but surfaces why it failed.
+ *
+ * A serverless fetch failure is invisible from outside: the fallback hides it
+ * and the reason is buried in function logs. This lets a forced ?source=appview
+ * request report the actual error, which is the difference between debugging
+ * and guessing.
+ */
+export async function fetchListingsWithDiagnostics(
+  options: ListOptions = {},
+): Promise<{ listings: Listing[] | null; error?: string; url?: string }> {
   const { limit = 50, did, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
+  const url = `${appViewUrl()}/xrpc/${NSID.listListings}`;
   try {
     const data = await xrpc<{ records?: AppViewRecord[] }>(NSID.listListings, { limit, did }, timeoutMs);
     const listings = (data.records || [])
       .map(toListing)
       .filter((l): l is Listing => l !== null)
       .map(withImageUrls);
-    return listings;
+    return { listings };
   } catch (err) {
-    console.warn('[appview] listListings failed, falling back:', err instanceof Error ? err.message : err);
-    return null;
+    // fetch() failures wrap the useful detail in `cause`; the outer message is
+    // just "fetch failed", which says nothing about DNS vs TLS vs refused.
+    const cause = (err as any)?.cause;
+    const detail = [
+      err instanceof Error ? err.message : String(err),
+      cause?.code ? `code=${cause.code}` : null,
+      cause?.message && cause.message !== (err as any)?.message ? `cause=${cause.message}` : null,
+      (err as any)?.name ? `name=${(err as any).name}` : null,
+    ]
+      .filter(Boolean)
+      .join(' | ');
+
+    console.warn('[appview] listListings failed, falling back:', detail, url);
+    return { listings: null, error: detail, url };
   }
 }
 
