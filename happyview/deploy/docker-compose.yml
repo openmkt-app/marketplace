@@ -1,0 +1,55 @@
+# HappyView — production deployment for a NAS or any always-on Linux box.
+#
+# Deliberately NOT the dev stack in the HappyView repo. That one mounts the
+# source tree, compiles Rust with `cargo watch`, and runs Caddy plus a Next.js
+# dev server — four containers and a multi-minute build. The published image
+# already contains the compiled binary and the built dashboard, so production is
+# a single container that pulls and starts in seconds.
+#
+#   docker compose up -d
+#
+# Storage is SQLite: one file in the ./data volume. No database container, no
+# managed Postgres, nothing with a free-tier compute budget to exhaust. At this
+# scale the write volume is close to zero — records only arrive when somebody
+# publishes a listing.
+
+name: happyview
+
+services:
+  happyview:
+    image: ghcr.io/gamesgamesgamesgamesgames/happyview:latest
+    restart: unless-stopped
+    ports:
+      # Bound to localhost only. Public access arrives through the tunnel, so
+      # nothing is exposed on the LAN or forwarded at the router.
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./data:/data
+    environment:
+      DATABASE_URL: sqlite:///data/happyview.db?mode=rwc
+      # Must match the hostname browsers actually use, or the atproto OAuth
+      # callback will not come back.
+      PUBLIC_URL: ${PUBLIC_URL:?set PUBLIC_URL in .env}
+      SESSION_SECRET: ${SESSION_SECRET:?generate with: openssl rand -base64 48}
+      RELAY_URL: ${RELAY_URL:-https://relay1.us-east.bsky.network}
+      JETSTREAM_URL: ${JETSTREAM_URL:-wss://jetstream1.us-east.bsky.network}
+      PORT: "3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # Optional. Only needed if the NAS is not already fronted by a reverse proxy
+  # with a real certificate. Requires a NAMED tunnel (a token), not the quick
+  # tunnel we used for the spike — quick tunnels get a random hostname that
+  # changes on every restart, which would break OAuth after each reboot.
+  #
+  # Comment this out if the NAS handles TLS itself.
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:?set a named-tunnel token, or remove this service}
+    depends_on:
+      - happyview

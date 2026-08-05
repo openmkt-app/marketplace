@@ -1,0 +1,10 @@
+{
+  "lexicon": 1,
+  "id": "app.openmkt.commerce.getListing",
+  "defs": {
+    "main": {
+      "type": "query",
+      "description": "Fetch a single listing by AT URI, from either the v2 commerce collection or the legacy v1 collection, normalized. Backed by scripts/getListing.lua."
+    }
+  }
+}
