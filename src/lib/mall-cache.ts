@@ -84,3 +84,36 @@ export function invalidateListingsCache(): void {
   listingsCache = null;
   listingsCachedAt = 0;
 }
+
+// --- AppView listings cache ---
+//
+// Kept separate from the fan-out cache above for two reasons. Sharing it would
+// let a ?source=fanout request be answered from AppView-cached data (and the
+// reverse), making the two paths impossible to compare honestly. And the AppView
+// deserves a shorter TTL: it indexes the firehose live, so caching it for five
+// minutes would throw away the freshness that is the point of having it.
+//
+// The TTL exists mainly to protect the origin. The index runs on a home NAS
+// behind a tunnel, so one request per page load is load worth avoiding.
+
+const APPVIEW_CACHE_TTL = 60 * 1000; // 1 minute
+
+let appViewCache: PublicListing[] | null = null;
+let appViewCachedAt = 0;
+
+export function getCachedAppViewListings(): PublicListing[] | null {
+  if (appViewCache && Date.now() - appViewCachedAt < APPVIEW_CACHE_TTL) {
+    return appViewCache;
+  }
+  return null;
+}
+
+export function setAppViewListingsCache(listings: PublicListing[]): void {
+  appViewCache = listings;
+  appViewCachedAt = Date.now();
+}
+
+export function invalidateAppViewListingsCache(): void {
+  appViewCache = null;
+  appViewCachedAt = 0;
+}

@@ -4,7 +4,11 @@ import { fetchListings as fetchListingsFromAppView, isAppViewEnabled } from '@/l
 import { READ_COLLECTIONS } from '@/lib/commerce/collections';
 import { normalizeListings } from '@/lib/commerce/hydrate';
 import { toLegacyListings } from '@/lib/commerce/legacy';
-import { getCachedListings, setListingsCache, getCachedSellers, getCachedPDS, setCachedPDS } from '@/lib/mall-cache';
+import {
+    getCachedListings, setListingsCache,
+    getCachedAppViewListings, setAppViewListingsCache,
+    getCachedSellers, getCachedPDS, setCachedPDS,
+} from '@/lib/mall-cache';
 import { getBotAgent } from '@/lib/bot-client';
 
 export const dynamic = 'force-dynamic';
@@ -98,6 +102,15 @@ export async function GET(request: Request) {
         const useAppView = forced === 'appview' || (forced !== 'fanout' && isAppViewEnabled());
 
         if (useAppView) {
+            const cachedIndexed = getCachedAppViewListings();
+            if (cachedIndexed) {
+                return NextResponse.json({
+                    listings: cachedIndexed,
+                    count: cachedIndexed.length,
+                    source: 'appview-cached',
+                });
+            }
+
             // One indexed query instead of a fan-out to every seller's PDS.
             // Returns null on any failure, which drops through to fan-out below
             // rather than failing the request — an index that is down must not
@@ -105,6 +118,7 @@ export async function GET(request: Request) {
             const indexed = await fetchListingsFromAppView({ limit: 100 });
             if (indexed) {
                 const listings = toLegacyListings(indexed);
+                setAppViewListingsCache(listings);
                 return NextResponse.json({ listings, count: listings.length, source: 'appview' });
             }
         }
