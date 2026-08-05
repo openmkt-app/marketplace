@@ -17,7 +17,11 @@ name: happyview
 
 services:
   happyview:
-    image: ghcr.io/gamesgamesgamesgamesgames/happyview:latest
+    # PINNED, and not to :latest — that tag currently resolves to 2.5.2 while
+    # the newest release is 2.12.0. Running :latest silently gave us a build
+    # with no Lua scripts admin API, which surfaced as a 405 on a path that
+    # exists in the docs. Bump this deliberately after checking the changelog.
+    image: ghcr.io/gamesgamesgamesgamesgames/happyview:2.12.0
     restart: unless-stopped
     ports:
       # Bound to localhost only. Public access arrives through the tunnel, so

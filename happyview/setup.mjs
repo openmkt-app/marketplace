@@ -12,10 +12,33 @@
 
 import fs from 'fs';
 import path from 'path';
+import dns from 'node:dns';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.join(__dirname, '..');
+
+// Optional DNS pin: HAPPYVIEW_RESOLVE=<ip>
+//
+// After a nameserver change, resolvers hold the old delegation until the NS
+// TTL expires — so the host is live but unreachable from a machine whose cache
+// is stale. Pinning the address lets the push run anyway. TLS is unaffected:
+// the hostname is still used for SNI and certificate validation, only the
+// address lookup is short-circuited.
+const pinnedIp = process.env.HAPPYVIEW_RESOLVE;
+if (pinnedIp) {
+  const pinnedHost = new URL(process.env.HAPPYVIEW_URL || 'http://127.0.0.1:3000').hostname;
+  const originalLookup = dns.lookup;
+  dns.lookup = (hostname, options, callback) => {
+    if (hostname === pinnedHost) {
+      const cb = typeof options === 'function' ? options : callback;
+      const opts = typeof options === 'function' ? {} : options || {};
+      if (opts.all) return cb(null, [{ address: pinnedIp, family: 4 }]);
+      return cb(null, pinnedIp, 4);
+    }
+    return originalLookup(hostname, options, callback);
+  };
+}
 
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
@@ -108,6 +131,20 @@ async function replace(kind, id, payload) {
   return api('POST', `/admin/${kind}`, payload);
 }
 
+// Scripts avoid DELETE entirely: create, and fall back to updating in place if
+// the trigger already exists. That keeps the required permission set to
+// scripts:manage alone — deleting to re-create needed a delete grant that is
+// easy to leave off a key, and produced a 403 halfway through a run.
+async function upsertScript(id, payload) {
+  try {
+    return await api('POST', '/admin/scripts', payload);
+  } catch (e) {
+    const alreadyExists = e.status === 409 || /exist|conflict|unique/i.test(e.message);
+    if (!alreadyExists) throw e;
+    return api('PATCH', `/admin/scripts/${encodeURIComponent(id)}`, payload);
+  }
+}
+
 async function main() {
   console.log(`HappyView: ${BASE}${dryRun ? '  (dry run)' : ''}\n`);
 
@@ -166,7 +203,7 @@ async function main() {
   console.log('\n--- Uploading Lua scripts ---');
   for (const q of queries) {
     const trigger = `xrpc.query:${q.doc.id}`;
-    await replace('scripts', trigger, { id: trigger, body: q.lua });
+    await upsertScript(trigger, { id: trigger, body: q.lua });
     console.log(`  ✅ ${path.basename(q.script)} -> ${trigger}`);
   }
 
