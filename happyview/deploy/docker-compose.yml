@@ -26,13 +26,15 @@ services:
     volumes:
       - ./data:/data
     environment:
-      DATABASE_URL: sqlite:///data/happyview.db?mode=rwc
+      # Values are quoted because several contain ":" — unquoted, YAML reads
+      # colon-space as a nested mapping and the file fails to parse.
+      DATABASE_URL: "sqlite:///data/happyview.db?mode=rwc"
       # Must match the hostname browsers actually use, or the atproto OAuth
       # callback will not come back.
-      PUBLIC_URL: ${PUBLIC_URL:?set PUBLIC_URL in .env}
-      SESSION_SECRET: ${SESSION_SECRET:?generate with: openssl rand -base64 48}
-      RELAY_URL: ${RELAY_URL:-https://relay1.us-east.bsky.network}
-      JETSTREAM_URL: ${JETSTREAM_URL:-wss://jetstream1.us-east.bsky.network}
+      PUBLIC_URL: "${PUBLIC_URL:?set PUBLIC_URL in .env}"
+      SESSION_SECRET: "${SESSION_SECRET:?generate one with openssl rand -base64 48}"
+      RELAY_URL: "${RELAY_URL:-https://relay1.us-east.bsky.network}"
+      JETSTREAM_URL: "${JETSTREAM_URL:-wss://jetstream1.us-east.bsky.network}"
       PORT: "3000"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
@@ -50,6 +52,13 @@ services:
   tunnel:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:?set a named-tunnel token, or remove this service}
+    # The token goes through the environment, not the command line. Passing it
+    # as --token means the value has to survive YAML parsing and then Compose's
+    # command splitting, and quoting it wrong yields a token with literal quote
+    # characters in it — which cloudflared rejects as "not valid", giving no
+    # hint that the value was mangled rather than wrong.
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: "${CLOUDFLARE_TUNNEL_TOKEN:?set a named-tunnel token, or remove this service}"
     depends_on:
       - happyview

@@ -26,18 +26,24 @@ No DKIM, no DMARC, no other subdomains. The zone is small.
 The two records people actually lose are **MX** and **`_atproto`**. Neither
 fails loudly: email just stops arriving, and the handle just stops resolving.
 
-## Improve the apex while migrating
+## Migrate first, improve second
 
-Do not copy the A records. Those are Netlify's shared IPs and can change without
-notice. Use Cloudflare's CNAME flattening at the apex instead:
+Reproduce the zone **exactly** as it is today, including the apex A records, and
+change nothing else while the nameservers move. Changing record types and
+nameservers in the same step means that if the site breaks you cannot tell which
+change did it.
+
+Afterwards, once everything is confirmed working, the apex is worth improving.
+Those two A records are Netlify's shared load balancers and can change without
+notice, so a CNAME with Cloudflare's apex flattening is more durable:
 
 ```
 @     CNAME  <your-site>.netlify.app   (DNS only)
 www   CNAME  <your-site>.netlify.app   (DNS only)
 ```
 
-Get `<your-site>` from the Netlify dashboard. This is what Netlify recommends
-for external DNS and it survives their infrastructure changes.
+Get `<your-site>` from the Netlify dashboard. Do this as a separate, later
+change with its own verification.
 
 ## Proxy settings — this catches people out
 
