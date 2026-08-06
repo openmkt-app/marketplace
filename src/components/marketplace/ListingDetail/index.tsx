@@ -11,7 +11,7 @@ import { formatConditionForDisplay } from '@/lib/condition-utils';
 import { formatPrice, formatDate } from '@/lib/price-utils';
 import { CATEGORIES } from '@/lib/category-data';
 import { extractSubcategoryFromDescription, formatCategoryDisplay, getCategoryName } from '@/lib/category-utils';
-import { getSellerDisplayName } from '@/lib/chat-utils';
+import { getSellerDisplayName } from '@/lib/seller-display';
 import { linkifyText } from '@/lib/linkify';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';

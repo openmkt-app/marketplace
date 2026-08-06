@@ -15,7 +15,7 @@ import { formatPrice, formatDate, formatLocation } from '@/lib/price-utils';
 import { isOnlineStore } from '@/lib/location-utils';
 import { extractSubcategoryFromDescription, getCategoryName } from '@/lib/category-utils';
 import { generateAvatarUrl } from '@/lib/image-utils';
-import { getSellerDisplayName } from '@/lib/chat-utils';
+import { getSellerDisplayName } from '@/lib/seller-display';
 import { shouldBlurListing } from '@/lib/content-labels';
 
 interface ListingCardProps {

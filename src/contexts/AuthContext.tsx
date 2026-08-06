@@ -1,11 +1,15 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Agent } from '@atproto/api';
-import MarketplaceClient from '@/lib/marketplace-client';
 import { addMarketplaceDID } from '@/lib/marketplace-dids';
 import { trackLogin } from '@/lib/analytics';
-import { restoreOAuthSession, revokeOAuthSession, OAuthSession } from '@/lib/oauth-client';
+import { fetchPublicProfile } from '@/lib/public-listings';
+// Type-only. The implementations are imported dynamically below: this provider
+// sits in the root layout, so a static import puts the AT Protocol SDK and the
+// OAuth client — together the two largest chunks on the site — in front of
+// hydration on every page, including for visitors who are not signed in.
+import type MarketplaceClient from '@/lib/marketplace-client';
+import type { OAuthSession } from '@/lib/oauth-client';
 
 type User = {
   did: string;
@@ -50,14 +54,17 @@ async function setupFromOAuthSession(
     // while the PDS is still accepting the token.
     const HANDLE_CACHE_KEY = `handle-cache-${did}`;
 
-    const publicAgent = new Agent({ service: 'https://api.bsky.app' });
-    let profile;
-    try {
-      const result = await publicAgent.getProfile({ actor: did });
-      profile = result.data;
+    let profile: { handle: string; displayName?: string; avatar?: string };
+    const publicProfile = await fetchPublicProfile(did);
+    if (publicProfile) {
+      profile = {
+        handle: publicProfile.handle,
+        displayName: publicProfile.displayName,
+        avatar: publicProfile.avatarCid,
+      };
       // Cache the successfully-resolved handle so we can use it when AT Protocol is down
       try { localStorage.setItem(HANDLE_CACHE_KEY, profile.handle); } catch {}
-    } catch {
+    } else {
       // api.bsky.app unreachable — try plc.directory, then cached handle, then raw DID
       let handle: string | null = null;
       try {
@@ -118,16 +125,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const marketplaceClient = new MarketplaceClient();
-    setClient(marketplaceClient);
+    let cancelled = false;
+
+    // Started synchronously so the listener registered below can always await
+    // it, however early the OAuth callback fires its event.
+    const clientPromise = import('@/lib/marketplace-client').then(({ default: MarketplaceClient }) => {
+      const instance = new MarketplaceClient();
+      if (!cancelled) setClient(instance);
+      return instance;
+    });
 
     const checkExistingSession = async () => {
       try {
+        const [{ restoreOAuthSession }, marketplaceClient] = await Promise.all([
+          import('@/lib/oauth-client'),
+          clientPromise,
+        ]);
+
         const result = await restoreOAuthSession();
-        if (!result) return;
+        if (!result || cancelled) return;
 
         const user = await setupFromOAuthSession(result.session, marketplaceClient);
-        if (!user) return;
+        if (!user || cancelled) return;
 
         setIsLoggedIn(true);
         setUser(user);
@@ -137,7 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error('[Auth] Error restoring session:', error);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
@@ -146,8 +165,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for the event fired by the callback page after a fresh OAuth login
     const handleOAuthLogin = async (event: CustomEvent<{ session: OAuthSession }>) => {
       try {
+        const marketplaceClient = await clientPromise;
         const user = await setupFromOAuthSession(event.detail.session, marketplaceClient);
-        if (!user) return;
+        if (!user || cancelled) return;
 
         setIsLoggedIn(true);
         setUser(user);
@@ -162,6 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     window.addEventListener('oauth-login-success', handleOAuthLogin as unknown as EventListener);
     return () => {
+      cancelled = true;
       window.removeEventListener('oauth-login-success', handleOAuthLogin as unknown as EventListener);
     };
   }, []);
@@ -182,6 +203,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     if (did) {
       try {
+        const { revokeOAuthSession } = await import('@/lib/oauth-client');
         await revokeOAuthSession(did);
       } catch (err) {
         // Revocation failure is non-fatal — local state is already cleared

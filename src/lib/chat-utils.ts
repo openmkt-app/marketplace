@@ -1,4 +1,10 @@
 import { Agent, AtpAgent } from '@atproto/api';
+import { formatSellerHandle, getSellerDisplayName } from './seller-display';
+
+// Re-exported for callers that already import them from here. Anything on a
+// render path should import from ./seller-display directly — reaching them
+// through this module drags in the SDK above.
+export { formatSellerHandle, getSellerDisplayName };
 import type { MarketplaceListing } from './marketplace-client';
 
 /**
@@ -271,23 +277,12 @@ export function canContactSeller(listing: MarketplaceListing & { authorHandle?: 
 /**
  * Format seller handle for display (ensure it starts with @)
  */
-export function formatSellerHandle(handle?: string): string {
-  if (!handle) return '';
-  return handle.startsWith('@') ? handle : `@${handle}`;
-}
+
 
 /**
  * Get the best display name for a seller (prefers display name over handle)
  */
-export function getSellerDisplayName(listing: MarketplaceListing & { authorHandle?: string; authorDisplayName?: string }): string {
-  if (listing.authorDisplayName && listing.authorDisplayName.trim()) {
-    return listing.authorDisplayName;
-  }
-  if (listing.authorHandle) {
-    return formatSellerHandle(listing.authorHandle);
-  }
-  return 'Unknown Seller';
-}
+
 
 /**
  * Alternative: Open a simple contact modal with seller info

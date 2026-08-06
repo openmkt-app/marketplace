@@ -7,7 +7,8 @@ import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/contexts/AuthContext';
 import SearchBar from '../marketplace/filters/SearchBar';
-import { getUnreadChatCount } from '@/lib/chat-utils';
+// Imported dynamically where it is used: it needs the AT Protocol SDK, only
+// runs for signed-in users, and the navbar is on every page.
 import { Bell, Store, Palette } from 'lucide-react';
 
 import NavbarUserMenu from './NavbarUserMenu';
@@ -76,6 +77,7 @@ const NavbarContent = () => {
 
     const checkMessages = async () => {
       if (isLoggedIn && client && client.agent) {
+        const { getUnreadChatCount } = await import('@/lib/chat-utils');
         const count = await getUnreadChatCount(client.agent);
         setHasUnreadMessages(count > 0);
       }

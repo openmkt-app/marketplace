@@ -4,8 +4,10 @@ import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { Link } from '@/i18n/navigation';
-import { AtpAgent } from '@atproto/api';
-import MarketplaceClient, { MarketplaceListing, ListingLocation, fetchPublicListings } from '@/lib/marketplace-client';
+// Both type-only: importing the values would pull marketplace-client, and with
+// it @atproto/api, into the browse bundle for a page that only ever reads.
+import type { MarketplaceListing, ListingLocation } from '@/lib/marketplace-client';
+import { fetchPublicListings, fetchPublicProfile } from '@/lib/public-listings';
 import { useAuth } from '@/contexts/AuthContext';
 import ListingCard from '@/components/marketplace/ListingCard';
 import ListingImageDisplay from '@/components/marketplace/ListingImageDisplay';
@@ -661,26 +663,7 @@ const BrowsePageClient = ({ initialListings = [] }: BrowsePageClientProps) => {
   }, [filters.location]);
 
   // Fetch profile information for a listing using the public AppView (no auth needed)
-  const fetchAuthorProfile = useCallback(async (did: string) => {
-    if (!did) return null;
-
-    try {
-      const publicAgent = new AtpAgent({ service: 'https://api.bsky.app' });
-      const result = await publicAgent.getProfile({ actor: did });
-      const profile = result.data;
-
-      const avatarCid = profile.avatar || undefined;
-
-      return {
-        did,
-        handle: profile.handle,
-        displayName: profile.displayName,
-        avatarCid,
-      };
-    } catch {
-      return null;
-    }
-  }, []);
+  const fetchAuthorProfile = useCallback((did: string) => fetchPublicProfile(did), []);
 
   /**
    * Fill in seller display names and avatars after the grid is already on screen.
