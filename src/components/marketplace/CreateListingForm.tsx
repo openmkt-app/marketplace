@@ -992,7 +992,11 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       }
 
       // Validate location data (skip for online store mode which has preset values)
-      if (!isOnlineStore && (!locationData.state || !locationData.county || !locationData.locality)) {
+      //
+      // County is deliberately not required. The commerce lexicon has no county
+      // field, so an upgraded listing comes back with an empty one — requiring
+      // it here made every migrated listing impossible to save a second time.
+      if (!isOnlineStore && (!locationData.state || !locationData.locality)) {
         setError(tCreate('errors.locationRequired'));
         setIsSubmitting(false);
         return;
@@ -1814,7 +1818,6 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                               type="text"
                               id="county"
                               name="county"
-                              required
                               value={locationCounty}
                               onChange={(e) => setLocationCounty(e.target.value)}
                               placeholder="e.g. Los Angeles County"
