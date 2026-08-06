@@ -43,6 +43,15 @@ export type StoreListing = MarketplaceListing & {
   }>;
 };
 
+/**
+ * How long a store page will wait on the index before reading the PDS instead.
+ *
+ * Matches the browse page's budget for the same reason: the index is fast when
+ * warm and slow when cold, and waiting out the cold case only delays a fallback
+ * that was going to run anyway.
+ */
+const APPVIEW_BUDGET_MS = 1200;
+
 /** Avatar URLs look like https://cdn.bsky.app/img/avatar/plain/did:plc:…/bafkrei…@jpeg */
 function extractAvatarCid(avatarUrl?: string): string | undefined {
   if (!avatarUrl) return undefined;
@@ -95,7 +104,15 @@ export async function fetchStoreByHandle(handle: string): Promise<StoreData | nu
     // One indexed query for this seller, covering both collections, instead of
     // resolving their PDS and listing each collection from it. Null means the
     // index did not answer, which falls through to the direct read below.
-    const indexed = await fetchListingsFromAppView({ did: profileData.did, limit: 100 });
+    //
+    // The budget matters because this blocks the page. A warm index answers in
+    // about 130ms; the client's default would wait six seconds for a cold
+    // tunnel before giving up, and the fallback still has to run after that.
+    const indexed = await fetchListingsFromAppView({
+      did: profileData.did,
+      limit: 100,
+      timeoutMs: APPVIEW_BUDGET_MS,
+    });
 
     let listings: StoreListing[];
 
