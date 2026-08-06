@@ -55,8 +55,9 @@ export default function ListingImageGallery({ images, title }: ListingImageGalle
           src={images[selectedImageIndex].fullsize}
           alt={`${title} - Image ${selectedImageIndex + 1}`}
           fill
+          sizes="(max-width: 640px) 100vw, 640px"
           className="object-contain"
-          unoptimized
+          priority
         />
 
 {/* TODO: Favorite Heart Button - Hidden until favorites feature is implemented (see TODO-STORE-IMPROVEMENTS.md)
@@ -90,8 +91,8 @@ export default function ListingImageGallery({ images, title }: ListingImageGalle
                 src={image.thumbnail}
                 alt={`${title} - Thumbnail ${index + 1}`}
                 fill
+                sizes="80px"
                 className="object-cover"
-                unoptimized
               />
             </button>
           ))}

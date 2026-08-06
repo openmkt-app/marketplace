@@ -1,7 +1,7 @@
 // src/components/marketplace/ListingImageDisplay.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { createBlueskyCdnImageUrls, extractBlobCid } from '@/lib/image-utils';
 import type { ListingImage } from '@/lib/marketplace-client';
@@ -13,6 +13,57 @@ interface ListingImageDisplayProps {
   height?: string | number;
   fallbackText?: string;
   priority?: boolean;
+  /**
+   * Layout width hint for the optimizer, so it can pick a source width instead
+   * of assuming the image fills the viewport. The default matches the browse
+   * grid (1 / 2 / 3 / 4 columns).
+   */
+  sizes?: string;
+}
+
+const DEFAULT_SIZES =
+  '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 320px';
+
+/**
+ * Work out which URL to display.
+ *
+ * Pure and synchronous on purpose. This used to run in a useEffect that set
+ * state, which meant the <img> had no src until after hydration — so images
+ * could not begin downloading until the JS bundle had loaded, parsed and run.
+ * Deriving it during render puts the URL in the markup the moment the card
+ * renders, and lets it be server-rendered.
+ */
+function resolveImageUrl(listing: any, size: 'thumbnail' | 'fullsize'): string | null {
+  if (!listing) return null;
+
+  const authorDid = listing.authorDid || '';
+  if (!authorDid) return null;
+
+  // The API already generated these server-side; prefer them over recomputing.
+  const preformatted = listing.formattedImages?.[0];
+  if (preformatted) {
+    const url = size === 'thumbnail' ? preformatted.thumbnail : preformatted.fullsize;
+    if (url) return url;
+  }
+
+  const first: ListingImage | undefined = listing.images?.[0];
+  if (!first) return null;
+
+  // Demo fixtures ship as static SVGs in /public rather than as blobs.
+  const link = (first as any)?.ref?.$link;
+  if (typeof link === 'string' && (link.includes('demo-') || link.endsWith('.svg'))) {
+    return `/${link}`;
+  }
+
+  const blobCid = extractBlobCid(first);
+  if (!blobCid) return null;
+
+  const urls = createBlueskyCdnImageUrls(
+    { ref: { $link: blobCid }, mimeType: (first as any).mimeType || 'image/jpeg', size: (first as any).size || 0 },
+    authorDid,
+  );
+
+  return size === 'thumbnail' ? urls.thumbnail : urls.fullsize;
 }
 
 export default function ListingImageDisplay({
@@ -22,75 +73,24 @@ export default function ListingImageDisplay({
   height = 200,
   fallbackText = 'No image available',
   priority = false,
+  sizes = DEFAULT_SIZES,
 }: ListingImageDisplayProps) {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [error, setError] = useState<boolean>(false);
-  
-  useEffect(() => {
-    if (!listing) return;
-    setError(false); // Reset error state on new listing
-
+  const imageUrl = useMemo(() => {
     try {
-      const authorDid = listing.authorDid || '';
-      const hasImages = listing.images && listing.images.length > 0;
-
-      if (!authorDid) {
-        setImageUrl(null);
-        return;
-      }
-      
-      if (!hasImages) {
-        setImageUrl(null);
-        return;
-      }
-      
-      // Check if this is a demo image with SVG format
-      const isDemoImage = listing.images[0]?.ref?.$link?.includes('demo-') || 
-                         listing.images[0]?.ref?.$link?.endsWith('.svg');
-      
-      if (isDemoImage) {
-        const svgPath = `/${listing.images[0].ref.$link}`;
-        setImageUrl(svgPath);
-        return;
-      }
-      
-      // Use the blobCid extraction utility for AT Protocol images
-      const blobCid = extractBlobCid(listing.images[0]);
-      
-      if (!blobCid) {
-        setImageUrl(null);
-        return;
-      }
-      
-      // Get the MIME type from the image object if available
-      const imageMimeType = listing.images[0].mimeType || 'image/jpeg';
-      
-      // Create a properly formatted image object to pass to the URL generator
-      const imageObj = {
-        ref: { $link: blobCid },
-        mimeType: imageMimeType,
-        size: listing.images[0].size || 0
-      };
-      
-      // Generate the image URLs
-      const imageData = createBlueskyCdnImageUrls(imageObj, authorDid);
-      const url = size === 'thumbnail' ? imageData.thumbnail : imageData.fullsize;
-      
-      setImageUrl(url);
-    } catch (err) {
-      setImageUrl(null);
+      return resolveImageUrl(listing, size);
+    } catch {
+      return null;
     }
   }, [listing, size]);
-  
-  // Handle image loading error
-  const handleImageError = () => {
-    setError(true);
-  };
-  
+
+  // Keyed by URL so a new image clears a previous failure without an effect.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const error = imageUrl !== null && failedUrl === imageUrl;
+
   // Show placeholder if no image or error
   if (!imageUrl || error) {
     return (
-      <div 
+      <div
         className={`flex items-center justify-center bg-gray-100 text-gray-400 ${className}`}
         style={{ height }}
       >
@@ -114,7 +114,7 @@ export default function ListingImageDisplay({
       </div>
     );
   }
-  
+
   // Render the image
   return (
     <div className="relative w-full" style={{ height }}>
@@ -122,9 +122,12 @@ export default function ListingImageDisplay({
         src={imageUrl}
         alt={listing.title || 'Listing image'}
         fill
+        sizes={sizes}
         className={className}
-        onError={handleImageError}
-        unoptimized
+        onError={() => setFailedUrl(imageUrl)}
+        // The optimizer rejects SVG unless dangerouslyAllowSVG is set, and the
+        // only SVGs here are local demo fixtures that need no resizing anyway.
+        unoptimized={imageUrl.endsWith('.svg')}
         priority={priority}
         loading={priority ? 'eager' : 'lazy'}
       />

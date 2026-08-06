@@ -665,6 +665,47 @@ const BrowsePageClient = () => {
     }
   }, []);
 
+  /**
+   * Fill in seller display names and avatars after the grid is already on screen.
+   *
+   * Runs against allListings by URI rather than replacing it wholesale, so a
+   * filter the visitor applied while this was in flight is not undone. The
+   * filter effect depends on allListings, so filteredListings refreshes itself.
+   */
+  const enhanceWithProfiles = useCallback(async (listings: MarketplaceListing[]) => {
+    const uniqueDids = Array.from(
+      new Set(listings.map(l => (l as any).authorDid).filter(Boolean) as string[])
+    );
+    if (uniqueDids.length === 0) return;
+
+    const profiles = await Promise.all(uniqueDids.map(did => fetchAuthorProfile(did)));
+
+    const profilesMap = new Map<string, { handle: string; displayName?: string; avatarCid?: string }>();
+    profiles.forEach(profile => {
+      if (profile) {
+        profilesMap.set(profile.did, {
+          handle: profile.handle,
+          displayName: profile.displayName,
+          avatarCid: profile.avatarCid,
+        });
+      }
+    });
+    if (profilesMap.size === 0) return;
+
+    setAllListings(prev =>
+      prev.map(listing => {
+        const profile = profilesMap.get((listing as any).authorDid);
+        if (!profile) return listing;
+        return {
+          ...listing,
+          authorHandle: profile.handle,
+          authorDisplayName: profile.displayName,
+          authorAvatarCid: profile.avatarCid,
+        };
+      })
+    );
+  }, [fetchAuthorProfile]);
+
   // Fetch listings - works for both logged in and logged out users
   // AT Protocol data is public, so we can always fetch real listings
   useEffect(() => {
@@ -687,49 +728,17 @@ const BrowsePageClient = () => {
         }
 
         if (listings && listings.length > 0) {
-          // If logged in, enhance with profile info
-          if (auth.isLoggedIn && auth.client) {
-            // Extract unique author DIDs
-            const uniqueDids = Array.from(new Set(listings.map(l => (l as any).authorDid).filter(Boolean) as string[]));
-
-            // Map to store profiles
-            const profilesMap = new Map<string, { handle: string; displayName?: string; avatarCid?: string }>();
-
-            // Fetch profiles in parallel
-            await Promise.all(
-              uniqueDids.map(async (did) => {
-                if (did) {
-                  const profile = await fetchAuthorProfile(did);
-                  if (profile) {
-                    profilesMap.set(did, {
-                      handle: profile.handle,
-                      displayName: profile.displayName,
-                      avatarCid: profile.avatarCid
-                    });
-                  }
-                }
-              })
-            );
-
-            // Enhance listings with cached profile information
-            listings = listings.map((listing) => {
-              const authorDid = (listing as any).authorDid;
-              if (authorDid && profilesMap.has(authorDid)) {
-                const profile = profilesMap.get(authorDid)!;
-                return {
-                  ...listing,
-                  authorHandle: profile.handle,
-                  authorDisplayName: profile.displayName,
-                  authorAvatarCid: profile.avatarCid
-                };
-              }
-              return listing;
-            });
-          }
-
-
+          // Show the listings straight away. Profile enrichment used to be
+          // awaited here, which meant one Bluesky getProfile call per seller
+          // stood between the data arriving and the first product appearing —
+          // the grid waited on the slowest of ~20 requests for display names and
+          // avatars it could perfectly well fill in a moment later.
           setAllListings(listings as MarketplaceListing[]);
           setFilteredListings(listings as MarketplaceListing[]);
+
+          if (auth.isLoggedIn && auth.client) {
+            void enhanceWithProfiles(listings as MarketplaceListing[]);
+          }
         } else {
 
           setAllListings([]);
@@ -747,43 +756,14 @@ const BrowsePageClient = () => {
     };
 
     fetchListings();
-  }, [auth.client, auth.isLoggedIn, auth.isLoading, initialized, fetchAuthorProfile]);
+  }, [auth.client, auth.isLoggedIn, auth.isLoading, initialized, enhanceWithProfiles]);
 
-  // Prefetch locations in background to warm up cache
-  // This makes filtering instant when user decides to filter
-  useEffect(() => {
-    if (allListings.length === 0) return;
-
-    const prefetchLocations = async () => {
-      // Get unique locations efficiently
-      const uniqueLocations = new Set<string>();
-
-      allListings.forEach(listing => {
-        if (listing.location) {
-          const locString = `${listing.location.locality}, ${listing.location.state}`;
-          uniqueLocations.add(locString);
-        }
-      });
-
-
-
-      // Process in small batches relative to UI non-blocking
-      const locations = Array.from(uniqueLocations);
-      for (const loc of locations) {
-        // geocodeLocation handles caching, so this is safe and efficient
-        // It will skip API calls for cached items
-        await geocodeLocation(loc);
-      }
-
-    };
-
-    // Use a small timeout to not block initial render or other critical data fetching
-    const timer = setTimeout(() => {
-      prefetchLocations().catch(err => console.error('Prefetch failed', err));
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [allListings]);
+  // Locations used to be geocoded here speculatively, to make the distance
+  // filter instant if the visitor reached for it. That cost every first-time
+  // visitor one Nominatim request per distinct seller location, issued in
+  // series while the images were still downloading — and almost nobody uses the
+  // filter. geocodeLocation caches in localStorage and is called on demand by
+  // filterListingsByDistance, so the first use pays instead of every visit.
 
   const handleShowNewListings = useCallback(() => {
     setAllListings(prev => [...newRealTimeListings, ...prev]);
