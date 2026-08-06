@@ -418,7 +418,18 @@ const HeroSection = ({ listingCount, locationName }: { listingCount: number; loc
   );
 };
 
-const BrowsePageClient = () => {
+interface BrowsePageClientProps {
+  /**
+   * Listings rendered on the server so the first screen is in the HTML.
+   *
+   * A seed, not the source of truth: the client fetch below replaces it with
+   * the full set once it arrives, which is also what applies the privacy
+   * filtering the server cannot do.
+   */
+  initialListings?: MarketplaceListing[];
+}
+
+const BrowsePageClient = ({ initialListings = [] }: BrowsePageClientProps) => {
   const t = useTranslations('browse');
   const tCommon = useTranslations('common');
   const tCats = useTranslations('categories');
@@ -447,10 +458,16 @@ const BrowsePageClient = () => {
     }
   }, [listingCreated]);
   // State for listings
-  const [allListings, setAllListings] = useState<MarketplaceListing[]>([]);
+  // A boolean rather than the array itself, because the `= []` default creates
+  // a fresh reference on every render and would retrigger any effect it appears in.
+  const hasInitialListings = initialListings.length > 0;
+  const [allListings, setAllListings] = useState<MarketplaceListing[]>(initialListings);
   const [newRealTimeListings, setNewRealTimeListings] = useState<MarketplaceListing[]>([]);
-  const [filteredListings, setFilteredListings] = useState<MarketplaceListing[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [filteredListings, setFilteredListings] = useState<MarketplaceListing[]>(initialListings);
+  // Only a spinner when there is genuinely nothing to show. With server-rendered
+  // listings the grid is already on screen, and the client fetch refreshes it in
+  // place rather than replacing products with a loading state.
+  const [isLoading, setIsLoading] = useState(!hasInitialListings);
   const [error, setError] = useState<string | null>(null);
   const [flaggedUris, setFlaggedUris] = useState<Set<string>>(new Set());
 
@@ -739,16 +756,21 @@ const BrowsePageClient = () => {
           if (auth.isLoggedIn && auth.client) {
             void enhanceWithProfiles(listings as MarketplaceListing[]);
           }
-        } else {
-
+        } else if (!hasInitialListings) {
+          // An empty result is only taken at face value when the server did not
+          // render anything either. Both fetch paths return an empty array on
+          // total failure as well as on a genuinely empty marketplace, so with
+          // products already on screen the seed is the better of the two.
           setAllListings([]);
           setFilteredListings([]);
         }
       } catch (err) {
         console.error('Failed to fetch listings:', err);
         setError(t('loadError'));
-        setAllListings([]);
-        setFilteredListings([]);
+        // Deliberately leaves the lists alone: if the server rendered a first
+        // screen, replacing it with an error because the refresh failed is
+        // worse than showing a slightly shorter, slightly older grid. With no
+        // seed they are already empty.
       } finally {
         setIsLoading(false);
         setInitialized(true);
@@ -756,7 +778,7 @@ const BrowsePageClient = () => {
     };
 
     fetchListings();
-  }, [auth.client, auth.isLoggedIn, auth.isLoading, initialized, enhanceWithProfiles]);
+  }, [auth.client, auth.isLoggedIn, auth.isLoading, initialized, enhanceWithProfiles, hasInitialListings]);
 
   // Locations used to be geocoded here speculatively, to make the distance
   // filter instant if the visitor reached for it. That cost every first-time
@@ -793,8 +815,10 @@ const BrowsePageClient = () => {
 
   // Apply filters when they change
   useEffect(() => {
-    // Don't apply filters until listings are loaded
-    if (!initialized || isLoading) return;
+    // Don't apply filters until there is something to filter. Server-rendered
+    // listings count: a page opened with ?q= or a category must not show the
+    // unfiltered seed while the client fetch is still in flight.
+    if (!initialized && allListings.length === 0) return;
 
     const applyFilters = async () => {
       // Use searchParams as the source of truth for the search query to avoid state sync lag
@@ -1008,7 +1032,11 @@ const BrowsePageClient = () => {
           onClick={handleShowNewListings}
         />
 
-        {!initialized || isLoading ? (
+        {/* isLoading alone, not `!initialized || isLoading`: the server render
+            has listings but has not run the client fetch, so keying the spinner
+            on `initialized` would hide a grid that is ready to show. isLoading
+            already starts true whenever there is nothing to display. */}
+        {isLoading ? (
           <div className="text-center py-10">
             <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary-color border-r-transparent"></div>
             <p className="mt-2 text-text-primary">{t('loading')}</p>
