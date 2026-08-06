@@ -122,6 +122,7 @@ export default async function StorePage({ params }: Props) {
       <StorePageClient
         handle={handle}
         initialProfile={storeData?.profile || null}
+        initialListings={storeData?.listings ?? null}
         initialListingsCount={storeData?.listingsCount || 0}
       />
     </>

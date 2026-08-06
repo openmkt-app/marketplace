@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
-import { BskyAgent } from '@atproto/api';
+// The SDK is imported dynamically in the fallback below. The server renders
+// this page, so the fallback only runs when that failed — a static import put
+// 109 KB in front of every listing page to cover a case that rarely happens.
 import { normalizeAndHydrate } from '@/lib/commerce/hydrate';
 import { toLegacyListing } from '@/lib/commerce/legacy';
 import ListingDetail from '@/components/marketplace/ListingDetail';
@@ -87,6 +89,7 @@ export default function ListingPageClient({ listingId, initialListing, isNewList
           // Fall back to bsky.social
         }
 
+        const { BskyAgent } = await import('@atproto/api');
         const agent = new BskyAgent({
           service: pdsEndpoint,
         });

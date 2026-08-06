@@ -3,8 +3,10 @@
 
 import { BskyAgent } from '@atproto/api';
 import { READ_COLLECTIONS } from '../commerce/collections';
+import { fetchListings as fetchListingsFromAppView } from '../commerce/appview';
 import { normalizeListings } from '../commerce/hydrate';
-import { toLegacyListing } from '../commerce/legacy';
+import { toLegacyListing, toLegacyListings } from '../commerce/legacy';
+import type { MarketplaceListing } from '../marketplace-client';
 
 export type SellerProfile = {
   did: string;
@@ -19,18 +21,34 @@ export type SellerProfile = {
   createdAt?: string;
 };
 
-export type StoreListing = {
-  title: string;
-  description: string;
-  price: string;
+/**
+ * A listing ready to hand straight to ListingCard.
+ *
+ * This used to carry only the five fields the metadata generator needed, so
+ * the store page threw it away and refetched everything in the browser. Card
+ * rendering wants category, condition and location too, and they cost nothing
+ * extra here — they were already fetched and then discarded.
+ */
+export type StoreListing = MarketplaceListing & {
   uri: string;
-  createdAt: string;
+  cid: string;
+  authorDid: string;
+  authorHandle: string;
+  authorDisplayName?: string;
+  authorAvatarCid?: string;
   formattedImages?: Array<{
     thumbnail: string;
     fullsize: string;
     mimeType: string;
   }>;
 };
+
+/** Avatar URLs look like https://cdn.bsky.app/img/avatar/plain/did:plc:…/bafkrei…@jpeg */
+function extractAvatarCid(avatarUrl?: string): string | undefined {
+  if (!avatarUrl) return undefined;
+  const match = avatarUrl.match(/\/(bafkrei[a-z0-9]+)@/);
+  return match ? match[1] : undefined;
+}
 
 export type StoreData = {
   profile: SellerProfile;
@@ -67,57 +85,72 @@ export async function fetchStoreByHandle(handle: string): Promise<StoreData | nu
       createdAt: profileData.createdAt,
     };
 
-    // Fetch the user's marketplace listings
-    let pdsEndpoint = 'https://bsky.social';
-    try {
-      const didDocResponse = await agent.com.atproto.identity.resolveHandle({ handle: decodedHandle });
-      const did = didDocResponse.data.did;
+    const author = {
+      authorDid: profileData.did,
+      authorHandle: profileData.handle,
+      authorDisplayName: profileData.displayName,
+      authorAvatarCid: extractAvatarCid(profileData.avatar),
+    };
 
-      const didDoc = await fetch(`https://plc.directory/${did}`).then(r => r.json());
-      const pdsService = didDoc.service?.find(
-        (s: { id: string; type: string; serviceEndpoint: string }) =>
-          s.id === '#atproto_pds' || s.type === 'AtprotoPersonalDataServer'
-      );
-      if (pdsService?.serviceEndpoint) {
-        pdsEndpoint = pdsService.serviceEndpoint;
+    // One indexed query for this seller, covering both collections, instead of
+    // resolving their PDS and listing each collection from it. Null means the
+    // index did not answer, which falls through to the direct read below.
+    const indexed = await fetchListingsFromAppView({ did: profileData.did, limit: 100 });
+
+    let listings: StoreListing[];
+
+    if (indexed) {
+      listings = toLegacyListings(indexed).map(listing => ({
+        ...(listing as any),
+        ...author,
+      }));
+    } else {
+      // Direct from the seller's PDS. Slower — it costs a handle resolution, a
+      // PLC lookup and one request per collection — but it is the source of
+      // truth, so a store page still works with the index down.
+      let pdsEndpoint = 'https://bsky.social';
+      try {
+        const didDoc = await fetch(`https://plc.directory/${profileData.did}`).then(r => r.json());
+        const pdsService = didDoc.service?.find(
+          (s: { id: string; type: string; serviceEndpoint: string }) =>
+            s.id === '#atproto_pds' || s.type === 'AtprotoPersonalDataServer'
+        );
+        if (pdsService?.serviceEndpoint) {
+          pdsEndpoint = pdsService.serviceEndpoint;
+        }
+      } catch (e) {
+        console.warn('Could not resolve PDS, using default:', e);
       }
-    } catch (e) {
-      console.warn('Could not resolve PDS, using default:', e);
+
+      const pdsAgent = new BskyAgent({ service: pdsEndpoint });
+
+      // A store's listings span both collections during the migration.
+      const listingsResults = await Promise.all(
+        READ_COLLECTIONS.map(collection =>
+          pdsAgent.api.com.atproto.repo
+            .listRecords({ repo: profileData.did, collection, limit: 50 })
+            .catch(() => null)
+        )
+      );
+
+      const rawRecords = listingsResults.flatMap(result =>
+        result?.success ? result.data.records : []
+      );
+
+      // Images come from the normalized `images` array rather than a regex over
+      // the stringified record, which matched any CID anywhere in it.
+      listings = normalizeListings(
+        rawRecords.map(record => ({
+          record: record.value as any,
+          uri: record.uri,
+          cid: record.cid,
+          authorDid: profileData.did,
+        }))
+      ).map(listing => ({
+        ...(toLegacyListing(listing) as any),
+        ...author,
+      }));
     }
-
-    // Create an agent for the user's PDS
-    const pdsAgent = new BskyAgent({ service: pdsEndpoint });
-
-    // A store's listings span both collections during the migration.
-    const listingsResults = await Promise.all(
-      READ_COLLECTIONS.map(collection =>
-        pdsAgent.api.com.atproto.repo
-          .listRecords({ repo: profileData.did, collection, limit: 50 })
-          .catch(() => null)
-      )
-    );
-
-    const rawRecords = listingsResults.flatMap(result =>
-      result?.success ? result.data.records : []
-    );
-
-    // Images come from the normalized `images` array rather than a regex over
-    // the stringified record, which matched any CID anywhere in it.
-    const listings: StoreListing[] = normalizeListings(
-      rawRecords.map(record => ({
-        record: record.value as any,
-        uri: record.uri,
-        cid: record.cid,
-        authorDid: profileData.did,
-      }))
-    ).map(listing => ({
-      title: listing.title,
-      description: listing.description,
-      price: toLegacyListing(listing).price,
-      uri: listing.uri,
-      createdAt: listing.createdAt,
-      formattedImages: listing.formattedImages ?? [],
-    }));
 
     // Sort by creation date (newest first)
     listings.sort((a, b) =>

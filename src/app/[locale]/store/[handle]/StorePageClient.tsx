@@ -4,14 +4,11 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useTranslations, useLocale } from 'next-intl';
 import { Link } from '@/i18n/navigation';
-import { BskyAgent } from '@atproto/api';
-import { MarketplaceListing } from '@/lib/marketplace-client';
-import { generateImageUrls } from '@/lib/image-utils';
-import { MARKETPLACE_COLLECTION } from '@/lib/constants';
+import type { MarketplaceListing } from '@/lib/marketplace-client';
 import ListingCard from '@/components/marketplace/ListingCard';
 import GalleryListingTile from '@/components/marketplace/GalleryListingTile';
 import { ExternalLink, Calendar, Globe, MapPin, Palette } from 'lucide-react';
-import type { SellerProfile } from '@/lib/server/fetch-store';
+import type { SellerProfile, StoreListing } from '@/lib/server/fetch-store';
 import { linkifyText } from '@/lib/linkify';
 import { isOnlineStore } from '@/lib/location-utils';
 import { isArtistStore } from '@/lib/artist-store-utils';
@@ -28,17 +25,26 @@ interface SellerListing extends MarketplaceListing {
 type Props = {
   handle: string;
   initialProfile: SellerProfile | null;
+  /** Null means the server could not fetch them, not that there are none. */
+  initialListings: StoreListing[] | null;
   initialListingsCount: number;
 };
 
-export default function StorePageClient({ handle: encodedHandle, initialProfile, initialListingsCount }: Props) {
+export default function StorePageClient({
+  handle: encodedHandle,
+  initialProfile,
+  initialListings,
+  initialListingsCount,
+}: Props) {
   const t = useTranslations('store');
   const locale = useLocale();
   const handle = decodeURIComponent(encodedHandle);
 
   const [profile, setProfile] = useState<SellerProfile | null>(initialProfile);
-  const [listings, setListings] = useState<SellerListing[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [listings, setListings] = useState<SellerListing[]>((initialListings ?? []) as SellerListing[]);
+  // The server renders the store outright. Only a server-side failure leaves
+  // anything to load, and that path is handled by the fallback effect below.
+  const [loading, setLoading] = useState(initialListings === null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'store' | 'local'>('store');
   const [flaggedUris, setFlaggedUris] = useState<Set<string>>(new Set());
@@ -51,23 +57,36 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
       .catch(() => {});
   }, []);
 
+  // Fallback for a server-side failure only.
+  //
+  // The store is rendered on the server, so this normally never runs. When it
+  // does, it reads the seller's PDS directly the way this page always used to.
+  // The AT Protocol SDK it needs is imported dynamically: a static import put
+  // 109 KB in front of every store page to cover a case that should not happen.
   useEffect(() => {
+    if (initialListings !== null) return;
+
+    let cancelled = false;
+
     async function fetchStoreData() {
       try {
         setLoading(true);
         setError(null);
 
-        // Create a public agent to fetch data
+        const [{ BskyAgent }, { generateImageUrls }, { MARKETPLACE_COLLECTION }] = await Promise.all([
+          import('@atproto/api'),
+          import('@/lib/image-utils'),
+          import('@/lib/constants'),
+        ]);
+
         const agent = new BskyAgent({ service: 'https://public.api.bsky.app' });
 
-        // Fetch the user's profile
         const profileResult = await agent.getProfile({ actor: handle });
-
-        if (!profileResult.success) {
-          throw new Error(t('fetchProfileError'));
-        }
+        if (!profileResult.success) throw new Error(t('fetchProfileError'));
 
         const profileData = profileResult.data;
+        if (cancelled) return;
+
         setProfile({
           did: profileData.did,
           handle: profileData.handle,
@@ -81,41 +100,29 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
           createdAt: profileData.createdAt,
         });
 
-        // Fetch the user's marketplace listings
-        // We need to resolve their PDS first
         let pdsEndpoint = 'https://bsky.social';
         try {
-          const didDocResponse = await agent.com.atproto.identity.resolveHandle({ handle });
-          const did = didDocResponse.data.did;
-
-          // Try to resolve the PDS from the DID document
-          const didDoc = await fetch(`https://plc.directory/${did}`).then(r => r.json());
+          const didDoc = await fetch(`https://plc.directory/${profileData.did}`).then(r => r.json());
           const pdsService = didDoc.service?.find(
             (s: { id: string; type: string; serviceEndpoint: string }) =>
               s.id === '#atproto_pds' || s.type === 'AtprotoPersonalDataServer'
           );
-          if (pdsService?.serviceEndpoint) {
-            pdsEndpoint = pdsService.serviceEndpoint;
-          }
+          if (pdsService?.serviceEndpoint) pdsEndpoint = pdsService.serviceEndpoint;
         } catch (e) {
           console.warn('Could not resolve PDS, using default:', e);
         }
 
-        // Create an agent for the user's PDS
         const pdsAgent = new BskyAgent({ service: pdsEndpoint });
-
-        // Fetch listings from the marketplace collection
         const listingsResult = await pdsAgent.api.com.atproto.repo.listRecords({
           repo: profileData.did,
           collection: MARKETPLACE_COLLECTION,
           limit: 50,
         });
+        if (cancelled) return;
 
         if (listingsResult.success && listingsResult.data.records.length > 0) {
           const processedListings = listingsResult.data.records.map((record) => {
             const listing = record.value as MarketplaceListing;
-            const formattedImages = generateImageUrls(profileData.did, listing.images);
-
             return {
               ...listing,
               uri: record.uri,
@@ -124,11 +131,10 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
               authorHandle: profileData.handle,
               authorDisplayName: profileData.displayName,
               authorAvatarCid: profileData.avatar ? extractAvatarCid(profileData.avatar) : undefined,
-              formattedImages,
+              formattedImages: generateImageUrls(profileData.did, listing.images),
             };
           });
 
-          // Sort by creation date (newest first)
           processedListings.sort((a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
@@ -139,14 +145,15 @@ export default function StorePageClient({ handle: encodedHandle, initialProfile,
         }
       } catch (err) {
         console.error('Failed to fetch store data:', err);
-        setError(err instanceof Error ? err.message : t('loadError'));
+        if (!cancelled) setError(err instanceof Error ? err.message : t('loadError'));
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     fetchStoreData();
-  }, [handle, t]);
+    return () => { cancelled = true; };
+  }, [handle, t, initialListings]);
 
   // Extract avatar CID from Bluesky CDN URL
   function extractAvatarCid(avatarUrl: string): string | undefined {

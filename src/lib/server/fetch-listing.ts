@@ -3,6 +3,7 @@
 
 import { BskyAgent } from '@atproto/api';
 import { isListingCollection } from '../commerce/collections';
+import { fetchPublicProfile } from '../public-listings';
 import { normalizeAndHydrate } from '../commerce/hydrate';
 import { toLegacyListing } from '../commerce/legacy';
 
@@ -68,6 +69,12 @@ export async function fetchListingById(id: string): Promise<ListingData | 'remov
       return null;
     }
 
+    // Started here, awaited after the record is in hand. The seller's profile
+    // does not depend on the record, but used to be fetched after it and as two
+    // more round trips (describeRepo, then the profile record), making four
+    // sequential hops before this function could return. Now it overlaps.
+    const profilePromise = fetchPublicProfile(did);
+
     // Resolve the DID to find the correct PDS (handles non-bsky.social accounts)
     let pdsEndpoint = 'https://bsky.social';
     try {
@@ -113,54 +120,16 @@ export async function fetchListingById(id: string): Promise<ListingData | 'remov
     const value = toLegacyListing(listing);
     const formattedImages = listing.formattedImages ?? [];
 
-    // Fetch seller profile
-    let authorHandle: string | undefined;
-    let authorDisplayName: string | undefined;
-    let authorAvatarUrl: string | undefined;
-
-    try {
-      const repoInfo = await agent.api.com.atproto.repo.describeRepo({ repo: did });
-      authorHandle = repoInfo.data.handle;
-
-      try {
-        const profileRecord = await agent.api.com.atproto.repo.getRecord({
-          repo: did,
-          collection: 'app.bsky.actor.profile',
-          rkey: 'self',
-        });
-
-        if (profileRecord.data?.value) {
-          const profileValue = profileRecord.data.value as any;
-          authorDisplayName = profileValue.displayName;
-
-          // Extract avatar CID
-          const avatar = profileValue.avatar;
-          if (avatar && typeof avatar === 'object') {
-            let avatarCid: string | undefined;
-
-            if (avatar.ref?.$link) {
-              avatarCid = avatar.ref.$link;
-            } else if (avatar.$link) {
-              avatarCid = avatar.$link;
-            } else {
-              const avatarStr = JSON.stringify(avatar);
-              const cidMatch = avatarStr.match(/bafkrei[a-z0-9]{52,}/i);
-              if (cidMatch) {
-                avatarCid = cidMatch[0];
-              }
-            }
-
-            if (avatarCid) {
-              authorAvatarUrl = `https://cdn.bsky.app/img/avatar/plain/${did}/${avatarCid}@jpeg`;
-            }
-          }
-        }
-      } catch {
-        // Profile record not available, continue with handle only
-      }
-    } catch {
-      // Could not fetch repo info
-    }
+    // Seller profile, started before the record fetch above.
+    //
+    // app.bsky.actor.getProfile returns the handle, display name and a ready
+    // avatar URL in one call, replacing describeRepo plus a raw profile-record
+    // read and the CID extraction that went with it. It resolves to null on any
+    // failure, which leaves the fields undefined exactly as the old catches did.
+    const profile = await profilePromise;
+    const authorHandle = profile?.handle;
+    const authorDisplayName = profile?.displayName;
+    const authorAvatarUrl = profile?.avatarCid;
 
     return {
       title: value.title || 'Untitled Listing',
