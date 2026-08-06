@@ -45,8 +45,19 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  // suppressHydrationWarning below covers the <html> element's own attributes
+  // only, not its children. Privacy extensions stamp attributes onto <html>
+  // before React loads — a Google Analytics opt-out adds
+  // data-google-analytics-opt-out — and React reports that as a hydration
+  // mismatch we can neither prevent nor fix. Real mismatches anywhere inside
+  // the app are still reported.
   return (
-    <html lang="en" className="h-full scroll-smooth" data-scroll-behavior="smooth">
+    <html
+      lang="en"
+      className="h-full scroll-smooth"
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+    >
       <body className={`${inter.className} flex flex-col min-h-screen antialiased`}>
         {children}
         {process.env.NEXT_PUBLIC_GA_ID && (

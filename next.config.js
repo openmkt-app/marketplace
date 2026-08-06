@@ -5,6 +5,11 @@ const withNextIntl = createNextIntlPlugin();
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // The dev server binds dual-stack, so Next sees a request to 127.0.0.1 as
+  // coming from a different host than the one it serves and blocks its own dev
+  // resources — which silently kills hydration. 127.0.0.1 is not optional here:
+  // the AT Protocol OAuth loopback redirect must use it rather than localhost.
+  allowedDevOrigins: ['127.0.0.1'],
   images: {
     remotePatterns: [
       {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { addToFeedIndex, removeFromFeedIndex, type FeedEntry } from '@/lib/feed-index';
 import { createBotAnnouncementPost } from '@/lib/bot-client';
-import { invalidateSellersCache, invalidateListingsCache } from '@/lib/mall-cache';
+import { invalidateSellersCache, invalidateListingsCache, invalidateAppViewListingsCache } from '@/lib/mall-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
   // Handle listing deletion
   if (action === 'delete') {
     await removeFromFeedIndex(listingUri);
+    invalidateAppViewListingsCache();
     return NextResponse.json({ success: true });
   }
 
@@ -85,6 +86,10 @@ export async function POST(req: NextRequest) {
     await addToFeedIndex(entry);
     invalidateSellersCache();
     invalidateListingsCache();
+    // Browse reads the AppView cache, not the fan-out caches above. Leaving it
+    // alone is why a deleted listing kept showing for up to a minute: the two
+    // invalidations here cleared caches that browse never consults.
+    invalidateAppViewListingsCache();
 
     return NextResponse.json({ success: true, postUri: resolvedPostUri });
   } catch (err) {
