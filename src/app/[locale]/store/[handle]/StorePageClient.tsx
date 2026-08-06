@@ -73,11 +73,13 @@ export default function StorePageClient({
         setLoading(true);
         setError(null);
 
-        const [{ BskyAgent }, { generateImageUrls }, { MARKETPLACE_COLLECTION }] = await Promise.all([
-          import('@atproto/api'),
-          import('@/lib/image-utils'),
-          import('@/lib/constants'),
-        ]);
+        const [{ BskyAgent }, { READ_COLLECTIONS }, { normalizeListings }, { toLegacyListing }] =
+          await Promise.all([
+            import('@atproto/api'),
+            import('@/lib/commerce/collections'),
+            import('@/lib/commerce/hydrate'),
+            import('@/lib/commerce/legacy'),
+          ]);
 
         const agent = new BskyAgent({ service: 'https://public.api.bsky.app' });
 
@@ -113,27 +115,40 @@ export default function StorePageClient({
         }
 
         const pdsAgent = new BskyAgent({ service: pdsEndpoint });
-        const listingsResult = await pdsAgent.api.com.atproto.repo.listRecords({
-          repo: profileData.did,
-          collection: MARKETPLACE_COLLECTION,
-          limit: 50,
-        });
+
+        // A seller's listings are split across both collections until every old
+        // record has been edited, which may never happen.
+        const listingsResults = await Promise.all(
+          READ_COLLECTIONS.map((collection) =>
+            pdsAgent.api.com.atproto.repo
+              .listRecords({ repo: profileData.did, collection, limit: 50 })
+              .catch(() => null)
+          )
+        );
         if (cancelled) return;
 
-        if (listingsResult.success && listingsResult.data.records.length > 0) {
-          const processedListings = listingsResult.data.records.map((record) => {
-            const listing = record.value as MarketplaceListing;
-            return {
-              ...listing,
+        const rawRecords = listingsResults.flatMap((result) =>
+          result?.success ? result.data.records : []
+        );
+
+        if (rawRecords.length > 0) {
+          const processedListings = normalizeListings(
+            rawRecords.map((record) => ({
+              record: record.value as Record<string, any>,
               uri: record.uri,
               cid: record.cid,
               authorDid: profileData.did,
-              authorHandle: profileData.handle,
-              authorDisplayName: profileData.displayName,
-              authorAvatarCid: profileData.avatar ? extractAvatarCid(profileData.avatar) : undefined,
-              formattedImages: generateImageUrls(profileData.did, listing.images),
-            };
-          });
+            }))
+          ).map((listing) => ({
+            ...(toLegacyListing(listing) as any),
+            uri: listing.uri,
+            cid: listing.cid,
+            authorDid: profileData.did,
+            authorHandle: profileData.handle,
+            authorDisplayName: profileData.displayName,
+            authorAvatarCid: profileData.avatar ? extractAvatarCid(profileData.avatar) : undefined,
+            formattedImages: listing.formattedImages,
+          }));
 
           processedListings.sort((a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()

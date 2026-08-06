@@ -5,7 +5,7 @@
 // never reach the repo. Spreading an app object into a record is how those
 // leaked in the first place.
 
-import { COMMERCE_COLLECTION } from './collections.ts';
+import { COMMERCE_COLLECTION, SHOP_COLLECTION } from './collections.ts';
 import { DEFAULT_CURRENCY } from './money.ts';
 import type { ListingInput } from './types.ts';
 
@@ -93,12 +93,15 @@ export function buildListingRecord(input: ListingInput, options: BuildOptions = 
 
     sku: input.sku,
     gtin: input.gtin,
+    shopRef: input.shopRef,
     partOf: input.partOf,
     variantProperties: input.variantProperties,
     groupedItems: input.groupedItems,
     specifications: input.specifications,
 
-    location: input.location ? compact(input.location) : undefined,
+    // stripLegacyFields, not compact: `legacyCounty` exists to carry a v1 field
+    // through a read, and must never be written back out to a v2 record.
+    location: stripLegacyFields(input.location),
     taxStatus: input.taxStatus,
     taxCategory: input.taxCategory,
     externalUrl: input.externalUrl,
@@ -119,6 +122,21 @@ export function buildListingRecord(input: ListingInput, options: BuildOptions = 
   // compact() returns undefined only for an empty object, which cannot happen
   // here since $type and createdAt are always present.
   return record as Record<string, any>;
+}
+
+/**
+ * Build an `app.openmkt.commerce.shop` record.
+ *
+ * Only `name` and `createdAt` are required, which is all there is to write
+ * until Phase 6 gives the shop a form of its own. It exists this early because
+ * a listing's `shopRef` is required and has to point somewhere.
+ */
+export function buildShopRecord(name: string, createdAt?: string): Record<string, any> {
+  return {
+    $type: SHOP_COLLECTION,
+    name,
+    createdAt: createdAt || new Date().toISOString(),
+  };
 }
 
 /**

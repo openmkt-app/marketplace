@@ -120,6 +120,8 @@ export type Listing = {
   // --- identifiers & structure ---
   sku?: string;
   gtin?: string;
+  /** AT URI of the seller's shop record. Required by the lexicon on write. */
+  shopRef?: string;
   partOf?: string;
   variantProperties?: Array<{ axis: string; value?: string }>;
   groupedItems?: GroupedItem[];

@@ -7,6 +7,7 @@
 import { MARKETPLACE_COLLECTION } from '../constants.ts';
 
 const PRODUCTION_COMMERCE = 'app.openmkt.commerce.listing';
+const PRODUCTION_SHOP = 'app.openmkt.commerce.shop';
 
 // Dev writes to a distinct NSID so test listings never land in the production
 // index, mirroring the reason the old app.atprotomkt.* split existed.
@@ -14,12 +15,23 @@ const PRODUCTION_COMMERCE = 'app.openmkt.commerce.listing';
 // TODO: confirm this name with Al. The old dev NSID borrowed a domain that is
 // no longer ours, which is not a good basis for NSID authority.
 const DEVELOPMENT_COMMERCE = 'app.openmkt.test.commerce.listing';
+const DEVELOPMENT_SHOP = 'app.openmkt.test.commerce.shop';
+
+const IS_PRODUCTION = process.env.NEXT_PUBLIC_MARKETPLACE_ENV === 'production';
 
 /** The only collection new records are written to. */
-export const COMMERCE_COLLECTION =
-  process.env.NEXT_PUBLIC_MARKETPLACE_ENV === 'production'
-    ? PRODUCTION_COMMERCE
-    : DEVELOPMENT_COMMERCE;
+export const COMMERCE_COLLECTION = IS_PRODUCTION ? PRODUCTION_COMMERCE : DEVELOPMENT_COMMERCE;
+
+/**
+ * The seller's shop record. One per repo, at rkey `self`.
+ *
+ * Listings need it before Phase 6 gives it a UI: `shopRef` is a required field
+ * on a listing, so a listing cannot be written without a shop to point at.
+ */
+export const SHOP_COLLECTION = IS_PRODUCTION ? PRODUCTION_SHOP : DEVELOPMENT_SHOP;
+
+/** Every repo has at most one shop, so the record key is fixed. */
+export const SHOP_RKEY = 'self';
 
 /** The v1 collection. Read-only — nothing should write here again. */
 export const LEGACY_COLLECTION = MARKETPLACE_COLLECTION;

@@ -1,0 +1,127 @@
+// Compatibility adapter: the form's v1-shaped output -> canonical ListingInput.
+//
+// The mirror of legacy.ts. That file turns a canonical Listing into the shape
+// the old UI reads; this one turns what the old form produces into the shape
+// serialize.ts writes. Both exist so the write path could move to the commerce
+// lexicon without first rewriting a 1951-line form.
+//
+// When CreateListingForm produces a ListingInput directly (Phase 5), this file
+// is only needed for the Etsy importer, and can shrink to that.
+
+import { inferListingType, normalizeCategory } from './normalize.ts';
+import { toMinorUnits } from './money.ts';
+import { DEFAULT_CURRENCY } from './money.ts';
+import type { CommerceLocation, ListingInput, ServiceDetails } from './types.ts';
+
+/** What CreateListingForm and etsy-client build today. */
+export type LegacyListingInput = {
+  title: string;
+  description: string;
+  price: string;
+  currency?: string;
+  category: string;
+  condition?: string;
+  location?: {
+    state?: string;
+    county?: string;
+    locality?: string;
+    zipPrefix?: string;
+    isOnlineStore?: boolean;
+  };
+  metadata?: Record<string, any>;
+  externalUrl?: string;
+  hideFromFriends?: boolean;
+  isNsfw?: boolean;
+};
+
+/**
+ * v1 wrote the literal strings "Online" / "Online Store" into state, county and
+ * locality for online sellers. Those are sentinels, not places, so they become
+ * `isRemote` and nothing else.
+ *
+ * `county` has no home in the new model and is dropped here rather than carried
+ * as `legacyCounty` — that field exists for reading old records, not for
+ * smuggling a dead field into a new one.
+ */
+function toCommerceLocation(loc: LegacyListingInput['location']): CommerceLocation | undefined {
+  if (!loc) return undefined;
+  if (loc.isOnlineStore) return { isRemote: true };
+
+  const out: CommerceLocation = { isRemote: false };
+  if (loc.state) out.region = loc.state;
+  if (loc.locality) out.locality = loc.locality;
+  if (loc.zipPrefix) out.postalPrefix = loc.zipPrefix;
+
+  // Only claim a country when there is a place to attach it to. The form is
+  // still US-only, and an empty location with countryCode: "US" would assert
+  // something the seller never said.
+  if (out.region || out.locality || out.postalPrefix) out.countryCode = 'US';
+
+  return out;
+}
+
+function toServiceDetails(metadata: Record<string, any> | undefined): ServiceDetails | undefined {
+  if (!metadata) return undefined;
+  const details: ServiceDetails = {};
+  if (typeof metadata.slotsAvailable === 'number') details.slotsAvailable = metadata.slotsAvailable;
+  if (metadata.turnaroundTime) details.turnaroundTime = metadata.turnaroundTime;
+  // commissionStatus is deliberately not carried: it is derived from
+  // slotsAvailable at render time (legacy.ts) and is not a lexicon field.
+  return Object.keys(details).length ? details : undefined;
+}
+
+/**
+ * Build the self-labels union the record carries for NSFW listings.
+ *
+ * Same shape the v1 write path used, kept here so the two write call sites do
+ * not each construct it.
+ */
+export function buildSelfLabels(isNsfw?: boolean) {
+  if (!isNsfw) return undefined;
+  return {
+    $type: 'com.atproto.label.defs#selfLabels',
+    values: [{ val: 'nsfw' }],
+  };
+}
+
+/**
+ * Convert the form's output into a canonical ListingInput.
+ *
+ * `images` is not handled here — blobs are uploaded by the client and attached
+ * afterwards, because this function must stay free of network calls.
+ *
+ * Known loss: `metadata.externalPlatform`. The commerce lexicon has no field
+ * for it and inventing one in a schema we share with Niizuki is worse than
+ * losing it. StoreCard already falls back to detectPlatform(externalUrl), which
+ * covers every platform except a custom domain that only the async probe can
+ * identify.
+ */
+export function toListingInput(input: LegacyListingInput): ListingInput {
+  const currency = input.currency || DEFAULT_CURRENCY;
+  const category = normalizeCategory(input.category);
+  const type = inferListingType(input.category);
+
+  const listingInput: ListingInput = {
+    type,
+    title: input.title,
+    description: input.description,
+    pricing: {
+      regularPrice: toMinorUnits(input.price, currency),
+      currency,
+      // taxInclusive stays unset: the form does not ask, and guessing would
+      // misprice every VAT-inclusive seller.
+    },
+    category,
+    subcategory: input.metadata?.subcategory,
+    condition: input.condition || undefined,
+    location: toCommerceLocation(input.location),
+    externalUrl: input.externalUrl,
+    hideFromFriends: input.hideFromFriends,
+  };
+
+  if (type === 'service') {
+    listingInput.serviceDetails = toServiceDetails(input.metadata);
+  }
+
+  return listingInput;
+}

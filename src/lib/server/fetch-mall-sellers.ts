@@ -1,7 +1,8 @@
 import { BskyAgent } from '@atproto/api';
 import { isSellerExcluded } from '@/lib/excluded-sellers';
-import { MARKETPLACE_COLLECTION } from '@/lib/constants';
-import { generateImageUrls } from '@/lib/image-utils';
+import { READ_COLLECTIONS } from '@/lib/commerce/collections';
+import { normalizeListings } from '@/lib/commerce/hydrate';
+import { toLegacyListing } from '@/lib/commerce/legacy';
 import type { SellerWithListings } from '@/components/marketplace/StoreCard';
 import type { MarketplaceListing } from '@/lib/marketplace-client';
 import { isSellerCachedEmpty, markSellerEmpty, invalidateSeller } from '@/lib/mall-cache';
@@ -74,25 +75,42 @@ export async function getVerifiedSellers(): Promise<SellerWithListings[]> {
             }
 
             const pdsAgent = new BskyAgent({ service: pdsEndpoint });
-            const listingsResult = await pdsAgent.api.com.atproto.repo.listRecords({
-              repo: followProfile.did,
-              collection: MARKETPLACE_COLLECTION,
-              limit: 50,
-              reverse: true,
-            });
 
-            if (!listingsResult.success) return [];
+            // Both collections. Mall membership is decided by whether a seller
+            // has any online-store listing, so missing the commerce collection
+            // would drop a seller off the Mall entirely the moment they edit.
+            const listingsResults = await Promise.all(
+              READ_COLLECTIONS.map(collection =>
+                pdsAgent.api.com.atproto.repo
+                  .listRecords({ repo: followProfile.did, collection, limit: 50, reverse: true })
+                  .catch(() => null)
+              )
+            );
 
-            return listingsResult.data.records.map(record => {
-              const listing = record.value as MarketplaceListing;
-              const formattedImages = generateImageUrls(followProfile.did, listing.images);
-              const { images, ...sanitizedListing } = listing;
-              return {
-                ...sanitizedListing,
+            const rawRecords = listingsResults.flatMap(result =>
+              result?.success ? result.data.records : []
+            );
+
+            // Normalized rather than spread: isOnlineStoreListing reads
+            // `location.isOnlineStore`, which only exists on the legacy shape.
+            return normalizeListings(
+              rawRecords.map(record => ({
+                record: record.value as Record<string, any>,
                 uri: record.uri,
                 cid: record.cid,
+                authorDid: followProfile.did,
+              }))
+            ).map(listing => {
+              const legacy = toLegacyListing(listing) as any;
+              // The raw blob refs are dropped on purpose — this payload is
+              // serialized into the page, and only the CDN URLs are needed.
+              const { images, ...sanitized } = legacy;
+              return {
+                ...sanitized,
+                uri: listing.uri,
+                cid: listing.cid,
                 sellerDid: followProfile.did,
-                formattedImages,
+                formattedImages: listing.formattedImages,
               };
             });
           } catch (e) {

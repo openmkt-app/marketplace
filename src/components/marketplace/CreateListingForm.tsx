@@ -1,7 +1,8 @@
 // src/components/marketplace/CreateListingForm.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import MarketplaceClient, { ListingImage, MarketplaceListing } from '@/lib/marketplace-client';
+import MarketplaceClient, { InsufficientScopeError, ListingImage, MarketplaceListing } from '@/lib/marketplace-client';
+import { useAuth } from '@/contexts/AuthContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { LocationFilterValue } from './filters/LocationFilter';
 import { formatZipPrefix } from '@/lib/location-utils';
@@ -39,8 +40,12 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   const tSubs = useTranslations('subcategories');
   const tConds = useTranslations('conditions');
   const searchParams = useSearchParams();
+  const { logout } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Set when the PDS refuses a write because the session predates the commerce
+  // collection being added to the OAuth scopes. Signing in again fixes it.
+  const [needsReauth, setNeedsReauth] = useState(false);
   const [images, setImages] = useState<(File | ListingImage)[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1080,9 +1085,11 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
       let result;
       if (mode === 'edit' && initialData && initialData.uri) {
-        // Update existing listing
-        await client.updateListing(initialData.uri, listingDataRaw);
-        result = { uri: initialData.uri };
+        // Editing an old listing moves it to the commerce collection, which
+        // changes its URI. Redirect to where the record actually ended up —
+        // the old URI is deleted by then and would 404.
+        const updated = await client.updateListing(initialData.uri, listingDataRaw);
+        result = { uri: updated.uri };
       } else {
         // Create new listing
         result = await client.createListing(listingDataRaw);
@@ -1129,10 +1136,17 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         price: listingDataRaw.price
       });
     } catch (err) {
-      setError(tCreate('errors.submitFailed', { 
-        action: mode === 'edit' ? tCreate('errors.actionUpdate') : tCreate('errors.actionCreate'),
-        message: err instanceof Error ? err.message : String(err)
-      }));
+      // A missing permission is not a failure the seller can fix by retrying,
+      // so it gets its own message and a way out instead of a raw OAuth error.
+      if (err instanceof InsufficientScopeError) {
+        setNeedsReauth(true);
+        setError(null);
+      } else {
+        setError(tCreate('errors.submitFailed', {
+          action: mode === 'edit' ? tCreate('errors.actionUpdate') : tCreate('errors.actionCreate'),
+          message: err instanceof Error ? err.message : String(err)
+        }));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -1146,6 +1160,20 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         {/* Main Form Column */}
         <div className="flex-1 min-w-0">
           <div className="max-w-2xl mx-auto lg:mx-0 lg:max-w-none">
+            {needsReauth && (
+              <div className="bg-amber-50 border border-amber-300 text-amber-900 px-4 py-3 rounded mb-4">
+                <p className="font-semibold mb-1">{tCreate('errors.reauthTitle')}</p>
+                <p className="mb-3 text-sm">{tCreate('errors.reauthBody')}</p>
+                <button
+                  type="button"
+                  onClick={() => logout()}
+                  className="px-4 py-2 bg-primary-color hover:bg-primary-light text-white rounded-md text-sm"
+                >
+                  {tCreate('errors.reauthAction')}
+                </button>
+              </div>
+            )}
+
             {error && (
               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 relative">
                 <span className="block sm:inline">{error}</span>

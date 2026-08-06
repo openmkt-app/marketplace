@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { OAUTH_SCOPE } from '@/lib/oauth-scopes';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
         redirect_uris: [
             `${origin}/oauth/callback`
         ],
-        scope: 'atproto transition:chat.bsky repo:app.openmkt.marketplace.listing repo:app.bsky.feed.post repo:app.bsky.graph.follow blob:*/*',
+        scope: OAUTH_SCOPE,
         grant_types: [
             'authorization_code',
             'refresh_token'

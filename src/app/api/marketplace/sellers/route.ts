@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { BskyAgent } from '@atproto/api';
 import { getBotAgent } from '@/lib/bot-client';
-import { MARKETPLACE_COLLECTION } from '@/lib/constants';
+import { READ_COLLECTIONS } from '@/lib/commerce/collections';
 import { getCachedSellers, setSellersCache, getCachedPDS, setCachedPDS } from '@/lib/mall-cache';
 
 export const dynamic = 'force-dynamic';
@@ -34,17 +34,28 @@ async function fetchListingCount(did: string): Promise<number> {
         const pds = await resolvePDS(did);
         const agent = new BskyAgent({ service: pds });
         let count = 0;
-        let cursor: string | undefined;
-        do {
-            const res = await agent.api.com.atproto.repo.listRecords({
-                repo: did,
-                collection: MARKETPLACE_COLLECTION,
-                limit: 100,
-                cursor,
-            });
-            count += res.data.records.length;
-            cursor = res.data.cursor;
-        } while (cursor);
+
+        // Counted across both collections. A seller's listings are split
+        // between them for as long as they have old records they never edited.
+        for (const collection of READ_COLLECTIONS) {
+            try {
+                let cursor: string | undefined;
+                do {
+                    const res = await agent.api.com.atproto.repo.listRecords({
+                        repo: did,
+                        collection,
+                        limit: 100,
+                        cursor,
+                    });
+                    count += res.data.records.length;
+                    cursor = res.data.cursor;
+                } while (cursor);
+            } catch {
+                // Caught per collection so one unreadable collection undercounts
+                // rather than reporting the seller as having nothing at all.
+            }
+        }
+
         return count;
     } catch {
         return 0;

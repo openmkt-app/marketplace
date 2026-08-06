@@ -504,7 +504,10 @@
       "freePriceCategory": "Itens na categoria 'Coisas Grátis' devem ter um preço de $0.00.",
       "submitFailed": "Falha ao {action} o anúncio: {message}",
       "actionCreate": "criar",
-      "actionUpdate": "atualizar"
+      "actionUpdate": "atualizar",
+      "reauthTitle": "Precisa entrar de novo, só uma vez",
+      "reauthBody": "O Open Market agora salva os anúncios em um formato novo, e sua conta precisa autorizar isso uma vez. Entre de novo e salve seu anúncio. Nada do que você escreveu se perde, mas copie o texto por segurança.",
+      "reauthAction": "Entrar de novo"
     }
   },
   "filters": {

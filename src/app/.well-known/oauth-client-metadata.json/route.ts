@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { OAUTH_SCOPE } from '@/lib/oauth-scopes';
 
 export const dynamic = 'force-dynamic'; // Defaults to auto, but we want to ensure per-request eval
 
@@ -17,7 +18,10 @@ export async function GET(request: NextRequest) {
         redirect_uris: [
             `${origin}/oauth/callback`
         ],
-        scope: 'atproto transition:generic transition:chat.bsky',
+        // Same string as /oauth-client-metadata.json, which is the client_id
+        // this document also points at. They drifted once — this one granted no
+        // repo access at all — so they now come from one constant.
+        scope: OAUTH_SCOPE,
         grant_types: [
             'authorization_code',
             'refresh_token'

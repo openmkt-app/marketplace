@@ -504,7 +504,10 @@
       "freePriceCategory": "Los artículos en la categoría 'Cosas Gratis' deben tener un precio de $0.00.",
       "submitFailed": "Error al {action} el anuncio: {message}",
       "actionCreate": "crear",
-      "actionUpdate": "actualizar"
+      "actionUpdate": "actualizar",
+      "reauthTitle": "Necesitas iniciar sesión una vez más",
+      "reauthBody": "Open Market ahora guarda los anuncios en un formato nuevo, y tu cuenta tiene que autorizarlo una vez. Inicia sesión de nuevo y guarda tu anuncio. No pierdes lo que escribiste, pero copia el texto por si acaso.",
+      "reauthAction": "Iniciar sesión de nuevo"
     }
   },
   "filters": {

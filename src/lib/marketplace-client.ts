@@ -5,6 +5,17 @@ import logger from './logger';
 import { getKnownMarketplaceDIDs, addMarketplaceDID, ensureVerifiedSellersLoaded, getKnownPDS } from './marketplace-dids';
 
 import { MARKETPLACE_COLLECTION } from './constants';
+import {
+  COMMERCE_COLLECTION,
+  LEGACY_COLLECTION,
+  READ_COLLECTIONS,
+  SHOP_COLLECTION,
+  SHOP_RKEY,
+} from './commerce/collections';
+import { buildListingRecord, buildShopRecord } from './commerce/serialize';
+import { buildSelfLabels, toListingInput } from './commerce/legacy-input';
+import { normalizeAndHydrate, normalizeListings } from './commerce/hydrate';
+import { toLegacyListing } from './commerce/legacy';
 import type { OAuthSession } from './oauth-client';
 
 // Define types for our marketplace listings
@@ -77,6 +88,53 @@ export type MarketplaceListing = {
 
 export type CreateListingParams = Omit<MarketplaceListing, 'createdAt'>;
 
+/** What updateListing reports back, so the caller knows where the record ended up. */
+export type UpdateListingResult = {
+  /** The listing's URI after the update. Differs from the old one after an upgrade. */
+  uri: string;
+  cid?: string;
+  /** True when the record moved from the v1 collection to the commerce one. */
+  migrated: boolean;
+};
+
+/**
+ * The session's OAuth grant does not cover the collection we tried to write.
+ *
+ * Granular scopes name the collection, so every seller who authorized before
+ * the commerce NSID was added to the scope string has to approve it once. This
+ * is a normal, expected state — not a bug — so it gets its own type and the UI
+ * offers a sign-in instead of showing a raw OAuth error.
+ */
+export class InsufficientScopeError extends Error {
+  readonly collection: string;
+
+  constructor(collection: string, cause?: unknown) {
+    super(`Session is not authorized to write ${collection}`);
+    this.name = 'InsufficientScopeError';
+    this.collection = collection;
+    if (cause !== undefined) (this as any).cause = cause;
+  }
+}
+
+/**
+ * Decide whether a failed write was a permission problem.
+ *
+ * The PDS says "Bad token scope" today, but that wording has changed before, so
+ * a 403 on a write we are otherwise authenticated for is also treated as a
+ * scope problem — being wrong here costs one unnecessary sign-in prompt, while
+ * missing it leaves the seller staring at an unexplained failure.
+ */
+function isScopeError(error: unknown): boolean {
+  const err = error as { status?: number; statusCode?: number; message?: unknown; error?: unknown } | null;
+  if (!err) return false;
+
+  const text = `${String(err.message ?? '')} ${String(err.error ?? '')}`;
+  if (/scope/i.test(text)) return true;
+
+  const status = err.status ?? err.statusCode;
+  return status === 403;
+}
+
 // Kept for any external consumers that may import it
 export type SessionData = { did: string; handle: string; accessJwt: string; refreshJwt: string };
 
@@ -111,6 +169,8 @@ export class MarketplaceClient {
   private lastApiCall: number;
   private cacheTTL: number;
   private rateLimitInterval: number;
+  /** Memoized shop-record lookup, so a session resolves it at most once. */
+  private shopUriPromise: Promise<string> | null;
 
   constructor() {
     // Start with an unauthenticated agent; replaced by setOAuthSession() after login
@@ -121,6 +181,7 @@ export class MarketplaceClient {
     this.lastApiCall = 0;
     this.cacheTTL = 5 * 60 * 1000;
     this.rateLimitInterval = 30 * 1000;
+    this.shopUriPromise = null;
   }
 
   /**
@@ -132,12 +193,59 @@ export class MarketplaceClient {
     this._handle = handle;
     this.isLoggedIn = true;
     this.listingsCache = null; // Invalidate cache on session change
+    this.shopUriPromise = null; // Belongs to the previous account
     logger.info('OAuth session configured', { meta: { did, handle } });
   }
 
   logout(): void {
     this.isLoggedIn = false;
     this._handle = undefined;
+    this.shopUriPromise = null;
+  }
+
+  /**
+   * Return the AT URI of the seller's shop record, creating it if there is none.
+   *
+   * A listing's `shopRef` is required by the lexicon, so there is no way to
+   * write a listing without a shop to point at. Phase 6 gives the shop a UI
+   * where the seller can set a real name, policies and shipping; until then it
+   * is created with just their handle, which is enough to be valid and is
+   * theirs to edit later.
+   */
+  private async ensureShopRecord(): Promise<string> {
+    if (this.shopUriPromise) return this.shopUriPromise;
+
+    const repo = this.agent.accountDid;
+
+    this.shopUriPromise = (async () => {
+      try {
+        const existing = await this.agent.api.com.atproto.repo.getRecord({
+          repo,
+          collection: SHOP_COLLECTION,
+          rkey: SHOP_RKEY,
+        });
+        if (existing.data?.uri) return existing.data.uri;
+      } catch {
+        // No shop record yet. Any other read failure lands here too, and the
+        // write below is a putRecord at a fixed rkey, so retrying is harmless.
+      }
+
+      const created = await this.agent.api.com.atproto.repo.putRecord({
+        repo,
+        collection: SHOP_COLLECTION,
+        rkey: SHOP_RKEY,
+        record: buildShopRecord(this._handle || repo),
+      });
+
+      logger.info('Created a shop record', { meta: { uri: created.data.uri } });
+      return created.data.uri;
+    })().catch((error) => {
+      // Do not cache a failure: the next save should try again.
+      this.shopUriPromise = null;
+      throw error;
+    });
+
+    return this.shopUriPromise;
   }
 
   async createListing(listingData: CreateListingParams): Promise<Record<string, unknown>> {
@@ -173,65 +281,37 @@ export class MarketplaceClient {
       });
 
       logger.logApiRequest('POST', 'com.atproto.repo.createRecord', {
-        collection: MARKETPLACE_COLLECTION,
+        collection: COMMERCE_COLLECTION,
         imageCount: processedImages ? processedImages.length : 0,
         hideFromFriends: listingDataWithoutImages.hideFromFriends || false
       });
 
-      // Construct labels if NSFW is checked
-      const labels = listingDataWithoutImages.isNsfw ? {
-        $type: 'com.atproto.label.defs#selfLabels',
-        values: [{ val: 'nsfw' }]
-      } : undefined;
+      // New records are always the commerce shape. serialize.ts keeps the
+      // whitelist that stops hydrated UI fields (authorHandle, formattedImages)
+      // from reaching the repo; the field list lives there now rather than being
+      // spelled out inline at each write site.
+      const shopRef = await this.ensureShopRecord();
 
-      // Construct the record with ONLY the fields defined in the lexicon
-      // This prevents 'authorHandle' or other hydrated fields from polluting the PDS record
-      const recordToCreate: Record<string, any> = {
-        title: listingDataWithoutImages.title,
-        price: listingDataWithoutImages.price,
-        currency: listingDataWithoutImages.currency,
-        category: listingDataWithoutImages.category,
-        condition: listingDataWithoutImages.condition,
-        description: listingDataWithoutImages.description,
-        location: listingDataWithoutImages.location,
-        images: processedImages,
-        createdAt: new Date().toISOString(),
-        hideFromFriends: listingDataWithoutImages.hideFromFriends || false,
-        metadata: listingDataWithoutImages.metadata || {},
-        externalUrl: listingDataWithoutImages.externalUrl,
-        $type: MARKETPLACE_COLLECTION
-      };
-
-      if (labels) {
-        recordToCreate.labels = labels;
-      }
+      const recordToCreate = buildListingRecord(
+        { ...toListingInput(listingDataWithoutImages), shopRef, images: processedImages },
+        { labels: buildSelfLabels(listingDataWithoutImages.isNsfw) }
+      );
 
       const result = await this.agent.api.com.atproto.repo.createRecord({
         repo: this.agent.accountDid,
-        collection: MARKETPLACE_COLLECTION,
+        collection: COMMERCE_COLLECTION,
         record: recordToCreate,
       });
 
       // Handle standard AT Proto response shape { data: { uri, cid }, success: boolean }
       const recordData = result.data ? result.data : result;
 
-      // Notify the feed indexer — fire-and-forget, must not break listing creation
+      // Notify the feed indexer — fire-and-forget, must not break listing
+      // creation. It is fed from the form's own values rather than the record,
+      // because the index still speaks v1 (flat price, US location object).
       const listingUri = (recordData as any).uri as string | undefined;
       if (listingUri) {
-        fetch('/api/feed/notify-new-listing', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            listingUri,
-            listingData: {
-              title: recordToCreate.title,
-              price: recordToCreate.price,
-              category: recordToCreate.category,
-              location: recordToCreate.location,
-              description: recordToCreate.description,
-            },
-          }),
-        }).catch(() => {});
+        this.notifyFeedIndex(listingUri, listingDataWithoutImages);
       }
 
       return {
@@ -239,9 +319,39 @@ export class MarketplaceClient {
         images: processedImages // Return the blobs so we can use them for sharing
       };
     } catch (error) {
+      if (isScopeError(error)) {
+        throw new InsufficientScopeError(COMMERCE_COLLECTION, error);
+      }
       console.error('Failed to create listing:', error);
       throw error;
     }
+  }
+
+  /**
+   * Tell the feed index about a listing. Fire-and-forget by design: the index
+   * is a cache of what is in the repos, so a failed notification costs a slower
+   * appearance, never the write itself.
+   */
+  private notifyFeedIndex(
+    listingUri: string,
+    listingData: Partial<MarketplaceListing>,
+    action?: 'delete',
+  ): void {
+    fetch('/api/feed/notify-new-listing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        listingUri,
+        ...(action ? { action } : {}),
+        listingData: {
+          title: listingData.title || '',
+          price: listingData.price || '',
+          category: listingData.category || '',
+          location: listingData.location || { state: '', county: '', locality: '' },
+          description: listingData.description,
+        },
+      }),
+    }).catch(() => {});
   }
 
   /**
@@ -285,11 +395,7 @@ export class MarketplaceClient {
       logger.info(`Successfully deleted listing: ${uri}`);
 
       // Remove from feed index — fire-and-forget
-      fetch('/api/feed/notify-new-listing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ listingUri: uri, action: 'delete', listingData: { title: '', price: '', category: '', location: { state: '', county: '', locality: '' } } }),
-      }).catch(() => {});
+      this.notifyFeedIndex(uri, {}, 'delete');
 
       // Invalidate cache
       this.listingsCache = null;
@@ -301,9 +407,18 @@ export class MarketplaceClient {
   }
 
   /**
-   * Update an existing listing
+   * Update an existing listing.
+   *
+   * A v1 record cannot be edited in place any more: writes go to the commerce
+   * collection, and putRecord cannot move a record between collections. So
+   * editing an old listing creates the new record and deletes the old one, and
+   * the listing's URI changes — which is why this returns where it ended up
+   * instead of void.
    */
-  async updateListing(uri: string, listingData: CreateListingParams & { images?: (File | ListingImage)[] }): Promise<void> {
+  async updateListing(
+    uri: string,
+    listingData: CreateListingParams & { images?: (File | ListingImage)[] },
+  ): Promise<UpdateListingResult> {
     if (!this.isLoggedIn || !this.agent.did) {
       throw new Error('User must be logged in to update a listing');
     }
@@ -359,53 +474,104 @@ export class MarketplaceClient {
         ...listingDataWithoutImages
       } = listingData;
 
+      // Read the record we are replacing, for two reasons.
+      //
+      // Its createdAt has to survive the edit. The old code wrote `new Date()`
+      // here and called it "bumps to top of feed", which would silently reorder
+      // the whole browse page the first time every seller edits an old listing.
+      //
+      // It also proves the record is there before we create its replacement,
+      // so the upgrade path below never leaves a duplicate behind a record that
+      // was already gone.
+      const existing = await this.agent.api.com.atproto.repo.getRecord({
+        repo,
+        collection,
+        rkey,
+      });
+
+      const existingValue = (existing.data?.value ?? {}) as Record<string, any>;
+      const createdAt: string = existingValue.createdAt || new Date().toISOString();
+
       logger.info('Updating listing record', {
         meta: {
           uri,
           title: listingDataWithoutImages.title,
-          imageCount: finalImages ? finalImages.length : 0
+          imageCount: finalImages ? finalImages.length : 0,
+          migrating: collection === LEGACY_COLLECTION
         }
       });
 
-      // Construct labels if NSFW is checked
-      const labels = listingDataWithoutImages.isNsfw ? {
-        $type: 'com.atproto.label.defs#selfLabels',
-        values: [{ val: 'nsfw' }]
-      } : undefined;
+      // Keep the shop the record already pointed at, if it had one — an edit
+      // should not silently repoint a listing at a different shop.
+      const shopRef = existingValue.shopRef || (await this.ensureShopRecord());
 
-      // Construct the record with ONLY the fields defined in the lexicon
-      const recordToUpdate: Record<string, any> = {
-        title: listingDataWithoutImages.title,
-        price: listingDataWithoutImages.price,
-        currency: listingDataWithoutImages.currency,
-        category: listingDataWithoutImages.category,
-        condition: listingDataWithoutImages.condition,
-        description: listingDataWithoutImages.description,
-        location: listingDataWithoutImages.location,
-        images: finalImages,
-        createdAt: new Date().toISOString(), // Bumps to top of feed
-        hideFromFriends: listingDataWithoutImages.hideFromFriends || false,
-        metadata: listingDataWithoutImages.metadata || {},
-        externalUrl: listingDataWithoutImages.externalUrl,
-        $type: MARKETPLACE_COLLECTION
-      };
+      const record = buildListingRecord(
+        { ...toListingInput(listingDataWithoutImages), shopRef, images: finalImages },
+        { createdAt, labels: buildSelfLabels(listingDataWithoutImages.isNsfw) }
+      );
 
-      if (labels) {
-        recordToUpdate.labels = labels;
+      // Already in the commerce collection: a plain overwrite.
+      if (collection === COMMERCE_COLLECTION) {
+        await this.agent.api.com.atproto.repo.putRecord({
+          repo,
+          collection,
+          rkey,
+          record
+        });
+
+        this.listingsCache = null;
+        return { uri, cid: existing.data?.cid, migrated: false };
       }
 
-      // Use putRecord to overwrite
-      await this.agent.api.com.atproto.repo.putRecord({
+      // Upgrade path: create the new record first, then delete the old one.
+      //
+      // The order matters and the failure modes are not symmetric. Create-first
+      // means a failed delete leaves a duplicate — visible in my-listings and
+      // removable in one click. Delete-first would mean a failed create loses
+      // the seller's listing outright, with the edit they just typed. A
+      // duplicate is the cheaper thing to be wrong about.
+      //
+      // It also keeps the images. Both records point at the same blobs, and the
+      // PDS reference-counts them — creating first means the count never drops
+      // to zero, so nothing can be swept between the two calls.
+      const created = await this.agent.api.com.atproto.repo.createRecord({
         repo,
-        collection,
-        rkey,
-        record: recordToUpdate
+        collection: COMMERCE_COLLECTION,
+        record,
       });
 
-      // Invalidate cache
+      const newUri = created.data?.uri;
+      if (!newUri) {
+        throw new Error('Upgrade failed: the new record was not created');
+      }
+
+      try {
+        await this.agent.api.com.atproto.repo.deleteRecord({ repo, collection, rkey });
+      } catch (deleteError) {
+        // The edit is saved. Say plainly what is left over rather than failing
+        // an update that actually succeeded.
+        logger.error('Upgraded a listing but could not delete the old record', deleteError as Error);
+        this.listingsCache = null;
+        throw new Error(
+          'Your changes were saved, but the old copy of this listing could not be removed. ' +
+          'You should see it twice — delete the older one from My Listings.'
+        );
+      }
+
+      logger.info(`Upgraded listing to the commerce collection: ${uri} -> ${newUri}`);
+
+      // Point the index at the new URI. Order matters here too: add first, so
+      // the listing is never missing from the feed in between.
+      this.notifyFeedIndex(newUri, listingDataWithoutImages);
+      this.notifyFeedIndex(uri, {}, 'delete');
+
       this.listingsCache = null;
+      return { uri: newUri, cid: created.data?.cid, migrated: true };
 
     } catch (error) {
+      if (isScopeError(error)) {
+        throw new InsufficientScopeError(COMMERCE_COLLECTION, error);
+      }
       logger.error('Failed to update listing', error as Error);
       throw error;
     }
@@ -687,17 +853,13 @@ export class MarketplaceClient {
         }
       }
 
-      // Look for listings in the supported namespace
-      const validTypes = [MARKETPLACE_COLLECTION];
-      const allListings: (MarketplaceListing & {
-        authorDid: string;
-        authorHandle: string;
-        uri: string;
-        cid: string;
-      })[] = [];
+      // Both collections. A seller's own storefront is the one place that must
+      // never miss a listing: this is the read behind my-listings and the
+      // post-save redirect, so a v1-only scan would hide every listing the
+      // seller has edited since the write path moved.
+      const rawRecords: Array<{ record: Record<string, any>; uri: string; cid: string }> = [];
 
-      // Get listings from the collection
-      for (const collection of validTypes) {
+      for (const collection of READ_COLLECTIONS) {
         try {
           logger.logApiRequest('GET', 'com.atproto.repo.listRecords', {
             repo: did,
@@ -711,32 +873,31 @@ export class MarketplaceClient {
           });
 
           if (result.success && result.data.records.length > 0) {
-            // Process the listings
-            const typedListings = result.data.records.map(record => {
-              return {
-                ...record.value as MarketplaceListing,
-                authorDid: did,
-                authorHandle: handle,
-                uri: record.uri,
-                cid: record.cid,
-              };
-            });
-
-            allListings.push(...typedListings);
+            rawRecords.push(...result.data.records.map(record => ({
+              record: record.value as Record<string, any>,
+              uri: record.uri,
+              cid: record.cid,
+            })));
           }
         } catch (error) {
+          // A collection the seller has never written to returns an error on
+          // some PDS implementations. That is not a failure worth surfacing.
           logger.warn(`Failed to fetch ${collection} listings for ${did}`, error as Error);
         }
       }
 
-      // Add formatted image URLs for each listing
-      const processedListings = allListings.map(listing => {
-        const formattedImages = generateImageUrls(listing.authorDid, listing.images);
-        return {
-          ...listing,
-          formattedImages
-        };
-      });
+      // Normalize whichever shape each record is in, then hand the UI the shape
+      // it already understands. Image URLs come from the `images` array here
+      // rather than being generated separately below.
+      const processedListings = normalizeListings(
+        rawRecords.map(row => ({ ...row, authorDid: did }))
+      ).map(listing => ({
+        ...(toLegacyListing(listing) as any),
+        authorDid: did,
+        authorHandle: handle,
+        uri: listing.uri,
+        cid: listing.cid,
+      }));
 
       return processedListings;
     } catch (error) {
@@ -1166,24 +1327,26 @@ export class MarketplaceClient {
           });
 
           if (result.success && result.data.value) {
-            const record = result.data.value as MarketplaceListing;
-
             // Get the author's profile to fetch handle
             const handle = await this.getHandleFromDid(repo);
 
+            // This is what feeds the edit form, so the record has to be
+            // normalized rather than spread: a commerce record has `pricing`
+            // and no `price`, and spreading it would hand the form an empty
+            // price field and silently wipe the listing on save.
             const listing = {
-              ...record,
+              ...(toLegacyListing(
+                normalizeAndHydrate(result.data.value as Record<string, any>, {
+                  uri,
+                  cid: result.data.cid,
+                  authorDid: repo,
+                })
+              ) as any),
               authorDid: repo,
               authorHandle: handle,
               uri: uri,
               cid: result.data.cid,
             } as MarketplaceListing;
-
-            // Add formatted image URLs if the listing has images
-            if (listing.images && listing.images.length > 0 && listing.authorDid) {
-              const formattedImages = generateImageUrls(listing.authorDid, listing.images);
-              listing.formattedImages = formattedImages;
-            }
 
             logger.info(`Successfully fetched listing via getRecord: ${listing.title}`);
             return listing;

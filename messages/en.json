@@ -504,7 +504,10 @@
       "freePriceCategory": "Items in the 'Free Stuff' category must have a price of $0.00.",
       "submitFailed": "Failed to {action} listing: {message}",
       "actionCreate": "create",
-      "actionUpdate": "update"
+      "actionUpdate": "update",
+      "reauthTitle": "One quick sign-in needed",
+      "reauthBody": "Open Market now saves listings in a new format, and your account has to say yes to that once. Sign in again and save your listing — nothing you typed is lost, but copy your text somewhere safe first, just in case.",
+      "reauthAction": "Sign in again"
     }
   },
   "filters": {

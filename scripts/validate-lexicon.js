@@ -1,7 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Lexicons } from '@atproto/lexicon';
+import { BlobRef, Lexicons } from '@atproto/lexicon';
+import { CID } from 'multiformats/cid';
+import { base32 } from 'multiformats/bases/base32';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -72,9 +74,96 @@ if (!fs.existsSync(fixtureDir)) {
   }
 }
 
+// Phase 3: validate what the app actually writes.
+//
+// Fixtures are hand-written, so they only prove the schema is coherent. This
+// runs the real write path — the form's output through toListingInput and
+// buildListingRecord — and validates the result, which is the thing that has to
+// stay valid as either side changes.
+console.log('\n--- Write-path records ---\n');
+let writeErrors = 0;
+process.env.NEXT_PUBLIC_MARKETPLACE_ENV = 'production';
+
+try {
+  const { toListingInput, buildSelfLabels } = await import('../src/lib/commerce/legacy-input.ts');
+  const { buildListingRecord, buildShopRecord } = await import('../src/lib/commerce/serialize.ts');
+
+  // The shop record the client auto-creates on a seller's first save.
+  try {
+    const shop = buildShopRecord('alice.bsky.social', '2025-03-11T10:04:00.000Z');
+    lexicons.assertValidRecord(shop.$type, shop);
+    console.log(`  ✅ auto-created shop (${shop.$type})`);
+  } catch (e) {
+    console.error(`  ❌ auto-created shop\n     ${e.message}`);
+    writeErrors++;
+  }
+
+  // A real BlobRef over a real CID, not the JSON shape: the lexicon validator
+  // checks the class, and this is what uploadBlob hands the write path at
+  // runtime. Built with the constructor because BlobRef.fromJsonRef calls
+  // CID.parse without a base decoder, which cannot read base32 CIDs.
+  const blob = new BlobRef(
+    CID.parse('bafkreibme22gw2h7y2h7tg2fhqotaqjucnbc24deqo72b6mkl2egm4mnii', base32),
+    'image/jpeg',
+    1234,
+  );
+
+  const cases = [
+    ['physical goods', {
+      title: 'Oak dining table',
+      description: 'Solid oak, seats six.',
+      price: '450.00',
+      currency: 'USD',
+      category: 'furniture',
+      condition: 'used_good',
+      location: { state: 'Oregon', county: 'Multnomah', locality: 'Portland', zipPrefix: '972' },
+      metadata: { subcategory: 'Tables' },
+      hideFromFriends: false,
+    }],
+    ['commission, NSFW, online-only', {
+      title: 'Custom character portrait',
+      description: 'Full colour, one character.',
+      price: '85.00',
+      currency: 'USD',
+      category: 'digital_arts',
+      condition: '',
+      location: { state: 'Online', county: 'Online', locality: 'Online Store', isOnlineStore: true },
+      metadata: { subcategory: 'Illustration', slotsAvailable: 2, turnaroundTime: '2 weeks', commissionStatus: 'open', externalPlatform: 'etsy' },
+      externalUrl: 'https://www.etsy.com/listing/123',
+      isNsfw: true,
+    }],
+    ['free item, zero-decimal currency', {
+      title: 'Moving boxes',
+      description: 'Come and get them.',
+      price: '0',
+      currency: 'JPY',
+      category: 'free',
+      condition: 'used_fair',
+      location: { state: 'Tokyo', county: '', locality: 'Shibuya' },
+    }],
+  ];
+
+  for (const [name, formOutput] of cases) {
+    try {
+      const record = buildListingRecord(
+        { ...toListingInput(formOutput), shopRef: 'at://did:plc:seller/app.openmkt.commerce.shop/self', images: [blob] },
+        { createdAt: '2025-03-11T10:04:00.000Z', labels: buildSelfLabels(formOutput.isNsfw) },
+      );
+      lexicons.assertValidRecord(record.$type, record);
+      console.log(`  ✅ ${name} (${record.$type})`);
+    } catch (e) {
+      console.error(`  ❌ ${name}\n     ${e.message}`);
+      writeErrors++;
+    }
+  }
+} catch (e) {
+  console.error(`  ❌ could not load the write path\n     ${e.message}`);
+  writeErrors++;
+}
+
 console.log(`\nSchemas: ${lexiconFiles.length - schemaErrors}/${lexiconFiles.length} valid`);
 console.log(`Records: ${recordCount} valid`);
-const totalErrors = schemaErrors + recordErrors;
+const totalErrors = schemaErrors + recordErrors + writeErrors;
 if (totalErrors > 0) {
   console.log(`\n${totalErrors} error(s) found.`);
   process.exit(1);

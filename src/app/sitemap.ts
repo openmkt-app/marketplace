@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next';
 import { BskyAgent } from '@atproto/api';
-import { MARKETPLACE_COLLECTION } from '@/lib/constants';
+import { READ_COLLECTIONS } from '@/lib/commerce/collections';
 
 const BASE_URL = 'https://openmkt.app';
 
@@ -55,20 +55,26 @@ async function getSellerListings(did: string): Promise<Array<{ uri: string; crea
     }
 
     const agent = new BskyAgent({ service: pdsEndpoint });
-    const result = await agent.api.com.atproto.repo.listRecords({
-      repo: did,
-      collection: MARKETPLACE_COLLECTION,
-      limit: 50,
-    });
 
-    if (result.success && result.data.records.length > 0) {
-      return result.data.records.map(record => ({
-        uri: record.uri,
-        createdAt: (record.value as any).createdAt || new Date().toISOString(),
-      }));
-    }
+    // Both collections: a listing the seller has edited since the write path
+    // moved lives in the commerce one, and a v1-only scan would drop it from
+    // the sitemap even though its page still works.
+    const results = await Promise.all(
+      READ_COLLECTIONS.map(collection =>
+        agent.api.com.atproto.repo
+          .listRecords({ repo: did, collection, limit: 50 })
+          .catch(() => null)
+      )
+    );
 
-    return [];
+    return results.flatMap(result =>
+      result?.success
+        ? result.data.records.map(record => ({
+            uri: record.uri,
+            createdAt: (record.value as any).createdAt || new Date().toISOString(),
+          }))
+        : []
+    );
   } catch (error) {
     console.error(`Failed to fetch listings for ${did}:`, error);
     return [];

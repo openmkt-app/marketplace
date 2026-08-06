@@ -40,11 +40,16 @@ const ORPHAN_CATEGORY_MAP: Record<string, string> = {
 type RawRecord = Record<string, any>;
 type Identity = RecordIdentity;
 
-function inferType(category: string | undefined): ListingType {
+/**
+ * Exported because the write path needs the same rule: a listing created from
+ * the old form has no `type` field, so both directions must agree on what
+ * `digital_arts` means. Phase 5 replaces this with a real discriminator.
+ */
+export function inferListingType(category: string | undefined): ListingType {
   return category === LEGACY_SERVICE_CATEGORY ? 'service' : 'goods';
 }
 
-function normalizeCategory(category: string | undefined): string {
+export function normalizeCategory(category: string | undefined): string {
   if (!category) return '';
   return ORPHAN_CATEGORY_MAP[category] ?? category;
 }
@@ -69,7 +74,7 @@ function normalizeLegacyLocation(loc: RawRecord | undefined): CommerceLocation |
 function normalizeV1(record: RawRecord, id: Identity): Listing {
   const meta = (record.metadata ?? {}) as RawRecord;
   const category = normalizeCategory(record.category);
-  const type = inferType(record.category);
+  const type = inferListingType(record.category);
   const currency = record.currency || DEFAULT_CURRENCY;
 
   const pricing: Pricing = {
@@ -151,6 +156,7 @@ function normalizeV2(record: RawRecord, id: Identity): Listing {
 
     sku: record.sku,
     gtin: record.gtin,
+    shopRef: record.shopRef,
     partOf: record.partOf,
     variantProperties: record.variantProperties,
     groupedItems: record.groupedItems,
