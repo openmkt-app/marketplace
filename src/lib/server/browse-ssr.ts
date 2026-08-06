@@ -30,6 +30,20 @@ const SSR_BUDGET_MS = 800;
 const SSR_LISTING_COUNT = 8;
 
 /**
+ * Drop every image but the first.
+ *
+ * A card shows one photo, but listings carry up to ten, and the two image
+ * arrays together were three quarters of the serialized seed — paid for on
+ * every page load to describe images that are never rendered. The client fetch
+ * restores the full record moments later, and the detail page loads its own.
+ */
+function trimToCardImage(listing: PublicListing): PublicListing {
+    const images = listing.images?.slice(0, 1);
+    const formattedImages = listing.formattedImages?.slice(0, 1);
+    return { ...listing, ...(images ? { images } : {}), ...(formattedImages ? { formattedImages } : {}) };
+}
+
+/**
  * Listings to seed the browse page with, or an empty array.
  *
  * Never throws and never blocks for long: any failure means the page renders
@@ -56,7 +70,8 @@ export async function getInitialBrowseListings(): Promise<PublicListing[]> {
         // late is recoverable; showing it to someone it was hidden from is not.
         return feed.listings
             .filter(listing => !listing.hideFromFriends)
-            .slice(0, SSR_LISTING_COUNT);
+            .slice(0, SSR_LISTING_COUNT)
+            .map(trimToCardImage);
     } catch {
         return [];
     }
