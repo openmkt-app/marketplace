@@ -471,7 +471,7 @@
     "locationHelp": "Location information helps buyers find items near them. More specific location details will make your listing appear in more relevant searches.",
     "visibilityHeader": "Visibility Options",
     "hideFromFriends": "Hide from friends",
-    "hideFromFriendsDesc": "When enabled, this listing won't appear in feeds of people who follow you on the AT Protocol network (Bluesky, this marketplace, etc.). This helps keep certain listings private from people you know.",
+    "hideFromFriendsDesc": "Keeps this listing out of Open Market for people who follow you. It is not private: the listing still lives on your PDS, so anyone with the link, or any other AT Protocol app, can still see it.",
     "markNsfw": "Mark as NSFW",
     "markNsfwDesc": "Label this listing as containing graphic, sexual, or mature content. The images will be explicitly blurred for viewers until clicked.",
     "shareToFeed": "Share to your feed",

@@ -9,6 +9,7 @@ import { Link } from '@/i18n/navigation';
 import type { MarketplaceListing, ListingLocation } from '@/lib/marketplace-client';
 import { fetchPublicListings, fetchPublicProfile } from '@/lib/public-listings';
 import { useAuth } from '@/contexts/AuthContext';
+import { filterForViewer } from '@/lib/viewer-visibility';
 import ListingCard from '@/components/marketplace/ListingCard';
 import ListingImageDisplay from '@/components/marketplace/ListingImageDisplay';
 import FilterPanel, { FilterValues } from '@/components/marketplace/filters/FilterPanel';
@@ -727,6 +728,13 @@ const BrowsePageClient = ({ initialListings = [] }: BrowsePageClientProps) => {
           listings = await fetchPublicListings();
         }
 
+        // "Hide from friends" is resolved here rather than on the server,
+        // because whether a listing may be shown depends on the viewer's follow
+        // graph and the server render has no viewer. The server withholds every
+        // flagged listing; this is what puts back the ones this viewer is
+        // allowed to see.
+        listings = await filterForViewer(listings, auth.user?.did);
+
         if (listings && listings.length > 0) {
           // Show the listings straight away. Profile enrichment used to be
           // awaited here, which meant one Bluesky getProfile call per seller
@@ -761,7 +769,7 @@ const BrowsePageClient = ({ initialListings = [] }: BrowsePageClientProps) => {
     };
 
     fetchListings();
-  }, [auth.client, auth.isLoggedIn, auth.isLoading, initialized, enhanceWithProfiles, hasInitialListings]);
+  }, [auth.client, auth.isLoggedIn, auth.isLoading, auth.user?.did, initialized, enhanceWithProfiles, hasInitialListings]);
 
   // Locations used to be geocoded here speculatively, to make the distance
   // filter instant if the visitor reached for it. That cost every first-time

@@ -65,9 +65,10 @@ export async function getInitialBrowseListings(): Promise<PublicListing[]> {
         //
         // Whether a viewer may see one depends on their follow graph, which is
         // only known to the logged-in client. Rather than resolve that here,
-        // they are left out of the HTML entirely and appear after the client
-        // fetch, which already applies the check. A listing showing up a moment
-        // late is recoverable; showing it to someone it was hidden from is not.
+        // they are left out of the HTML entirely and are put back by the client
+        // fetch, which applies the check in viewer-visibility.ts. A listing
+        // showing up a moment late is recoverable; showing it to someone it was
+        // hidden from is not.
         return feed.listings
             .filter(listing => !listing.hideFromFriends)
             .slice(0, SSR_LISTING_COUNT)

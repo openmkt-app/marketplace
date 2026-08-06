@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { useTranslations, useLocale } from 'next-intl';
 import { Link } from '@/i18n/navigation';
@@ -12,6 +12,8 @@ import type { SellerProfile, StoreListing } from '@/lib/server/fetch-store';
 import { linkifyText } from '@/lib/linkify';
 import { isOnlineStore } from '@/lib/location-utils';
 import { isArtistStore } from '@/lib/artist-store-utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { filterForViewer } from '@/lib/viewer-visibility';
 
 interface SellerListing extends MarketplaceListing {
   uri: string;
@@ -41,13 +43,39 @@ export default function StorePageClient({
   const handle = decodeURIComponent(encodedHandle);
 
   const [profile, setProfile] = useState<SellerProfile | null>(initialProfile);
-  const [listings, setListings] = useState<SellerListing[]>((initialListings ?? []) as SellerListing[]);
+  const [allListings, setAllListings] = useState<SellerListing[]>((initialListings ?? []) as SellerListing[]);
   // The server renders the store outright. Only a server-side failure leaves
   // anything to load, and that path is handled by the fallback effect below.
   const [loading, setLoading] = useState(initialListings === null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'store' | 'local'>('store');
   const [flaggedUris, setFlaggedUris] = useState<Set<string>>(new Set());
+  const auth = useAuth();
+  const [hiddenUris, setHiddenUris] = useState<Set<string>>(new Set());
+
+  // "Hide from friends" — resolved here rather than on the server, which has no
+  // viewer to check the follow graph against. Everything downstream reads the
+  // filtered `listings`, so the counts, the artist-store check and the
+  // online/local split all agree with what is actually on screen.
+  useEffect(() => {
+    let cancelled = false;
+    const flagged = allListings.filter(l => l.hideFromFriends);
+    if (flagged.length === 0 || !auth.user?.did) {
+      setHiddenUris(prev => (prev.size === 0 ? prev : new Set()));
+      return;
+    }
+    filterForViewer(allListings, auth.user.did).then(visible => {
+      if (cancelled) return;
+      const shown = new Set(visible.map(l => l.uri));
+      setHiddenUris(new Set(allListings.filter(l => !shown.has(l.uri)).map(l => l.uri)));
+    });
+    return () => { cancelled = true; };
+  }, [allListings, auth.user?.did]);
+
+  const listings = useMemo(
+    () => (hiddenUris.size === 0 ? allListings : allListings.filter(l => !hiddenUris.has(l.uri))),
+    [allListings, hiddenUris],
+  );
 
   // Fetch moderation flagged URIs
   useEffect(() => {
@@ -154,9 +182,9 @@ export default function StorePageClient({
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
 
-          setListings(processedListings);
+          setAllListings(processedListings);
         } else {
-          setListings([]);
+          setAllListings([]);
         }
       } catch (err) {
         console.error('Failed to fetch store data:', err);

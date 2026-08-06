@@ -471,7 +471,7 @@
     "locationHelp": "La información de ubicación ayuda a los compradores a encontrar artículos cerca de ellos. Los detalles de ubicación más específicos harán que tu anuncio aparezca en búsquedas más relevantes.",
     "visibilityHeader": "Opciones de visibilidad",
     "hideFromFriends": "Ocultar a amigos",
-    "hideFromFriendsDesc": "Cuando está habilitado, este anuncio no aparecerá en las fuentes de las personas que te siguen en la red AT Protocol (Bluesky, este mercado, etc.). Esto ayuda a mantener ciertos anuncios privados de personas que conoces.",
+    "hideFromFriendsDesc": "Mantiene este anuncio fuera de Open Market para las personas que te siguen. No es privado: el anuncio sigue en tu PDS, así que cualquiera con el enlace, o cualquier otra app de AT Protocol, puede verlo.",
     "markNsfw": "Marcar como NSFW",
     "markNsfwDesc": "Etiqueta este anuncio como contenido gráfico, sexual o para adultos. Las imágenes se difuminarán explícitamente para los espectadores hasta que se haga clic en ellas.",
     "shareToFeed": "Compartir en mi feed",
