@@ -95,6 +95,9 @@ export default function PriceFilter({ initialValue, onChange }: PriceFilterProps
   // Price brackets options
   const brackets = [
     { label: t('any'), value: '' },
+    // Free used to be a category. It is a price, so this is where it belongs —
+    // and it is the one bracket people actually go looking for.
+    { label: tGen('price_free'), value: 'free' },
     { label: tGen('price_under_50'), value: 'under_50' },
     { label: tGen('price_50_100'), value: '50_100' },
     { label: tGen('price_100_250'), value: '100_250' },

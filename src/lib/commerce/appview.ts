@@ -10,6 +10,7 @@
 // and why callers fall back to the fan-out path.
 
 import { withImageUrls } from './hydrate.ts';
+import { resolveListingCategory } from './normalize.ts';
 import type { Availability, Listing, ListingType, SchemaVersion } from './types.ts';
 
 const DEFAULT_APPVIEW_URL = 'https://appview.openmkt.app';
@@ -71,6 +72,7 @@ function toListing(rec: AppViewRecord): Listing | null {
 
   const did = String(rec.uri).split('/')[2] ?? '';
   const pricing = rec.pricing ?? {};
+  const resolvedCategory = resolveListingCategory(rec.category, rec.subcategory);
 
   return {
     uri: rec.uri,
@@ -90,8 +92,10 @@ function toListing(rec: AppViewRecord): Listing | null {
       saleStartsAt: pricing.saleStartsAt,
       saleEndsAt: pricing.saleEndsAt,
     },
-    category: rec.category || '',
-    subcategory: rec.subcategory,
+    // Same resolver the PDS read path uses. Reading the raw value here meant
+    // an Etsy orphan category was mapped on one path and not the other.
+    category: resolvedCategory.category,
+    subcategory: resolvedCategory.subcategory,
     taxonomy: rec.taxonomy,
     tags: rec.tags,
     brand: rec.brand,

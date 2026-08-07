@@ -127,6 +127,9 @@ function filterListingsByPrice(listings: MarketplaceListing[], priceFilter?: Fil
     // Apply price bracket filters
     if (priceFilter.bracket) {
       switch (priceFilter.bracket) {
+        case 'free':
+          if (price !== 0) return false;
+          break;
         case 'under_50':
           if (price >= 50) return false;
           break;

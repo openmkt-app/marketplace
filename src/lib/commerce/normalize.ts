@@ -39,6 +39,52 @@ const ORPHAN_CATEGORY_MAP: Record<string, string> = {
   digital: 'hobbies',
 };
 
+/**
+ * "Free Stuff" was a category, and it carried a parallel copy of the taxonomy:
+ * Free Clothing, Free Furniture, Free Household and so on. A free sofa was
+ * therefore invisible to anyone browsing Furniture, and being free — a fact
+ * about price — cost the seller the ability to say what the thing was.
+ *
+ * Free is now a price of zero in whatever category the item actually belongs
+ * to. Records written under the old scheme are mapped here, using the old
+ * subcategory to recover the real category. Their price is already 0, because
+ * the form forced it.
+ */
+const FREE_CATEGORY = 'free';
+
+const FREE_SUBCATEGORY_TO_CATEGORY: Record<string, string> = {
+  clothing: 'apparel',
+  electronics: 'electronics',
+  furniture: 'furniture',
+  household: 'home_goods',
+  toys: 'kids',
+  other_free: 'other',
+};
+
+/** The old English display names, which is what v1 records actually stored. */
+const FREE_SUBCATEGORY_NAMES: Record<string, string> = {
+  'free clothing': 'clothing',
+  'free electronics': 'electronics',
+  'free furniture': 'furniture',
+  'free household': 'household',
+  'free toys & games': 'toys',
+  'other free items': 'other_free',
+};
+
+/**
+ * Recover a real category for a record filed under "Free Stuff".
+ *
+ * Falls back to `other` rather than dropping the listing out of every category
+ * listing: an uncategorised item is findable, an item in a category that no
+ * longer exists is not.
+ */
+function categoryForFreeListing(subcategory: string | undefined): string {
+  if (!subcategory) return 'other';
+  const raw = subcategory.trim().toLowerCase();
+  const id = FREE_SUBCATEGORY_NAMES[raw] ?? raw;
+  return FREE_SUBCATEGORY_TO_CATEGORY[id] ?? 'other';
+}
+
 type RawRecord = Record<string, any>;
 type Identity = RecordIdentity;
 
@@ -54,6 +100,25 @@ export function inferListingType(category: string | undefined): ListingType {
 export function normalizeCategory(category: string | undefined): string {
   if (!category) return '';
   return ORPHAN_CATEGORY_MAP[category] ?? category;
+}
+
+/**
+ * Resolve a stored category/subcategory pair to the one the app should use.
+ *
+ * The single place that knows about categories that no longer mean what they
+ * say: the Etsy import's orphans, and "Free Stuff". Exported because the
+ * AppView path builds its listings from an already-indexed record and would
+ * otherwise need its own copy — which is how the orphan mapping came to apply
+ * on one read path and not the other.
+ */
+export function resolveListingCategory(
+  category: string | undefined,
+  subcategory: string | undefined,
+): { category: string; subcategory: string | undefined } {
+  if (category === FREE_CATEGORY) {
+    return { category: categoryForFreeListing(subcategory), subcategory: undefined };
+  }
+  return { category: normalizeCategory(category), subcategory };
 }
 
 function normalizeLegacyLocation(loc: RawRecord | undefined): CommerceLocation | undefined {
@@ -75,7 +140,8 @@ function normalizeLegacyLocation(loc: RawRecord | undefined): CommerceLocation |
 
 function normalizeV1(record: RawRecord, id: Identity): Listing {
   const meta = (record.metadata ?? {}) as RawRecord;
-  const category = normalizeCategory(record.category);
+  const resolved = resolveListingCategory(record.category, meta.subcategory);
+  const category = resolved.category;
   const type = inferListingType(record.category);
   const currency = record.currency || DEFAULT_CURRENCY;
 
@@ -96,7 +162,7 @@ function normalizeV1(record: RawRecord, id: Identity): Listing {
     description: record.description || '',
     pricing,
     category,
-    subcategory: meta.subcategory,
+    subcategory: resolved.subcategory,
     condition: record.condition || undefined,
     createdAt: record.createdAt || new Date().toISOString(),
 
@@ -121,6 +187,7 @@ function normalizeV1(record: RawRecord, id: Identity): Listing {
 
 function normalizeV2(record: RawRecord, id: Identity): Listing {
   const details = (record.details ?? {}) as RawRecord;
+  const resolvedCategory = resolveListingCategory(record.category, record.subcategory);
   const detailsType: string | undefined = details.$type;
 
   const listing: Listing = {
@@ -141,8 +208,8 @@ function normalizeV2(record: RawRecord, id: Identity): Listing {
       saleStartsAt: record.pricing?.saleStartsAt,
       saleEndsAt: record.pricing?.saleEndsAt,
     },
-    category: normalizeCategory(record.category),
-    subcategory: record.subcategory,
+    category: resolvedCategory.category,
+    subcategory: resolvedCategory.subcategory,
     taxonomy: record.taxonomy,
     tags: record.tags,
     brand: record.brand,

@@ -141,8 +141,6 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   const [locationZip, setLocationZip] = useState('');
 
   // Add state for Free category confirmation dialog
-  const [showFreeConfirmation, setShowFreeConfirmation] = useState(false);
-  const [previousCategory, setPreviousCategory] = useState<string>('');
 
   // Commission-specific state
   const [slotsAvailable, setSlotsAvailable] = useState<string>('');
@@ -707,14 +705,9 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
     // Store the sanitized value
     setPriceInput(formattedValue);
 
-    // If price is 0, automatically set category to "Free Stuff"
-    const isZeroPrice = parseFloat(formattedValue) === 0 || formattedValue === '0' || formattedValue === '0.0' || formattedValue === '0.00';
-    if (isZeroPrice && formattedValue !== '') {
-      setSelectedCategory('free');
-    } else if (!isZeroPrice && selectedCategory === 'free') {
-      // If price is non-zero and category is "Free Stuff", reset category
-      setSelectedCategory('');
-    }
+    // The price no longer touches the category. Typing 0 used to move the
+    // listing to "Free Stuff", and typing a price again wiped the category the
+    // seller had chosen. Free is a price, not a kind of thing.
   };
 
   // Check if price is zero (for category locking)
@@ -724,46 +717,18 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const categoryId = e.target.value;
 
-    // If selecting Free category, show confirmation dialog
-    if (categoryId === 'free' && selectedCategory !== 'free') {
-      setPreviousCategory(selectedCategory);
-      setShowFreeConfirmation(true);
-    } else {
-      // Set the category directly for other categories
-      setSelectedCategory(categoryId);
-      // Reset subcategory when category changes
-      setSelectedSubcategory('');
+    setSelectedCategory(categoryId);
+    // Reset subcategory when category changes
+    setSelectedSubcategory('');
 
-      // If "Free Stuff" category is selected, automatically set price to 0
-      if (categoryId === 'free') {
-        setPriceInput('0.00');
-      }
-
-      // Auto-configure for digital arts commissions
-      if (categoryId === 'digital_arts') {
-        setIsOnlineStore(true);
-        setIsLocationExpanded(false);
-      }
+    // Auto-configure for digital arts commissions
+    if (categoryId === 'digital_arts') {
+      setIsOnlineStore(true);
+      setIsLocationExpanded(false);
     }
   };
 
   // Handle Free category confirmation
-  const handleFreeConfirmation = (confirmed: boolean) => {
-    if (confirmed) {
-      setSelectedCategory('free');
-      setPriceInput('0.00');
-    } else {
-      // Revert to the previous category or empty if there was none
-      setSelectedCategory(previousCategory || '');
-      // Auto-configure for digital arts commissions if reverting
-      if (previousCategory === 'digital_arts') {
-        setIsOnlineStore(true);
-        setIsLocationExpanded(false);
-      }
-    }
-
-    setShowFreeConfirmation(false);
-  };
 
   // Handle external URL changes
   const handleExternalUrlChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1105,23 +1070,6 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       const formattedPrice = formatPrice(priceInput);
       const priceValue = parseFloat(formattedPrice);
 
-      // Validate price and category combination
-      if (priceValue === 0) {
-        // If price is zero, category must be "Free Stuff"
-        if (categoryId !== 'free') {
-          setError(tCreate('errors.freeCategoryPrice'));
-          setIsSubmitting(false);
-          return;
-        }
-      } else {
-        // If price is not zero, category cannot be "Free Stuff"
-        if (categoryId === 'free') {
-          setError(tCreate('errors.freePriceCategory'));
-          setIsSubmitting(false);
-          return;
-        }
-      }
-
       // Update the price input to show the formatted price
       setPriceInput(formattedPrice);
 
@@ -1353,32 +1301,6 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
             </div>
 
             {/* Free Category Confirmation Dialog */}
-            {showFreeConfirmation && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg p-6 max-w-md mx-4">
-                  <h3 className="text-lg font-bold mb-2">{tCreate('freeConfirmTitle')}</h3>
-                  <p className="mb-4 text-text-secondary">
-                    {tCreate('freeConfirmBody')}
-                  </p>
-                  <div className="flex space-x-3 justify-end">
-                    <button
-                      type="button"
-                      onClick={() => handleFreeConfirmation(false)}
-                      className="px-4 py-2 border border-neutral-light rounded-md hover:bg-neutral-light/50"
-                    >
-                      {tCreate('cancel')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleFreeConfirmation(true)}
-                      className="px-4 py-2 bg-primary-color hover:bg-primary-light text-white rounded-md"
-                    >
-                      {tCreate('confirm')}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Bot Follow Warning */}
             {!isCheckingFollow && !isFollowingBotState && (
@@ -1759,13 +1681,16 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                       id="category"
                       name="category"
                       required
-                      className={`w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light ${isPriceZero && priceInput !== '' ? 'bg-neutral-light/50 cursor-not-allowed' : ''}`}
+                      className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
                       value={selectedCategory}
                       onChange={handleCategoryChange}
-                      disabled={isPriceZero && priceInput !== ''}
                     >
                       <option value="">{tCreate('selectCategory')}</option>
-                      {CATEGORIES.map(category => (
+                      {/* "Free Stuff" is no longer offered: it duplicated the
+                          whole taxonomy and cost a free sofa its place under
+                          Furniture. Still listed for a record that already has
+                          it, so editing one does not silently reassign it. */}
+                      {CATEGORIES.filter(c => c.id !== 'free' || selectedCategory === 'free').map(category => (
                         <option
                           key={category.id}
                           value={category.id}
