@@ -62,6 +62,10 @@ export type MarketplaceListing = {
   /** The struck-through price. Only set while a sale is actually running. */
   originalPrice?: string;
   isOnSale?: boolean;
+  /** The sale price as entered, whether or not the window is open yet. */
+  salePrice?: string;
+  saleStartsAt?: string;
+  saleEndsAt?: string;
   /** Undefined means the seller never said whether tax is included. */
   taxInclusive?: boolean;
   currency?: string;

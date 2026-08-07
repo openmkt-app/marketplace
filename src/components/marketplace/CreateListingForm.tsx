@@ -255,10 +255,18 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       // `price` is what the buyer pays, so on a live sale it holds the sale
       // price and the regular one is in originalPrice. Unpick that, or editing
       // a discounted listing would save the sale price as the new regular one.
-      const onSale = !!initialData.isOnSale && !!initialData.originalPrice;
-      setPriceInput(formatPrice(onSale ? initialData.originalPrice! : initialData.price));
-      setSalePriceInput(onSale ? formatPrice(initialData.price) : '');
-      setShowSaleFields(onSale);
+      // A sale that has not started, or has already ended, still has to load —
+      // `isOnSale` only says whether it is running right now.
+      const running = !!initialData.isOnSale && !!initialData.originalPrice;
+      const hasSale = running || !!initialData.salePrice;
+      setPriceInput(formatPrice(running ? initialData.originalPrice! : initialData.price));
+      setSalePriceInput(
+        running ? formatPrice(initialData.price) : initialData.salePrice ? formatPrice(initialData.salePrice) : ''
+      );
+      setShowSaleFields(hasSale);
+      // <input type="date"> wants YYYY-MM-DD; the record holds a datetime.
+      setSaleStartsAt(initialData.saleStartsAt ? initialData.saleStartsAt.slice(0, 10) : '');
+      setSaleEndsAt(initialData.saleEndsAt ? initialData.saleEndsAt.slice(0, 10) : '');
       setTaxInclusive(initialData.taxInclusive);
       setCurrency(initialData.currency || 'USD');
       setCondition(initialData.condition);

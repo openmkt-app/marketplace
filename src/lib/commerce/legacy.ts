@@ -35,6 +35,10 @@ export type LegacyListing = {
   /** The struck-through price. Only set while a sale is actually running. */
   originalPrice?: string;
   isOnSale?: boolean;
+  /** The sale price as entered, whether or not the window is open yet. */
+  salePrice?: string;
+  saleStartsAt?: string;
+  saleEndsAt?: string;
   /** Undefined means the seller never said. Do not render a guess. */
   taxInclusive?: boolean;
   description: string;
@@ -117,6 +121,17 @@ export function toLegacyListing(listing: Listing): LegacyListing {
     price: toLegacyPriceString(payable, currency),
     originalPrice: onSale ? toLegacyPriceString(listing.pricing.regularPrice, currency) : undefined,
     isOnSale: onSale,
+
+    // The sale as configured, not as currently applied. The edit form has to
+    // reload what the seller set even when the window has not opened yet or has
+    // already closed — without these it reopened blank and saving wiped the
+    // sale, which is the opposite of leaving a listing alone.
+    salePrice:
+      listing.pricing.salePrice === null || listing.pricing.salePrice === undefined
+        ? undefined
+        : toLegacyPriceString(listing.pricing.salePrice, currency),
+    saleStartsAt: listing.pricing.saleStartsAt,
+    saleEndsAt: listing.pricing.saleEndsAt,
     taxInclusive: listing.pricing.taxInclusive,
     currency,
     category: listing.category,
