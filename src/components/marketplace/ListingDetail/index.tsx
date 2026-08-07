@@ -415,9 +415,32 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
             {listing.category === COMMISSION_CATEGORY_ID && (
               <p className="text-xs text-gray-400 mb-0.5">{t('startingAt')}</p>
             )}
-            <p className={`text-2xl font-bold ${listing.category === COMMISSION_CATEGORY_ID ? 'text-rose-600' : 'text-blue-600'}`}>
-              {formatPrice(listing.price, listing.currency, locale, tCommon('free'))}
-            </p>
+            <div className="flex items-baseline gap-3 flex-wrap">
+              <p className={`text-2xl font-bold ${
+                listing.isOnSale
+                  ? 'text-emerald-600'
+                  : listing.category === COMMISSION_CATEGORY_ID ? 'text-rose-600' : 'text-blue-600'
+              }`}>
+                {formatPrice(listing.price, listing.currency, locale, tCommon('free'))}
+              </p>
+              {listing.isOnSale && listing.originalPrice && (
+                <>
+                  <p className="text-lg text-gray-400 line-through">
+                    {formatPrice(listing.originalPrice, listing.currency, locale, tCommon('free'))}
+                  </p>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold">
+                    {t('onSale')}
+                  </span>
+                </>
+              )}
+            </div>
+            {/* Only claimed when the seller actually said. Silence here is the
+                honest rendering of "they did not say". */}
+            {listing.taxInclusive !== undefined && (
+              <p className="text-xs text-gray-500 mt-1">
+                {listing.taxInclusive ? t('taxIncluded') : t('taxExcluded')}
+              </p>
+            )}
           </div>
 
           {/* Seller Info */}

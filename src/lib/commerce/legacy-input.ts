@@ -20,6 +20,11 @@ export type LegacyListingInput = {
   type?: ListingType;
   description: string;
   price: string;
+  /** Blank or absent means no sale. */
+  salePrice?: string;
+  saleStartsAt?: string;
+  saleEndsAt?: string;
+  taxInclusive?: boolean;
   currency?: string;
   category: string;
   condition?: string;
@@ -112,9 +117,15 @@ export function toListingInput(input: LegacyListingInput): ListingInput {
     description: input.description,
     pricing: {
       regularPrice: toMinorUnits(input.price, currency),
+      // toMinorUnits returns null for a blank field, which is exactly "no
+      // sale" — the same value an absent sale price has.
+      salePrice: toMinorUnits(input.salePrice, currency),
       currency,
-      // taxInclusive stays unset: the form does not ask, and guessing would
-      // misprice every VAT-inclusive seller.
+      // Left unset when the seller did not say. Defaulting either way would
+      // misprice every seller on the other side of the tax line.
+      taxInclusive: input.taxInclusive,
+      saleStartsAt: input.saleStartsAt,
+      saleEndsAt: input.saleEndsAt,
     },
     category,
     subcategory: input.metadata?.subcategory,

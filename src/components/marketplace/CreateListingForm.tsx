@@ -82,6 +82,11 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
   // Add state for price input
   const [priceInput, setPriceInput] = useState('');
+  const [salePriceInput, setSalePriceInput] = useState('');
+  const [saleStartsAt, setSaleStartsAt] = useState('');
+  const [saleEndsAt, setSaleEndsAt] = useState('');
+  const [taxInclusive, setTaxInclusive] = useState<boolean | undefined>(undefined);
+  const [showSaleFields, setShowSaleFields] = useState(false);
   const [currency, setCurrency] = useState('USD');
 
   // Add state for controlled inputs (Title, Description, Condition)
@@ -247,7 +252,14 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
     if (mode === 'edit' && initialData) {
       setTitle(initialData.title);
       setDescription(initialData.description);
-      setPriceInput(formatPrice(initialData.price));
+      // `price` is what the buyer pays, so on a live sale it holds the sale
+      // price and the regular one is in originalPrice. Unpick that, or editing
+      // a discounted listing would save the sale price as the new regular one.
+      const onSale = !!initialData.isOnSale && !!initialData.originalPrice;
+      setPriceInput(formatPrice(onSale ? initialData.originalPrice! : initialData.price));
+      setSalePriceInput(onSale ? formatPrice(initialData.price) : '');
+      setShowSaleFields(onSale);
+      setTaxInclusive(initialData.taxInclusive);
       setCurrency(initialData.currency || 'USD');
       setCondition(initialData.condition);
       setSelectedCategory(initialData.category);
@@ -1043,6 +1055,20 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       // Update the price input to show the formatted price
       setPriceInput(formattedPrice);
 
+      if (showSaleFields && salePriceInput.trim()) {
+        const saleValue = parseFloat(formatPrice(salePriceInput));
+        if (!(saleValue < priceValue)) {
+          setError(tCreate('errors.salePriceTooHigh'));
+          setIsSubmitting(false);
+          return;
+        }
+        if (saleStartsAt && saleEndsAt && saleEndsAt < saleStartsAt) {
+          setError(tCreate('errors.saleDatesBackwards'));
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       // Validate external URL if provided
       let processedExternalUrl: string | undefined;
       if (externalUrl.trim()) {
@@ -1093,6 +1119,14 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       // Prepare listing data with metadata embedded as JSON
       const listingDataRaw = {
         type: listingType,
+        // Only sent when the seller actually set one; an empty field is not a
+        // sale, and toMinorUnits turns it into null either way.
+        ...(showSaleFields && salePriceInput.trim() && {
+          salePrice: formatPrice(salePriceInput),
+          saleStartsAt: saleStartsAt ? new Date(`${saleStartsAt}T00:00:00Z`).toISOString() : undefined,
+          saleEndsAt: saleEndsAt ? new Date(`${saleEndsAt}T23:59:59Z`).toISOString() : undefined,
+        }),
+        ...(taxInclusive !== undefined && { taxInclusive }),
         // The lexicon's own availability field. Only meaningful for services
         // today; goods listings do not ask, so it stays unset for them.
         ...(isService && { availability: commissionOpen === 'closed' ? 'out_of_stock' : 'in_stock' }),
@@ -1537,6 +1571,85 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                         className="flex-1 w-full pl-3 pr-3 py-2 border border-neutral-light rounded-r-md focus:outline-none focus:ring-2 focus:ring-primary-light"
                       />
                     </div>
+
+                    {/* Sales are the exception, so the fields stay folded away
+                        until asked for — an always-visible sale price invites
+                        people to fill it in for no reason. */}
+                    {!isPriceZero && (
+                      <div className="mt-3">
+                        {!showSaleFields ? (
+                          <button
+                            type="button"
+                            onClick={() => setShowSaleFields(true)}
+                            className="text-sm text-primary-color hover:underline"
+                          >
+                            {tCreate('addSalePrice')}
+                          </button>
+                        ) : (
+                          <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-lg space-y-3">
+                            <div className="flex items-center justify-between">
+                              <label htmlFor="salePrice" className="text-sm font-medium text-text-secondary">
+                                {tCreate('labelSalePrice')}
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => { setShowSaleFields(false); setSalePriceInput(''); setSaleStartsAt(''); setSaleEndsAt(''); }}
+                                className="text-xs text-text-secondary hover:underline"
+                              >
+                                {tCreate('removeSalePrice')}
+                              </button>
+                            </div>
+                            <input
+                              type="text"
+                              id="salePrice"
+                              placeholder="0.00"
+                              value={salePriceInput}
+                              onChange={(e) => setSalePriceInput(e.target.value)}
+                              className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
+                            />
+                            <p className="text-xs text-text-secondary">{tCreate('hintSalePrice')}</p>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label htmlFor="saleStartsAt" className="block text-xs font-medium text-text-secondary mb-1">
+                                  {tCreate('labelSaleStarts')}
+                                </label>
+                                <input type="date" id="saleStartsAt" value={saleStartsAt} onChange={(e) => setSaleStartsAt(e.target.value)}
+                                  className="w-full px-2 py-1.5 text-sm border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light" />
+                              </div>
+                              <div>
+                                <label htmlFor="saleEndsAt" className="block text-xs font-medium text-text-secondary mb-1">
+                                  {tCreate('labelSaleEnds')}
+                                </label>
+                                <input type="date" id="saleEndsAt" value={saleEndsAt} onChange={(e) => setSaleEndsAt(e.target.value)}
+                                  className="w-full px-2 py-1.5 text-sm border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light" />
+                              </div>
+                            </div>
+                            <p className="text-xs text-text-secondary">{tCreate('hintSaleDates')}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Three states, not two: "not said" is the honest default
+                        and must survive a save, or every seller silently claims
+                        one tax treatment or the other. */}
+                    {!isPriceZero && (
+                      <div className="mt-3">
+                        <label htmlFor="taxInclusive" className="block text-sm font-medium text-text-secondary mb-1">
+                          {tCreate('labelTaxInclusive')}
+                        </label>
+                        <select
+                          id="taxInclusive"
+                          value={taxInclusive === undefined ? '' : taxInclusive ? 'yes' : 'no'}
+                          onChange={(e) => setTaxInclusive(e.target.value === '' ? undefined : e.target.value === 'yes')}
+                          className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
+                        >
+                          <option value="">{tCreate('taxNotSaid')}</option>
+                          <option value="yes">{tCreate('taxIncluded')}</option>
+                          <option value="no">{tCreate('taxExcluded')}</option>
+                        </select>
+                      </div>
+                    )}
                   </div>
 
                   <div>

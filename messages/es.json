@@ -414,6 +414,17 @@
     "noListingsBody": "Este vendedor aún no ha publicado ningún artículo a la venta. ¡Vuelve más tarde!"
   },
   "createListing": {
+    "addSalePrice": "+ Poner en oferta",
+    "labelSalePrice": "Precio de oferta",
+    "removeSalePrice": "Quitar",
+    "hintSalePrice": "Debe ser menor que el precio normal.",
+    "labelSaleStarts": "Empieza",
+    "labelSaleEnds": "Termina",
+    "hintSaleDates": "Deja ambos vacíos para empezar ya y seguir hasta que lo quites.",
+    "labelTaxInclusive": "¿El precio incluye impuestos?",
+    "taxNotSaid": "Prefiero no decirlo",
+    "taxIncluded": "Sí, impuestos incluidos",
+    "taxExcluded": "No, se añaden al pagar",
     "title": "Publica tu artículo",
     "editTitle": "Editar anuncio",
     "sellingHeader": "Estoy vendiendo",
@@ -496,6 +507,8 @@
     "botFollowBody": "Para recibir consultas de compradores interesados, debes seguir a nuestro Bot de Introducción. La creación de anuncios está deshabilitada hasta que lo sigas.",
     "botFollowButton": "Seguir al Bot del Mercado",
     "errors": {
+      "salePriceTooHigh": "El precio de oferta tiene que ser menor que el precio normal.",
+      "saleDatesBackwards": "La oferta no puede terminar antes de empezar.",
       "followBot": "Error al seguir al bot. Por favor, inténtalo de nuevo.",
       "maxImages": "Solo puedes subir un máximo de 10 imágenes. Por favor, elimina algunas primero.",
       "geoNotSupported": "La geolocalización no es compatible con tu navegador",
@@ -622,6 +635,9 @@
     "forParts": "Para Repuestos / No Funciona"
   },
   "listingDetail": {
+    "onSale": "En oferta",
+    "taxIncluded": "Impuestos incluidos",
+    "taxExcluded": "Impuestos añadidos al pagar",
     "nsfwContent": "Contenido NSFW",
     "clickToReveal": "Haz clic para mostrar",
     "noImages": "No hay imágenes disponibles",

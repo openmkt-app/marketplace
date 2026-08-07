@@ -12,7 +12,7 @@
 // This file is scaffolding with a defined end: as components migrate to
 // `Listing`, calls to toLegacyListing disappear. When none are left, delete it.
 
-import { exponentFor, fromMinorUnits } from './money.ts';
+import { effectiveAmount, exponentFor, fromMinorUnits, isOnSale } from './money.ts';
 import type { Listing } from './types.ts';
 
 /**
@@ -30,8 +30,14 @@ function toLegacyPriceString(amount: number | null | undefined, currency: string
 export type LegacyListing = {
   title: string;
   type?: 'goods' | 'service' | 'digital';
-  description: string;
+  /** What the buyer pays today: the sale price while a sale is running. */
   price: string;
+  /** The struck-through price. Only set while a sale is actually running. */
+  originalPrice?: string;
+  isOnSale?: boolean;
+  /** Undefined means the seller never said. Do not render a guess. */
+  taxInclusive?: boolean;
+  description: string;
   currency?: string;
   category: string;
   condition: string;
@@ -99,10 +105,19 @@ export function toLegacyListing(listing: Listing): LegacyListing {
     metadata.commissionStatus = commissionStatus ?? deriveCommissionStatus(listing.availability, slotsAvailable);
   }
 
+  // `price` is what the buyer pays, so a running sale replaces it. Every price
+  // filter, sort and badge in the app reads this field, and all of them should
+  // be working from the amount actually being charged.
+  const onSale = isOnSale(listing.pricing);
+  const payable = effectiveAmount(listing.pricing);
+
   return {
     title: listing.title,
     description: listing.description,
-    price: toLegacyPriceString(listing.pricing.regularPrice, currency),
+    price: toLegacyPriceString(payable, currency),
+    originalPrice: onSale ? toLegacyPriceString(listing.pricing.regularPrice, currency) : undefined,
+    isOnSale: onSale,
+    taxInclusive: listing.pricing.taxInclusive,
     currency,
     category: listing.category,
     condition: listing.condition ?? '',

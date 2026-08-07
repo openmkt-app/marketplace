@@ -157,8 +157,18 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, prior
         {listing.category === COMMISSION_CATEGORY_ID && (
           <span className="text-xs text-slate-400 -mb-1 block">{t('startingAt')}</span>
         )}
-        <p className="text-xl font-bold text-slate-900 mb-2">
-          {formatPrice(listing.price, listing.currency, locale, tCommon('free'))}
+        <p className="text-xl font-bold text-slate-900 mb-2 flex items-baseline gap-2 flex-wrap">
+          {/* On sale, `price` is already the sale price and originalPrice is
+              what it was. Both come from the commerce layer, so the card never
+              works out whether a sale window is running. */}
+          <span className={listing.isOnSale ? 'text-emerald-700' : undefined}>
+            {formatPrice(listing.price, listing.currency, locale, tCommon('free'))}
+          </span>
+          {listing.isOnSale && listing.originalPrice && (
+            <span className="text-sm font-medium text-slate-400 line-through">
+              {formatPrice(listing.originalPrice, listing.currency, locale, tCommon('free'))}
+            </span>
+          )}
         </p>
 
         <p className="text-sm text-slate-500 line-clamp-2 mb-4 flex-grow">

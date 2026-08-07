@@ -414,6 +414,17 @@
     "noListingsBody": "Este vendedor ainda anunciou nenhum item à venda. Volte mais tarde!"
   },
   "createListing": {
+    "addSalePrice": "+ Colocar em promoção",
+    "labelSalePrice": "Preço promocional",
+    "removeSalePrice": "Remover",
+    "hintSalePrice": "Precisa ser menor que o preço normal.",
+    "labelSaleStarts": "Começa",
+    "labelSaleEnds": "Termina",
+    "hintSaleDates": "Deixe os dois vazios para começar agora e seguir até você remover.",
+    "labelTaxInclusive": "O preço inclui impostos?",
+    "taxNotSaid": "Prefiro não dizer",
+    "taxIncluded": "Sim, impostos incluídos",
+    "taxExcluded": "Não, somados no pagamento",
     "title": "Anunciar seu item",
     "editTitle": "Editar anúncio",
     "sellingHeader": "Estou vendendo",
@@ -496,6 +507,8 @@
     "botFollowButton": "Seguir Bot do Mercado",
     "legalWarning": "Seu anúncio será visível para toda a comunidade do AT Protocol. Observe que não permitimos anúncios de animais vivos, substâncias controladas, armas, itens falsificados ou qualquer coisa que viole os direitos de propriedade intelectual. Mantenha-o legal e amigável para a comunidade!",
     "errors": {
+      "salePriceTooHigh": "O preço promocional precisa ser menor que o preço normal.",
+      "saleDatesBackwards": "A promoção não pode terminar antes de começar.",
       "followBot": "Falha ao seguir o bot. Por favor, tente novamente.",
       "maxImages": "Você só pode enviar no máximo 10 imagens. Por favor, remova algumas primeiro.",
       "geoNotSupported": "A geolocalização não é suportada pelo seu navegador",
@@ -622,6 +635,9 @@
     "forParts": "Para Peças / Não Funciona"
   },
   "listingDetail": {
+    "onSale": "Em promoção",
+    "taxIncluded": "Impostos incluídos",
+    "taxExcluded": "Impostos somados no pagamento",
     "nsfwContent": "Conteúdo NSFW",
     "clickToReveal": "Clique para revelar",
     "noImages": "Nenhuma imagem disponível",

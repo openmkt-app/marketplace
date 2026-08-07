@@ -414,6 +414,17 @@
     "noListingsBody": "This seller hasn't listed any items for sale yet. Check back later!"
   },
   "createListing": {
+    "addSalePrice": "+ Put this on sale",
+    "labelSalePrice": "Sale price",
+    "removeSalePrice": "Remove",
+    "hintSalePrice": "Must be lower than the normal price.",
+    "labelSaleStarts": "Starts",
+    "labelSaleEnds": "Ends",
+    "hintSaleDates": "Leave both empty to start now and run until you remove it.",
+    "labelTaxInclusive": "Does the price include tax?",
+    "taxNotSaid": "Rather not say",
+    "taxIncluded": "Yes, tax included",
+    "taxExcluded": "No, tax added at checkout",
     "title": "List Your Item",
     "editTitle": "Edit Listing",
     "sellingHeader": "I'm selling",
@@ -496,6 +507,8 @@
     "botFollowBody": "To receive inquiries from interested buyers, you need to follow our Introduction Bot. Listing creation is disabled until you follow.",
     "botFollowButton": "Follow Marketplace Bot",
     "errors": {
+      "salePriceTooHigh": "The sale price has to be lower than the normal price.",
+      "saleDatesBackwards": "The sale cannot end before it starts.",
       "followBot": "Failed to follow the bot. Please try again.",
       "maxImages": "You can only upload a maximum of 10 images. Please remove some images first.",
       "geoNotSupported": "Geolocation is not supported by your browser",
@@ -622,6 +635,9 @@
     "forParts": "For Parts / Not Working"
   },
   "listingDetail": {
+    "onSale": "On sale",
+    "taxIncluded": "Tax included",
+    "taxExcluded": "Tax added at checkout",
     "nsfwContent": "NSFW Content",
     "clickToReveal": "Click to reveal",
     "noImages": "No images available",

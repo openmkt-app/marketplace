@@ -57,7 +57,13 @@ export type MarketplaceListing = {
    */
   type?: 'goods' | 'service' | 'digital';
   description: string;
+  /** What the buyer pays today: the sale price while a sale is running. */
   price: string;
+  /** The struck-through price. Only set while a sale is actually running. */
+  originalPrice?: string;
+  isOnSale?: boolean;
+  /** Undefined means the seller never said whether tax is included. */
+  taxInclusive?: boolean;
   currency?: string;
   images?: ListingImage[];
   location: ListingLocation;
