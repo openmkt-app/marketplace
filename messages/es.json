@@ -421,6 +421,14 @@
     "noListingsBody": "Este vendedor aún no ha publicado ningún artículo a la venta. ¡Vuelve más tarde!"
   },
   "createListing": {
+  "tabs": {
+    "label": "Secciones del anuncio",
+    "basics": "Básicos",
+    "price": "Precio",
+    "availability": "Disponibilidad",
+    "delivery": "Entrega",
+    "more": "Más"
+  },
     "labelAcceptingOffers": "Acepto ofertas",
     "hintAcceptingOffers": "Marca esto si no sabes cuánto vale. Puedes dejar el precio vacío.",
     "hintAcceptingOffersOn": "Deja el precio vacío si no tienes ni idea, o pon una cifra aproximada como guía.",
@@ -568,6 +576,7 @@
       "freeAndOffers": "Un artículo gratis no puede aceptar ofertas. Pon un precio, o déjalo vacío y mantén las ofertas activadas.",
       "freeWithExternalUrl": "Un artículo gratis no puede tener un enlace de compra externo. Quita el enlace o pon un precio.",
       "salePriceTooHigh": "El precio de oferta tiene que ser menor que el precio normal.",
+      "basicsIncomplete": "Falta algo en Básicos: revisa el título, la categoría, el estado y la descripción.",
       "variantValueRequired": "Ponle nombre a esta opción, para que los compradores la distingan de las demás.",
       "variantProductRequired": "Escribe el nombre del producto al que pertenecen estas opciones.",
       "saleDatesBackwards": "La oferta no puede terminar antes de empezar.",

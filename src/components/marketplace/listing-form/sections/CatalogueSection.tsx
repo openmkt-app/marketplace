@@ -30,8 +30,6 @@ export default function CatalogueSection() {
     tagsInput, setTagsInput, specs, setSpecs,
     manageStock, setManageStock, quantity, setQuantity,
     lowStockThreshold, setLowStockThreshold, soldIndividually, setSoldIndividually,
-    shippingWeight, setShippingWeight, dimL, setDimL, dimW, setDimW, dimH, setDimH,
-    isPhysical,
   } = useListingForm();
   const detailField = FIELD_CLASS;
 
@@ -140,32 +138,6 @@ export default function CatalogueSection() {
             </label>
           </div>
 
-          {/* Weight and size describe a physical thing, so neither a
-              service nor a download is asked for them. */}
-          {isPhysical && (
-            <div className="pt-4 border-t border-neutral-light">
-              <p className="text-sm font-medium text-text-secondary mb-2">{tCreate('shippingDetailsHeader')}</p>
-              <div className="grid sm:grid-cols-4 gap-3">
-                <div>
-                  <label htmlFor="weight" className="block text-xs text-text-secondary mb-1">{tCreate('labelWeight')}</label>
-                  <input id="weight" type="number" min="0" step="any" value={shippingWeight} onChange={e => setShippingWeight(e.target.value)} className={detailField} />
-                </div>
-                <div>
-                  <label htmlFor="dimL" className="block text-xs text-text-secondary mb-1">{tCreate('labelLength')}</label>
-                  <input id="dimL" type="number" min="0" step="any" value={dimL} onChange={e => setDimL(e.target.value)} className={detailField} />
-                </div>
-                <div>
-                  <label htmlFor="dimW" className="block text-xs text-text-secondary mb-1">{tCreate('labelWidth')}</label>
-                  <input id="dimW" type="number" min="0" step="any" value={dimW} onChange={e => setDimW(e.target.value)} className={detailField} />
-                </div>
-                <div>
-                  <label htmlFor="dimH" className="block text-xs text-text-secondary mb-1">{tCreate('labelHeight')}</label>
-                  <input id="dimH" type="number" min="0" step="any" value={dimH} onChange={e => setDimH(e.target.value)} className={detailField} />
-                </div>
-              </div>
-              <p className="text-xs text-text-secondary mt-1">{tCreate('hintShippingUnits')}</p>
-            </div>
-          )}
         </div>
       )}
     </div>

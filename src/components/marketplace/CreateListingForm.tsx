@@ -1,5 +1,5 @@
 // src/components/marketplace/CreateListingForm.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import MarketplaceClient, { InsufficientScopeError, ListingImage, MarketplaceListing } from '@/lib/marketplace-client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,6 +28,10 @@ import ImagesSection from './listing-form/sections/ImagesSection';
 import MagicImportSection from './listing-form/sections/MagicImportSection';
 import LocationSection from './listing-form/sections/LocationSection';
 import DetailsSection from './listing-form/sections/DetailsSection';
+import PriceSection from './listing-form/sections/PriceSection';
+import AvailabilitySection from './listing-form/sections/AvailabilitySection';
+import ShippingFields from './listing-form/sections/ShippingFields';
+import Tabs, { type TabId, type TabDef } from './listing-form/Tabs';
 import VisibilitySection from './listing-form/sections/VisibilitySection';
 
 import { useSearchParams } from 'next/navigation';
@@ -86,26 +90,65 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
     setIsSubmitting, error, setError, needsReauth, setNeedsReauth, messageRef, images,
     setImages, previewUrls, setPreviewUrls, hideFromFriends, setHideFromFriends, isNsfw,
     setIsNsfw, postToBluesky, isFollowingBotState, setIsFollowingBotState, isCheckingFollow,
-    setIsCheckingFollow, selectedCategory, setSelectedCategory, setSelectedSubcategory,
-    subcategories, setSubcategories, savedLocations, setSavedLocations, selectedLocation,
-    setSelectedLocation, isLocationExpanded, setIsLocationExpanded, setLocationSaved,
-    locationState, setLocationState, setLocationCounty, locationLocality,
-    setLocationLocality, setLocationZip, isOnlineStore, setIsOnlineStore, currency,
-    setCurrency, priceInput, setPriceInput, salePriceInput, setSalePriceInput, saleStartsAt,
-    setSaleStartsAt, saleEndsAt, setSaleEndsAt, showSaleFields, setShowSaleFields,
-    taxInclusive, setTaxInclusive, acceptingOffers, setAcceptingOffers, billingPeriod,
-    setBillingPeriod, isVariant, setIsVariant, groups, setGroups, groupUri, setGroupUri,
-    groupTitle, axisName, setAxisName, optionValue, setOptionValue, groupsLoaded,
-    suggestedTitle, setShowMoreDetails, sku, setSku, gtin, setGtin, brand, setBrand,
-    tagsInput, setTagsInput, specs, setSpecs, manageStock, setManageStock, quantity,
-    setQuantity, lowStockThreshold, setLowStockThreshold, soldIndividually,
-    setSoldIndividually, shippingWeight, setShippingWeight, dimL, setDimL, dimW, setDimW,
-    dimH, setDimH, title, setTitle, description, setDescription, condition, setCondition,
-    slotsAvailable, setSlotsAvailable, turnaroundTime, setTurnaroundTime, commissionOpen,
-    setCommissionOpen, listingType, setListingType, externalUrl, setExternalUrl,
-    detectedPlatform, setDetectedPlatform, isService, isPhysical,
+    setIsCheckingFollow, selectedCategory, setSelectedCategory, selectedSubcategory,
+    setSelectedSubcategory, subcategories, setSubcategories, savedLocations,
+    setSavedLocations, selectedLocation, setSelectedLocation, isLocationExpanded,
+    setIsLocationExpanded, setLocationSaved, locationState, setLocationState,
+    locationCounty, setLocationCounty, locationLocality, setLocationLocality, locationZip,
+    setLocationZip, isOnlineStore, setIsOnlineStore, currency, setCurrency, priceInput,
+    setPriceInput, salePriceInput, setSalePriceInput, saleStartsAt, setSaleStartsAt,
+    saleEndsAt, setSaleEndsAt, showSaleFields, setShowSaleFields, taxInclusive,
+    setTaxInclusive, acceptingOffers, setAcceptingOffers, billingPeriod, setBillingPeriod,
+    isVariant, setIsVariant, groups, setGroups, groupUri, setGroupUri, groupTitle, axisName,
+    setAxisName, optionValue, setOptionValue, groupsLoaded, suggestedTitle,
+    setShowMoreDetails, sku, setSku, gtin, setGtin, brand, setBrand, tagsInput,
+    setTagsInput, specs, setSpecs, manageStock, setManageStock, quantity, setQuantity,
+    lowStockThreshold, setLowStockThreshold, soldIndividually, setSoldIndividually,
+    shippingWeight, setShippingWeight, dimL, setDimL, dimW, setDimW, dimH, setDimH, title,
+    setTitle, description, setDescription, condition, setCondition, slotsAvailable,
+    setSlotsAvailable, turnaroundTime, setTurnaroundTime, commissionOpen, setCommissionOpen,
+    listingType, setListingType, externalUrl, setExternalUrl, detectedPlatform,
+    setDetectedPlatform, isService, isPhysical,
   } = form;
   const detailField = FIELD_CLASS;
+
+  const [activeTab, setActiveTab] = useState<TabId>('basics');
+
+  /**
+   * Which tabs exist, and which are still missing something required.
+   *
+   * Availability appears only for a service — it is the most important tab
+   * there is for a commission artist and meaningless for a bookshelf.
+   *
+   * The dot is not a scold: it only marks a field the seller must fill in to
+   * save at all, so a tab they never opened because they had nothing to put
+   * there stays clean.
+   */
+  const tabs: TabDef[] = useMemo(() => {
+    const needsLocation = !isOnlineStore && (!locationState || !locationLocality) && !selectedLocation;
+    const list: TabDef[] = [
+      {
+        id: 'basics',
+        labelKey: 'basics',
+        incomplete: !title.trim() || !selectedCategory || !description.trim() || (isPhysical && !condition),
+      },
+      { id: 'price', labelKey: 'price', incomplete: !acceptingOffers && !priceInput.trim() },
+    ];
+    if (isService) list.push({ id: 'availability', labelKey: 'availability' });
+    list.push({ id: 'delivery', labelKey: 'delivery', incomplete: needsLocation });
+    list.push({ id: 'more', labelKey: 'more' });
+    return list;
+  }, [
+    title, selectedCategory, description, condition, isPhysical,
+    acceptingOffers, priceInput, isService,
+    isOnlineStore, locationState, locationLocality, selectedLocation,
+  ]);
+
+  // A tab can disappear: switching a commission to a physical product while
+  // standing on Availability would otherwise leave the form showing nothing.
+  useEffect(() => {
+    if (!tabs.some(tab => tab.id === activeTab)) setActiveTab('basics');
+  }, [tabs, activeTab]);
 
   // Set up an effect to auto-dismiss error messages after a timeout
   useEffect(() => {
@@ -434,8 +477,6 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
     setIsSubmitting(true);
     setError(null);
 
-    const formData = new FormData(event.currentTarget);
-
     try {
       // 0. Check if following bot
       if (!isFollowingBotState) {
@@ -445,14 +486,22 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         return;
       }
 
-      // Get selected category
-      // We use the state variable because the select element might be disabled (for Free Stuff),
-      // in which case it's not included in the formData
+      // The browser only validates fields it can see, and four tabs out of five
+      // are unmounted at any moment — so `required` on the inputs no longer
+      // catches an empty title. Checked here instead, before anything is saved.
+      if (!title.trim() || !selectedCategory || !description.trim() || (isPhysical && !condition)) {
+        setError(tCreate('errors.basicsIncomplete'));
+        setActiveTab('basics');
+        setIsSubmitting(false);
+        return;
+      }
+
       const categoryId = selectedCategory;
 
-      // Get the subcategory value
-      const subcategory = formData.get('subcategory') as string;
-      const description = formData.get('description') as string;
+      // Read from state, not from the DOM. With the form split across tabs the
+      // inactive ones are unmounted, so a FormData built from the form element
+      // only ever holds the tab the seller happens to be looking at.
+      const subcategory = selectedSubcategory;
 
       // Prepare listing data
       // Collect the location data from the form or use selected location
@@ -478,10 +527,10 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       } else {
         // Get location from form inputs
         locationData = {
-          state: formData.get('state') as string,
-          county: formData.get('county') as string,
-          locality: formData.get('locality') as string,
-          zipPrefix: formData.get('zipPrefix') as string || undefined,
+          state: locationState,
+          county: locationCounty,
+          locality: locationLocality,
+          zipPrefix: locationZip || undefined,
         };
       }
 
@@ -492,6 +541,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       // it here made every migrated listing impossible to save a second time.
       if (!isOnlineStore && (!locationData.state || !locationData.locality)) {
         setError(tCreate('errors.locationRequired'));
+        setActiveTab('delivery');
         setIsSubmitting(false);
         return;
       }
@@ -501,6 +551,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       // point of the flag, and requiring one is what makes people type 0.
       if (!acceptingOffers && !priceInput.trim()) {
         setError(tCreate('errors.priceRequired'));
+        setActiveTab('price');
         setIsSubmitting(false);
         return;
       }
@@ -515,6 +566,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       // way to say so, so this combination is refused rather than tolerated.
       if (acceptingOffers && priceValue === 0 && priceInput.trim() !== '') {
         setError(tCreate('errors.freeAndOffers'));
+        setActiveTab('price');
         setIsSubmitting(false);
         return;
       }
@@ -526,11 +578,13 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         const saleValue = parseFloat(formatPrice(salePriceInput));
         if (!(saleValue < priceValue)) {
           setError(tCreate('errors.salePriceTooHigh'));
+        setActiveTab('price');
           setIsSubmitting(false);
           return;
         }
         if (saleStartsAt && saleEndsAt && saleEndsAt < saleStartsAt) {
           setError(tCreate('errors.saleDatesBackwards'));
+        setActiveTab('price');
           setIsSubmitting(false);
           return;
         }
@@ -554,6 +608,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       // processed until this point.
       if (priceValue === 0 && priceInput.trim() !== '' && processedExternalUrl) {
         setError(tCreate('errors.freeWithExternalUrl'));
+        setActiveTab('price');
         setIsSubmitting(false);
         return;
       }
@@ -572,6 +627,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
         if (!value) {
           setError(tCreate('errors.variantValueRequired'));
+        setActiveTab('basics');
           setIsSubmitting(false);
           return;
         }
@@ -580,6 +636,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
         if (groupUri === NEW_GROUP && !groupTitle.trim()) {
           setError(tCreate('errors.variantProductRequired'));
+        setActiveTab('basics');
           setIsSubmitting(false);
           return;
         }
@@ -707,13 +764,13 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         // The lexicon's own availability field. Only meaningful for services
         // today; goods listings do not ask, so it stays unset for them.
         ...(isService && { availability: commissionOpen === 'closed' ? 'out_of_stock' : 'in_stock' }),
-        title: formData.get('title') as string,
+        title: title,
         description: description,
         price: formattedPrice,
         currency: currency,
         location: locationData,
         category: categoryId,
-        condition: isPhysical ? (formData.get('condition') as string) : '',
+        condition: isPhysical ? condition : '',
         images: images as any, // The client handles mixed types now
         hideFromFriends: hideFromFriends,
         isNsfw: isNsfw,
@@ -868,27 +925,48 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
               </div>
             )}
 
-            <form id="listing-form" onSubmit={handleSubmit} className="space-y-8">
-              <TypeSelectorSection />
-
-              <VariantSection />
-
+            <form id="listing-form" onSubmit={handleSubmit} className="space-y-6">
+              {/* Above the tabs, not inside one. Pasting a shop link is how a
+                  listing starts for the sellers who use it — a field buried in
+                  a tab reads as one more thing to fill in rather than the thing
+                  that fills the rest in. */}
               <MagicImportSection />
 
-              {/* Photos Section */}
+              <Tabs tabs={tabs} active={activeTab} onSelect={setActiveTab} />
 
-              <ImagesSection />
+              {/* Only the open tab is mounted. Nothing reads the DOM for its
+                  values any more — the submit handler works from state — so an
+                  unmounted tab cannot silently drop a field. */}
+              <div className="space-y-8">
+                {activeTab === 'basics' && (
+                  <>
+                    <TypeSelectorSection />
+                    <VariantSection />
+                    <ImagesSection />
+                    <DetailsSection mode={mode} />
+                  </>
+                )}
 
-              <DetailsSection mode={mode} />
+                {activeTab === 'price' && <PriceSection />}
 
-              <LocationSection />
+                {activeTab === 'availability' && <AvailabilitySection mode={mode} />}
 
-              <CatalogueSection />
+                {activeTab === 'delivery' && (
+                  <>
+                    <LocationSection />
+                    <ShippingFields />
+                  </>
+                )}
 
-              <VisibilitySection />
+                {activeTab === 'more' && (
+                  <>
+                    <CatalogueSection />
+                    <VisibilitySection />
+                  </>
+                )}
+              </div>
 
               <SubmitSection mode={mode} />
-
             </form>
           </div>
         </div>

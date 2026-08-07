@@ -421,6 +421,14 @@
     "noListingsBody": "This seller hasn't listed any items for sale yet. Check back later!"
   },
   "createListing": {
+  "tabs": {
+    "label": "Listing sections",
+    "basics": "Basics",
+    "price": "Price",
+    "availability": "Availability",
+    "delivery": "Delivery",
+    "more": "More"
+  },
     "labelAcceptingOffers": "I'll consider offers",
     "hintAcceptingOffers": "Tick this if you're not sure what it's worth. You can leave the price blank.",
     "hintAcceptingOffersOn": "Leave the price blank if you have no idea, or put a rough figure as a guide.",
@@ -568,6 +576,7 @@
       "freeAndOffers": "A free item can't also take offers. Set a price, or leave it blank and keep offers on.",
       "freeWithExternalUrl": "A free item can't have a buy-it-elsewhere link. Remove the link, or set a price.",
       "salePriceTooHigh": "The sale price has to be lower than the normal price.",
+      "basicsIncomplete": "Something on Basics is still empty — check the title, category, condition and description.",
       "variantValueRequired": "Give this option a name, so buyers can tell it apart from the others.",
       "variantProductRequired": "Name the product these options belong to.",
       "saleDatesBackwards": "The sale cannot end before it starts.",
