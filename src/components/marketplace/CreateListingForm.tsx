@@ -1592,6 +1592,11 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                   {isService && (
                     <div className="space-y-4 p-4 bg-rose-50 border border-rose-100 rounded-lg">
                       <p className="text-sm font-semibold text-rose-800">{tCreate('commissionSettings')}</p>
+                      {/* Edit only. A listing is never published closed, so on
+                          create this is a question with one sensible answer —
+                          it just adds noise. Sellers close commissions later,
+                          when they are full or away. */}
+                      {mode === 'edit' && (
                       <div>
                         <label className="block text-sm font-medium text-text-secondary mb-1">
                           {tCreate('commissionAvailability')}
@@ -1614,6 +1619,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                         </div>
                         <p className="text-xs text-text-secondary mt-1">{tCreate('commissionAvailabilityDesc')}</p>
                       </div>
+                      )}
                       <div>
                         <label className="block text-sm font-medium text-text-secondary mb-1">
                           {tCreate('openSlots')}{' '}
