@@ -108,7 +108,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
     setTitle, description, setDescription, condition, setCondition, slotsAvailable,
     setSlotsAvailable, turnaroundTime, setTurnaroundTime, commissionOpen, setCommissionOpen,
     listingType, setListingType, externalUrl, setExternalUrl, detectedPlatform,
-    setDetectedPlatform, isService, isPhysical,
+    setDetectedPlatform, isService, isDigital, isPhysical,
   } = form;
   const detailField = FIELD_CLASS;
 
@@ -603,10 +603,18 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         processedExternalUrl = urlResult.processedUrl;
       }
 
-      // Something free cannot also be bought somewhere else. Checked here
-      // rather than with the other price rules because the URL is not
-      // processed until this point.
-      if (priceValue === 0 && priceInput.trim() !== '' && processedExternalUrl) {
+      // Something free cannot also be bought somewhere else — except when the
+      // link is how you get it.
+      //
+      // For a physical item, "free" plus a buy-it-elsewhere link is the whole
+      // loophole: zero wins the cheapest-first sort and the thing is not
+      // actually free. For a download it is the opposite. A free font, a demo,
+      // an open-source tool — the link is the only way to deliver it, so
+      // blocking this made free digital goods impossible to list at all.
+      //
+      // Checked here rather than with the other price rules because the URL is
+      // not processed until this point.
+      if (!isDigital && priceValue === 0 && priceInput.trim() !== '' && processedExternalUrl) {
         setError(tCreate('errors.freeWithExternalUrl'));
         setActiveTab('price');
         setIsSubmitting(false);

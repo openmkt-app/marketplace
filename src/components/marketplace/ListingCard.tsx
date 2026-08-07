@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
-import { MapPin, ShoppingCart, Globe } from 'lucide-react';
+import { MapPin, ShoppingCart, Globe, Download } from 'lucide-react';
 import ListingImageDisplay from './ListingImageDisplay';
 import ListingImageDebug from './ListingImageDebug';
 import type { MarketplaceListing } from '@/lib/marketplace-client';
@@ -54,6 +54,11 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, prior
 
   // A collapsed product: one card standing for several variant listings.
   const hasOptions = (listing.variantCount ?? 0) > 1;
+
+  // Genuinely free and delivered by a link. `noPrice` is checked because a
+  // listing with no price at all formats identically to one priced at zero.
+  const isFreeDownload =
+    !listing.noPrice && parseFloat(listing.price) === 0 && !!listing.externalUrl;
 
   // Format location - clean up prefixes and abbreviate state
   const isOnline = listing.location ? isOnlineStore(listing.location) : false;
@@ -116,13 +121,22 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, prior
           ) : null}
         </div>
 
-        {/* External Buy Badge */}
+        {/* External Buy Badge.
+            A free listing with a link is not a purchase — it is a download, and
+            calling it "Buy online" contradicts the price right below it. */}
         {listing.externalUrl && (
           <div className="absolute top-3 right-3 z-20 pointer-events-none">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-400 text-slate-800 shadow-sm">
-              <ShoppingCart size={12} />
-              {t('buyOnline')}
-            </span>
+            {isFreeDownload ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500 text-white shadow-sm">
+                <Download size={12} />
+                {t('freeDownload')}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-400 text-slate-800 shadow-sm">
+                <ShoppingCart size={12} />
+                {t('buyOnline')}
+              </span>
+            )}
           </div>
         )}
 

@@ -32,6 +32,7 @@ import {
   ExternalLink,
   Clock,
   Check,
+  Download,
 } from 'lucide-react';
 import VariantChooser from '../VariantChooser';
 import { COMMISSION_CATEGORY_ID } from '@/lib/artist-store-utils';
@@ -69,6 +70,12 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
 
   // Get clean description without subcategory text
   const { cleanDescription, subcategory } = extractSubcategoryFromDescription(listing.description);
+
+  // Genuinely free and delivered by a link — a download, not a purchase.
+  // `noPrice` is checked because a listing with no price at all formats
+  // identically to one priced at zero.
+  const isFreeDownload =
+    !listing.noPrice && parseFloat(listing.price) === 0 && !!listing.externalUrl;
 
   // Determine if we have formatted images to display
   const hasFormattedImages = listing.formattedImages && listing.formattedImages.length > 0;
@@ -652,14 +659,23 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
             {/* External Buy Button - Always show if externalUrl exists */}
             {listing.externalUrl && (
               <div className="space-y-2">
+                {/* A free thing is not bought. Labelling the link "Buy on
+                    Gumroad" for something priced at zero contradicts the price
+                    directly above it. */}
                 <a
                   href={listing.externalUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-yellow-400 hover:bg-yellow-300 text-slate-900 text-lg font-bold rounded-xl shadow-sm hover:shadow-md transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+                  className={`w-full flex items-center justify-center gap-2 px-6 py-4 text-lg font-bold rounded-xl shadow-sm hover:shadow-md transition-all transform hover:-translate-y-0.5 active:translate-y-0 ${
+                    isFreeDownload
+                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                      : 'bg-yellow-400 hover:bg-yellow-300 text-slate-900'
+                  }`}
                 >
-                  <ExternalLink size={24} />
-                  {t('buyOn', { platform: getPlatformDisplayName(listing.externalUrl) || 'Website' })}
+                  {isFreeDownload ? <Download size={24} /> : <ExternalLink size={24} />}
+                  {isFreeDownload
+                    ? t('getItFree')
+                    : t('buyOn', { platform: getPlatformDisplayName(listing.externalUrl) || 'Website' })}
                 </a>
                 <p className="text-center text-xs text-gray-500">
                   {t('opensInNewTab', { platform: getPlatformDisplayName(listing.externalUrl) || 'external website' })}
