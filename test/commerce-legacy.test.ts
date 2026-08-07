@@ -19,7 +19,8 @@ const fixture = (name: string) =>
 const legacyUri = `at://did:plc:test/${LEGACY_COLLECTION}/abc`;
 const commerceUri = `at://did:plc:test/${COMMERCE_COLLECTION}/abc`;
 
-const roundTrip = (name: string, uri: string) => toLegacyListing(normalizeListing(fixture(name), { uri }));
+const roundTrip = (name: string, uri: string, now?: Date) =>
+  toLegacyListing(normalizeListing(fixture(name), { uri }), now);
 
 test('v1 goods survives the round trip unchanged', () => {
   const legacy = roundTrip('legacy-marketplace-listing.json', legacyUri);
@@ -57,14 +58,43 @@ test('v1 commission keeps the fields ListingCard renders', () => {
   assert.equal(legacy.metadata?.externalPlatform, 'kofi', 'StoreCard builds platform badges from this');
 });
 
-test('a v2 record reaches the old UI with a usable price', () => {
-  const legacy = roundTrip('listing-standalone-goods.json', commerceUri);
+// The goods fixture carries a sale running 1–14 August 2026. Both tests below
+// pin `now` on either side of it: read from the wall clock, this pair asserted
+// nothing in particular and quietly changed meaning when the window opened.
+const BEFORE_SALE = new Date('2026-07-20T00:00:00Z');
+const DURING_SALE = new Date('2026-08-05T12:00:00Z');
 
-  assert.equal(legacy.price, '30.00', 'regular price, not the sale price');
+test('a v2 record reaches the old UI with a usable price', () => {
+  const legacy = roundTrip('listing-standalone-goods.json', commerceUri, BEFORE_SALE);
+
+  assert.equal(legacy.price, '30.00', 'regular price while the sale has not opened');
+  assert.equal(legacy.isOnSale, false);
+  assert.equal(legacy.originalPrice, undefined, 'nothing to strike through yet');
   assert.equal(legacy.currency, 'USD');
   assert.equal(legacy.category, 'apparel');
   assert.equal(legacy.condition, 'new');
   assert.equal(legacy.schemaVersion, 2, 'provenance survives for an upgrade nudge');
+});
+
+test('a running sale is the price the old UI reads', () => {
+  const legacy = roundTrip('listing-standalone-goods.json', commerceUri, DURING_SALE);
+
+  // Every price filter, sort and badge reads `price`, so it has to be the
+  // amount actually being charged.
+  assert.equal(legacy.price, '24.00', 'the buyer pays the sale price');
+  assert.equal(legacy.originalPrice, '30.00', 'regular price moves aside to be struck through');
+  assert.equal(legacy.isOnSale, true);
+});
+
+test('the configured sale survives whether or not it is running', () => {
+  // The edit form reloads these, so a seller reopening a listing outside the
+  // sale window must not find the sale blanked and saved away.
+  for (const now of [BEFORE_SALE, DURING_SALE]) {
+    const legacy = roundTrip('listing-standalone-goods.json', commerceUri, now);
+    assert.equal(legacy.salePrice, '24.00');
+    assert.equal(legacy.saleStartsAt, '2026-08-01T00:00:00Z');
+    assert.equal(legacy.saleEndsAt, '2026-08-14T00:00:00Z');
+  }
 });
 
 test('a v2 service record still shows its commission badge', () => {

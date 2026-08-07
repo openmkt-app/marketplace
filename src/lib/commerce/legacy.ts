@@ -115,7 +115,14 @@ function deriveCommissionStatus(
   return 'open';
 }
 
-export function toLegacyListing(listing: Listing): LegacyListing {
+/**
+ * `now` is a parameter rather than a call to the clock inside because whether a
+ * sale is running decides what `price` says, and a hidden clock cannot be
+ * tested — the assertion just changes meaning as the calendar moves. It also
+ * keeps a batch consistent: every listing in one render is priced at the same
+ * instant instead of each reading the clock separately.
+ */
+export function toLegacyListing(listing: Listing, now: Date = new Date()): LegacyListing {
   const currency = listing.pricing.currency;
 
   // The old UI reads commission fields off `metadata`, so fold serviceDetails
@@ -135,8 +142,8 @@ export function toLegacyListing(listing: Listing): LegacyListing {
   // `price` is what the buyer pays, so a running sale replaces it. Every price
   // filter, sort and badge in the app reads this field, and all of them should
   // be working from the amount actually being charged.
-  const onSale = isOnSale(listing.pricing);
-  const payable = effectiveAmount(listing.pricing);
+  const onSale = isOnSale(listing.pricing, now);
+  const payable = effectiveAmount(listing.pricing, now);
 
   return {
     title: listing.title,
@@ -225,6 +232,8 @@ export function toLegacyListing(listing: Listing): LegacyListing {
   };
 }
 
-export function toLegacyListings(listings: Listing[]): LegacyListing[] {
-  return listings.map(toLegacyListing);
+export function toLegacyListings(listings: Listing[], now: Date = new Date()): LegacyListing[] {
+  // Written out rather than `map(toLegacyListing)`: map passes the index as the
+  // second argument, which would arrive as `now`.
+  return listings.map((listing) => toLegacyListing(listing, now));
 }
