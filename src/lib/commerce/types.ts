@@ -25,7 +25,7 @@ export type CommissionStatus = 'open' | 'waitlist' | 'closed';
  * `{year, 1}` are the same price written two ways, and every reader would have
  * to normalize before it could compare. See AMENDMENT-3.
  */
-export type BillingPeriod = 'day' | 'week' | 'fortnight' | 'month' | 'quarter' | 'year';
+export type BillingPeriod = 'day' | 'week' | 'month' | 'quarter' | 'year';
 
 export type Pricing = {
   /**

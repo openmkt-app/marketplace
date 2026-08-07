@@ -14,7 +14,7 @@ import LiveListingPreview from './LiveListingPreview';
 import { createBlueskyCdnImageUrls } from '@/lib/image-utils';
 import { trackCreateListing } from '@/lib/analytics';
 import { processExternalLink, getPlatformDisplayName } from '@/lib/external-link-utils';
-import { Wand2, Loader2, Sparkles, Package, Palette, Download } from 'lucide-react';
+import { Wand2, Loader2, Sparkles, Package, Palette, Download, ChevronUp, ChevronDown } from 'lucide-react';
 import type { BillingPeriod, ListingType, ProductGroup } from '@/lib/commerce/types';
 
 /** Sentinel for "make a new product" in the group picker. Not an AT URI. */
@@ -44,6 +44,15 @@ function cleanSpecs(rows: Array<{ name: string; value: string }>) {
     .map(r => ({ name: r.name.trim(), value: r.value.trim() }))
     .filter(r => r.name)
     .map(r => (r.value ? r : { name: r.name }));
+}
+
+/** Move one row up or down, returning a new array. Out-of-range is a no-op. */
+function moveRow<T>(rows: T[], from: number, delta: number): T[] {
+  const to = from + delta;
+  if (to < 0 || to >= rows.length) return rows;
+  const next = [...rows];
+  [next[from], next[to]] = [next[to], next[from]];
+  return next;
 }
 
 function numberOrUndefined(raw: string): number | undefined {
@@ -137,6 +146,8 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   const [axisName, setAxisName] = useState('');
   const [optionValue, setOptionValue] = useState('');
   const groupsLoaded = useRef(false);
+  /** The last title this form suggested, so a seller's own wording survives. */
+  const suggestedTitle = useRef('');
   const [showSaleFields, setShowSaleFields] = useState(false);
 
   // Catalogue detail. Folded away by default: someone selling one used chair
@@ -485,14 +496,48 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       .catch(() => setGroups([]));
   }, [isVariant, client]);
 
-  // The axis name belongs to the product, so joining one adopts its name and
-  // the field is not asked for. Runs when the groups arrive, which is also when
-  // an edit of an existing variant learns what its axis is called.
+  /**
+   * Adopt what the chosen product already knows.
+   *
+   * The options of one product share a description, a category and a type —
+   * that is what makes them one product — so a seller adding the second tier
+   * should not retype any of it. Only empty fields are filled: an edit in
+   * progress is never overwritten, and neither is a variant that genuinely
+   * differs.
+   */
   useEffect(() => {
     if (groupUri === NEW_GROUP) return;
     const chosen = groups.find(g => g.uri === groupUri);
-    if (chosen) setAxisName(chosen.optionAxes[0]?.name || '');
+    if (!chosen) return;
+
+    setAxisName(chosen.optionAxes[0]?.name || '');
+    if (chosen.type) setListingType(chosen.type);
+    setDescription(prev => (prev.trim() ? prev : chosen.description || ''));
+    setSelectedCategory(prev => (prev ? prev : chosen.category || ''));
   }, [groupUri, groups]);
+
+  /**
+   * Suggest a title for a variant: the product's name plus this option's.
+   *
+   * Only while the title is untouched or still holds the last suggestion —
+   * once the seller edits it, it is theirs and nothing rewrites it.
+   */
+  useEffect(() => {
+    if (!isVariant) return;
+
+    const productName =
+      groupUri === NEW_GROUP
+        ? groupTitle.trim()
+        : groups.find(g => g.uri === groupUri)?.title || '';
+    const suggestion = [productName, optionValue.trim()].filter(Boolean).join(' ');
+
+    if (!suggestion) return;
+    setTitle(prev => {
+      if (prev.trim() && prev !== suggestedTitle.current) return prev;
+      suggestedTitle.current = suggestion;
+      return suggestion;
+    });
+  }, [isVariant, groupUri, groupTitle, optionValue, groups]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -1248,7 +1293,11 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
               // in one category and its options in another.
               category: categoryId,
               type: listingType,
-              description: existing?.description,
+              // What the options share lives on the product, so the next
+              // variant inherits it instead of the seller typing it again.
+              // An existing description wins — this fills a gap, never
+              // rewrites the product from whichever variant was saved last.
+              description: existing?.description || description,
               defaultVariant: existing?.defaultVariant,
               sku: existing?.sku,
               specifications: existing?.specifications,
@@ -1586,6 +1635,104 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                 </div>
               </div>
 
+              {/* Options and variants.
+                  Sits here, above everything else, because choosing an existing
+                  product fills in what the options share — asking for it after
+                  the seller has typed the description means typing it twice.
+                  Folded away by default: most listings are one thing. */}
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-neutral-light">
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isVariant}
+                    onChange={e => setIsVariant(e.target.checked)}
+                    className="h-4 w-4 mt-0.5 rounded border-gray-300 text-primary-color"
+                  />
+                  <span>
+                    <span className="text-sm font-medium text-text-primary">{tCreate('labelIsVariant')}</span>
+                    <span className="block text-xs text-text-secondary">{tCreate('hintIsVariant')}</span>
+                  </span>
+                </label>
+
+                {isVariant && (
+                  <div className="mt-4 space-y-3 pl-6">
+                    <div>
+                      <label htmlFor="groupUri" className="block text-sm font-medium text-text-secondary mb-1">
+                        {tCreate('labelProduct')}
+                      </label>
+                      <select
+                        id="groupUri"
+                        value={groupUri}
+                        onChange={e => setGroupUri(e.target.value)}
+                        className={detailField}
+                      >
+                        <option value={NEW_GROUP}>{tCreate('newProduct')}</option>
+                        {groups.map(group => (
+                          <option key={group.uri} value={group.uri}>{group.title}</option>
+                        ))}
+                        {/* The product this listing already belongs to, when
+                            the list has not arrived yet or did not load. Without
+                            it the select would silently show a different
+                            product than the one about to be saved. */}
+                        {groupUri !== NEW_GROUP && !groups.some(g => g.uri === groupUri) && (
+                          <option value={groupUri}>{tCreate('currentProduct')}</option>
+                        )}
+                      </select>
+                    </div>
+
+                    {/* Only for a new product. Joining an existing one adopts
+                        its name and what its options are called — letting a
+                        second listing rename either would split the product. */}
+                    {groupUri === NEW_GROUP && (
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <div>
+                          <label htmlFor="groupTitle" className="block text-sm font-medium text-text-secondary mb-1">
+                            {tCreate('labelProductName')} <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            id="groupTitle"
+                            type="text"
+                            value={groupTitle}
+                            onChange={e => setGroupTitle(e.target.value)}
+                            placeholder={tCreate('placeholderProductName')}
+                            className={detailField}
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="axisName" className="block text-sm font-medium text-text-secondary mb-1">
+                            {tCreate('labelAxisName')}
+                          </label>
+                          <input
+                            id="axisName"
+                            type="text"
+                            value={axisName}
+                            onChange={e => setAxisName(e.target.value)}
+                            placeholder={tCreate('variantAxisDefault')}
+                            className={detailField}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label htmlFor="optionValue" className="block text-sm font-medium text-text-secondary mb-1">
+                        {tCreate('labelOptionValue', { axis: axisName.trim() || tCreate('variantAxisDefault') })}{' '}
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="optionValue"
+                        type="text"
+                        value={optionValue}
+                        onChange={e => setOptionValue(e.target.value)}
+                        placeholder={tCreate('placeholderOptionValue')}
+                        className={detailField}
+                      />
+                      <p className="mt-1 text-xs text-text-secondary">{tCreate('hintOptionValue')}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Magic Link Section */}
               <div className="bg-gradient-to-r from-amber-100 to-yellow-100 border-2 border-amber-300 rounded-2xl p-6">
                 <div className="flex items-center gap-2 mb-3">
@@ -1832,7 +1979,6 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                           <option value="">{tCreate('billingOneOff')}</option>
                           <option value="day">{tCreate('billingDay')}</option>
                           <option value="week">{tCreate('billingWeek')}</option>
-                          <option value="fortnight">{tCreate('billingFortnight')}</option>
                           <option value="month">{tCreate('billingMonth')}</option>
                           <option value="quarter">{tCreate('billingQuarter')}</option>
                           <option value="year">{tCreate('billingYear')}</option>
@@ -2113,103 +2259,6 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                 </div>
               </div>
 
-              {/* Options and variants.
-                  Folded away by default: most listings are one thing, and a
-                  form that opens asking "which tier is this?" invites people to
-                  invent a product structure they do not have. */}
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-neutral-light">
-                <label className="flex items-start gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isVariant}
-                    onChange={e => setIsVariant(e.target.checked)}
-                    className="h-4 w-4 mt-0.5 rounded border-gray-300 text-primary-color"
-                  />
-                  <span>
-                    <span className="text-sm font-medium text-text-primary">{tCreate('labelIsVariant')}</span>
-                    <span className="block text-xs text-text-secondary">{tCreate('hintIsVariant')}</span>
-                  </span>
-                </label>
-
-                {isVariant && (
-                  <div className="mt-4 space-y-3 pl-6">
-                    <div>
-                      <label htmlFor="groupUri" className="block text-sm font-medium text-text-secondary mb-1">
-                        {tCreate('labelProduct')}
-                      </label>
-                      <select
-                        id="groupUri"
-                        value={groupUri}
-                        onChange={e => setGroupUri(e.target.value)}
-                        className={detailField}
-                      >
-                        <option value={NEW_GROUP}>{tCreate('newProduct')}</option>
-                        {groups.map(group => (
-                          <option key={group.uri} value={group.uri}>{group.title}</option>
-                        ))}
-                        {/* The product this listing already belongs to, when
-                            the list has not arrived yet or did not load. Without
-                            it the select would silently show a different
-                            product than the one about to be saved. */}
-                        {groupUri !== NEW_GROUP && !groups.some(g => g.uri === groupUri) && (
-                          <option value={groupUri}>{tCreate('currentProduct')}</option>
-                        )}
-                      </select>
-                    </div>
-
-                    {/* Only for a new product. Joining an existing one adopts
-                        its name and what its options are called — letting a
-                        second listing rename either would split the product. */}
-                    {groupUri === NEW_GROUP && (
-                      <div className="grid sm:grid-cols-2 gap-3">
-                        <div>
-                          <label htmlFor="groupTitle" className="block text-sm font-medium text-text-secondary mb-1">
-                            {tCreate('labelProductName')} <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            id="groupTitle"
-                            type="text"
-                            value={groupTitle}
-                            onChange={e => setGroupTitle(e.target.value)}
-                            placeholder={tCreate('placeholderProductName')}
-                            className={detailField}
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="axisName" className="block text-sm font-medium text-text-secondary mb-1">
-                            {tCreate('labelAxisName')}
-                          </label>
-                          <input
-                            id="axisName"
-                            type="text"
-                            value={axisName}
-                            onChange={e => setAxisName(e.target.value)}
-                            placeholder={tCreate('variantAxisDefault')}
-                            className={detailField}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <div>
-                      <label htmlFor="optionValue" className="block text-sm font-medium text-text-secondary mb-1">
-                        {tCreate('labelOptionValue', { axis: axisName.trim() || tCreate('variantAxisDefault') })}{' '}
-                        <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        id="optionValue"
-                        type="text"
-                        value={optionValue}
-                        onChange={e => setOptionValue(e.target.value)}
-                        placeholder={tCreate('placeholderOptionValue')}
-                        className={detailField}
-                      />
-                      <p className="mt-1 text-xs text-text-secondary">{tCreate('hintOptionValue')}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
               {/* Location Section with Accordion UI */}
               <div className="bg-white rounded-lg shadow-sm border border-neutral-light overflow-hidden">
                 <div
@@ -2463,6 +2512,10 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                     <div>
                       <label className="block text-sm font-medium text-text-secondary mb-1">{tCreate('labelSpecs')}</label>
                       <div className="space-y-2">
+                        {/* Order is meaningful — a feature list is read top to
+                            bottom — and it is not the order things occur to
+                            you. Buttons rather than drag: they work on a phone,
+                            with a keyboard, and with a screen reader. */}
                         {specs.map((row, i) => (
                           <div key={i} className="flex gap-2">
                             <input
@@ -2477,8 +2530,20 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                               placeholder={tCreate('placeholderSpecValue')}
                               className={`${detailField} flex-1`}
                             />
-                            <button type="button" onClick={() => setSpecs(specs.filter((_, j) => j !== i))}
-                              className="px-3 text-text-secondary hover:text-red-600" aria-label={tCreate('removeSpec')}>×</button>
+                            <div className="flex flex-shrink-0">
+                              <button type="button" onClick={() => setSpecs(moveRow(specs, i, -1))} disabled={i === 0}
+                                className="px-1.5 text-text-secondary hover:text-primary-color disabled:opacity-25 disabled:hover:text-text-secondary"
+                                aria-label={tCreate('moveSpecUp')}>
+                                <ChevronUp size={16} />
+                              </button>
+                              <button type="button" onClick={() => setSpecs(moveRow(specs, i, 1))} disabled={i === specs.length - 1}
+                                className="px-1.5 text-text-secondary hover:text-primary-color disabled:opacity-25 disabled:hover:text-text-secondary"
+                                aria-label={tCreate('moveSpecDown')}>
+                                <ChevronDown size={16} />
+                              </button>
+                              <button type="button" onClick={() => setSpecs(specs.filter((_, j) => j !== i))}
+                                className="px-2 text-text-secondary hover:text-red-600" aria-label={tCreate('removeSpec')}>×</button>
+                            </div>
                           </div>
                         ))}
                       </div>

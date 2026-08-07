@@ -62,7 +62,6 @@
           "knownValues": [
             "day",
             "week",
-            "fortnight",
             "month",
             "quarter",
             "year"

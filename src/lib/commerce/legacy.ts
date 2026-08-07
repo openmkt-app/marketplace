@@ -40,7 +40,7 @@ export type LegacyListing = {
   saleStartsAt?: string;
   saleEndsAt?: string;
   /** Set when the price repeats: 'year' means the amount is charged yearly. */
-  billingPeriod?: 'day' | 'week' | 'fortnight' | 'month' | 'quarter' | 'year';
+  billingPeriod?: 'day' | 'week' | 'month' | 'quarter' | 'year';
   /** Undefined means the seller never said. Do not render a guess. */
   taxInclusive?: boolean;
   /** The seller will consider offers; any price shown is a guide. */
