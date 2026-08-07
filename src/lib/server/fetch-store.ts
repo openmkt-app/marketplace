@@ -2,9 +2,11 @@
 // Server-side utility for fetching store/seller data (used by generateMetadata)
 
 import { BskyAgent } from '@atproto/api';
-import { READ_COLLECTIONS } from '../commerce/collections';
+import { READ_COLLECTIONS, SHOP_COLLECTION, SHOP_RKEY } from '../commerce/collections';
 import { fetchListings as fetchListingsFromAppView } from '../commerce/appview';
 import { normalizeListings } from '../commerce/hydrate';
+import { normalizeShop } from '../commerce/normalize';
+import type { Shop } from '../commerce/types';
 import { toLegacyListing, toLegacyListings } from '../commerce/legacy';
 import type { MarketplaceListing } from '../marketplace-client';
 
@@ -63,7 +65,49 @@ export type StoreData = {
   profile: SellerProfile;
   listings: StoreListing[];
   listingsCount: number;
+  /** Null when the seller has no shop record yet. */
+  shop: Shop | null;
 };
+
+/**
+ * Read the seller's shop record from their PDS.
+ *
+ * Never throws: a store page without a shop record is the normal state for a
+ * seller who has not saved a listing since the commerce collection landed, and
+ * the page falls back to their Bluesky profile exactly as it always has.
+ */
+async function fetchShop(pdsEndpoint: string, did: string): Promise<Shop | null> {
+  try {
+    const agent = new BskyAgent({ service: pdsEndpoint });
+    const res = await agent.api.com.atproto.repo.getRecord({
+      repo: did,
+      collection: SHOP_COLLECTION,
+      rkey: SHOP_RKEY,
+    });
+    if (!res.data?.value) return null;
+    return normalizeShop(res.data.value as Record<string, any>, {
+      uri: res.data.uri,
+      cid: res.data.cid,
+      authorDid: did,
+    });
+  } catch {
+    return null;
+  }
+}
+
+/** Resolve a DID's PDS, falling back to bsky.social. */
+async function resolvePds(did: string): Promise<string> {
+  try {
+    const didDoc = await fetch(`https://plc.directory/${did}`).then(r => r.json());
+    const pdsService = didDoc.service?.find(
+      (s: { id: string; type: string; serviceEndpoint: string }) =>
+        s.id === '#atproto_pds' || s.type === 'AtprotoPersonalDataServer'
+    );
+    return pdsService?.serviceEndpoint || 'https://bsky.social';
+  } catch {
+    return 'https://bsky.social';
+  }
+}
 
 export async function fetchStoreByHandle(handle: string): Promise<StoreData | null> {
   try {
@@ -108,6 +152,14 @@ export async function fetchStoreByHandle(handle: string): Promise<StoreData | nu
     // The budget matters because this blocks the page. A warm index answers in
     // about 130ms; the client's default would wait six seconds for a cold
     // tunnel before giving up, and the fallback still has to run after that.
+    // The seller's PDS, resolved once and shared by the shop read and the
+    // listings fallback below — they used to each pay their own PLC lookup.
+    const pdsPromise = resolvePds(profileData.did);
+
+    // Started here, awaited after the listings. The shop record does not depend
+    // on them, so it overlaps rather than adding a round trip to the page.
+    const shopPromise = pdsPromise.then(pds => fetchShop(pds, profileData.did));
+
     const indexed = await fetchListingsFromAppView({
       did: profileData.did,
       limit: 100,
@@ -125,21 +177,7 @@ export async function fetchStoreByHandle(handle: string): Promise<StoreData | nu
       // Direct from the seller's PDS. Slower — it costs a handle resolution, a
       // PLC lookup and one request per collection — but it is the source of
       // truth, so a store page still works with the index down.
-      let pdsEndpoint = 'https://bsky.social';
-      try {
-        const didDoc = await fetch(`https://plc.directory/${profileData.did}`).then(r => r.json());
-        const pdsService = didDoc.service?.find(
-          (s: { id: string; type: string; serviceEndpoint: string }) =>
-            s.id === '#atproto_pds' || s.type === 'AtprotoPersonalDataServer'
-        );
-        if (pdsService?.serviceEndpoint) {
-          pdsEndpoint = pdsService.serviceEndpoint;
-        }
-      } catch (e) {
-        console.warn('Could not resolve PDS, using default:', e);
-      }
-
-      const pdsAgent = new BskyAgent({ service: pdsEndpoint });
+      const pdsAgent = new BskyAgent({ service: await pdsPromise });
 
       // A store's listings span both collections during the migration.
       const listingsResults = await Promise.all(
@@ -178,6 +216,7 @@ export async function fetchStoreByHandle(handle: string): Promise<StoreData | nu
       profile,
       listings,
       listingsCount: listings.length,
+      shop: await shopPromise,
     };
   } catch (error) {
     console.error('Failed to fetch store data:', error);

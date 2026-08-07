@@ -7,7 +7,7 @@
 
 import { COMMERCE_COLLECTION, SHOP_COLLECTION } from './collections.ts';
 import { DEFAULT_CURRENCY } from './money.ts';
-import type { ListingInput } from './types.ts';
+import type { ListingInput, ShopInput } from './types.ts';
 
 const DETAILS_TYPE = {
   goods: `${COMMERCE_COLLECTION}#goodsDetails`,
@@ -127,16 +127,32 @@ export function buildListingRecord(input: ListingInput, options: BuildOptions = 
 /**
  * Build an `app.openmkt.commerce.shop` record.
  *
- * Only `name` and `createdAt` are required, which is all there is to write
- * until Phase 6 gives the shop a form of its own. It exists this early because
- * a listing's `shopRef` is required and has to point somewhere.
+ * Whitelisted like the listing builder, for the same reason: a shop read back
+ * from the repo carries `uri` and `ownerDid`, and spreading it into a record
+ * would write those straight back.
+ *
+ * `logo` and `banner` are in the lexicon but not written here. Store pages use
+ * the seller's Bluesky avatar and banner, which they already have and can
+ * change in one place — a second pair of images to keep in sync is a cost with
+ * no benefit until someone asks for it.
  */
-export function buildShopRecord(name: string, createdAt?: string): Record<string, any> {
-  return {
+export function buildShopRecord(input: ShopInput, createdAt?: string): Record<string, any> {
+  const record = compact({
     $type: SHOP_COLLECTION,
-    name,
-    createdAt: createdAt || new Date().toISOString(),
-  };
+
+    name: input.name,
+    description: input.description,
+    website: input.website,
+    location: stripLegacyFields(input.location),
+    policies: input.policies ? compact(input.policies) : undefined,
+    handlingTime: input.handlingTime,
+    defaultCurrency: input.defaultCurrency,
+    shipsTo: input.shipsTo,
+
+    createdAt: createdAt || input.createdAt || new Date().toISOString(),
+  });
+
+  return record as Record<string, any>;
 }
 
 /**

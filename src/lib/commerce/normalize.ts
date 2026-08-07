@@ -16,6 +16,7 @@ import type {
   Listing,
   ListingType,
   Pricing,
+  Shop,
 } from './types.ts';
 
 export type RecordIdentity = {
@@ -199,4 +200,33 @@ export function normalizeListing(record: RawRecord, id: Identity): Listing {
 
   // Unknown or missing collection — decide structurally rather than guessing.
   return record.pricing ? normalizeV2(record, id) : normalizeV1(record, id);
+}
+
+/**
+ * Normalize an `app.openmkt.commerce.shop` record.
+ *
+ * There is no v1 shop — the collection was introduced with the commerce
+ * lexicon — so this is a straight read rather than a two-format merge. It
+ * exists so nothing outside this module reads a raw shop record, which is the
+ * same rule listings follow.
+ */
+export function normalizeShop(record: RawRecord, id: Identity): Shop {
+  return {
+    uri: id.uri,
+    cid: id.cid,
+    ownerDid: id.authorDid ?? didFromUri(id.uri) ?? '',
+
+    // `name` is required by the lexicon, but a record written by an older
+    // client or hand-edited might not have it; the owner's DID is a poor name
+    // but better than rendering "undefined" as a shop title.
+    name: record.name || id.authorDid || 'Shop',
+    description: record.description,
+    website: record.website,
+    location: record.location,
+    policies: record.policies,
+    handlingTime: record.handlingTime,
+    defaultCurrency: record.defaultCurrency,
+    shipsTo: Array.isArray(record.shipsTo) ? record.shipsTo : undefined,
+    createdAt: record.createdAt || new Date().toISOString(),
+  };
 }

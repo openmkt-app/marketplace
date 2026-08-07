@@ -124,6 +124,7 @@ export default async function StorePage({ params }: Props) {
         initialProfile={storeData?.profile || null}
         initialListings={storeData?.listings ?? null}
         initialListingsCount={storeData?.listingsCount || 0}
+        shop={storeData?.shop ?? null}
       />
     </>
   );

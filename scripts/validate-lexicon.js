@@ -88,14 +88,38 @@ try {
   const { toListingInput, buildSelfLabels } = await import('../src/lib/commerce/legacy-input.ts');
   const { buildListingRecord, buildShopRecord } = await import('../src/lib/commerce/serialize.ts');
 
-  // The shop record the client auto-creates on a seller's first save.
-  try {
-    const shop = buildShopRecord('alice.bsky.social', '2025-03-11T10:04:00.000Z');
-    lexicons.assertValidRecord(shop.$type, shop);
-    console.log(`  ✅ auto-created shop (${shop.$type})`);
-  } catch (e) {
-    console.error(`  ❌ auto-created shop\n     ${e.message}`);
-    writeErrors++;
+  // Both ends of the shop form: the bare record created automatically on a
+  // seller's first save, and one with every field the form can set.
+  const shopCases = [
+    ['auto-created shop', { name: 'alice.bsky.social' }],
+    ['fully filled shop', {
+      name: 'Acme Goods',
+      description: 'Handmade widgets since 2019.',
+      website: 'https://acme.example',
+      handlingTime: '1-3 business days',
+      defaultCurrency: 'USD',
+      shipsTo: ['US', 'CA', 'GB'],
+      location: { countryCode: 'US', region: 'Oregon', locality: 'Portland', isRemote: false },
+      policies: {
+        returns: '30 day returns, buyer pays postage',
+        shipping: 'https://acme.example/shipping',
+        terms: 'https://acme.example/terms',
+        privacy: 'We keep nothing we do not need.',
+      },
+    }],
+    // Everything optional left out — compact() must not emit empty objects.
+    ['shop with empty policies', { name: 'Bare', policies: {}, shipsTo: [] }],
+  ];
+
+  for (const [name, input] of shopCases) {
+    try {
+      const shop = buildShopRecord(input, '2025-03-11T10:04:00.000Z');
+      lexicons.assertValidRecord(shop.$type, shop);
+      console.log(`  ✅ ${name} (${shop.$type})`);
+    } catch (e) {
+      console.error(`  ❌ ${name}\n     ${e.message}`);
+      writeErrors++;
+    }
   }
 
   // A real BlobRef over a real CID, not the JSON shape: the lexicon validator

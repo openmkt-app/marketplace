@@ -158,6 +158,44 @@ export type Listing = {
   isVerifiedSeller?: boolean;
 };
 
+/**
+ * A seller's shop: one record per repo, at rkey `self`.
+ *
+ * Every listing points at one via `shopRef`, which the lexicon requires, so a
+ * shop exists for every seller who has ever saved a listing — created with just
+ * their handle until they fill the rest in.
+ */
+export type ShopPolicies = {
+  returns?: string;
+  shipping?: string;
+  terms?: string;
+  privacy?: string;
+};
+
+export type Shop = {
+  uri: string;
+  cid?: string;
+  ownerDid: string;
+
+  name: string;
+  description?: string;
+  website?: string;
+  location?: CommerceLocation;
+  policies?: ShopPolicies;
+  /** Free text, e.g. "1-3 business days". */
+  handlingTime?: string;
+  /** ISO 4217 code this shop normally prices in. */
+  defaultCurrency?: string;
+  /** ISO 3166-1 alpha-2 codes. Absent means the seller has not said. */
+  shipsTo?: string[];
+  createdAt: string;
+};
+
+/** What the shop form produces, before it becomes a record. */
+export type ShopInput = Omit<Shop, 'uri' | 'cid' | 'ownerDid' | 'createdAt'> & {
+  createdAt?: string;
+};
+
 /** What the create/edit form produces, before it becomes a record. */
 export type ListingInput = Omit<
   Listing,

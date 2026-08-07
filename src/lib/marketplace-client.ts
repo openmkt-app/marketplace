@@ -15,6 +15,8 @@ import {
 import { buildListingRecord, buildShopRecord } from './commerce/serialize';
 import { buildSelfLabels, toListingInput } from './commerce/legacy-input';
 import { normalizeAndHydrate, normalizeListings } from './commerce/hydrate';
+import { normalizeShop } from './commerce/normalize';
+import type { Shop, ShopInput } from './commerce/types';
 import { toLegacyListing } from './commerce/legacy';
 import type { OAuthSession } from './oauth-client';
 
@@ -234,7 +236,7 @@ export class MarketplaceClient {
         repo,
         collection: SHOP_COLLECTION,
         rkey: SHOP_RKEY,
-        record: buildShopRecord(this._handle || repo),
+        record: buildShopRecord({ name: this._handle || repo }),
       });
 
       logger.info('Created a shop record', { meta: { uri: created.data.uri } });
@@ -246,6 +248,72 @@ export class MarketplaceClient {
     });
 
     return this.shopUriPromise;
+  }
+
+  /**
+   * Read the signed-in seller's shop record.
+   *
+   * Returns null when there is none, which is the state of any seller who has
+   * never saved a listing — creating one on a read would put a record in their
+   * repo just for opening a settings page.
+   */
+  async getShop(): Promise<Shop | null> {
+    if (!this.isLoggedIn || !this.agent.did) return null;
+
+    const repo = this.agent.accountDid;
+    try {
+      const res = await this.agent.api.com.atproto.repo.getRecord({
+        repo,
+        collection: SHOP_COLLECTION,
+        rkey: SHOP_RKEY,
+      });
+      if (!res.data?.value) return null;
+      return normalizeShop(res.data.value as Record<string, any>, {
+        uri: res.data.uri,
+        cid: res.data.cid,
+        authorDid: repo,
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Save the seller's shop.
+   *
+   * putRecord at a fixed rkey, so this both creates and updates. The original
+   * createdAt is preserved for the same reason listings preserve theirs: it is
+   * the date the shop opened, not the date its policies were last edited.
+   */
+  async updateShop(input: ShopInput): Promise<Shop> {
+    if (!this.isLoggedIn || !this.agent.did) {
+      throw new Error('User must be logged in to update a shop');
+    }
+
+    const repo = this.agent.accountDid;
+    try {
+      const existing = await this.getShop();
+      const record = buildShopRecord(input, existing?.createdAt);
+
+      const res = await this.agent.api.com.atproto.repo.putRecord({
+        repo,
+        collection: SHOP_COLLECTION,
+        rkey: SHOP_RKEY,
+        record,
+      });
+
+      // The shop URI never changes, but a first save creates it — let the
+      // memoized lookup pick it up rather than going stale at null.
+      this.shopUriPromise = Promise.resolve(res.data.uri);
+
+      return normalizeShop(record, { uri: res.data.uri, cid: res.data.cid, authorDid: repo });
+    } catch (error) {
+      if (isScopeError(error)) {
+        throw new InsufficientScopeError(SHOP_COLLECTION, error);
+      }
+      logger.error('Failed to update shop', error as Error);
+      throw error;
+    }
   }
 
   async createListing(listingData: CreateListingParams): Promise<Record<string, unknown>> {

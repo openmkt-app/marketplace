@@ -7,11 +7,13 @@ import { Link } from '@/i18n/navigation';
 import type { MarketplaceListing } from '@/lib/marketplace-client';
 import ListingCard from '@/components/marketplace/ListingCard';
 import GalleryListingTile from '@/components/marketplace/GalleryListingTile';
-import { ExternalLink, Calendar, Globe, MapPin, Palette } from 'lucide-react';
+import { ExternalLink, Calendar, Globe, MapPin, Palette, Settings } from 'lucide-react';
 import type { SellerProfile, StoreListing } from '@/lib/server/fetch-store';
 import { linkifyText } from '@/lib/linkify';
 import { isOnlineStore } from '@/lib/location-utils';
 import { isArtistStore } from '@/lib/artist-store-utils';
+import ShopDetails from '@/components/marketplace/ShopDetails';
+import type { Shop } from '@/lib/commerce/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { filterForViewer } from '@/lib/viewer-visibility';
 
@@ -30,6 +32,8 @@ type Props = {
   /** Null means the server could not fetch them, not that there are none. */
   initialListings: StoreListing[] | null;
   initialListingsCount: number;
+  /** The seller's shop record, read on the server. Null when they have none. */
+  shop: Shop | null;
 };
 
 export default function StorePageClient({
@@ -37,6 +41,7 @@ export default function StorePageClient({
   initialProfile,
   initialListings,
   initialListingsCount,
+  shop,
 }: Props) {
   const t = useTranslations('store');
   const locale = useLocale();
@@ -51,6 +56,7 @@ export default function StorePageClient({
   const [activeTab, setActiveTab] = useState<'store' | 'local'>('store');
   const [flaggedUris, setFlaggedUris] = useState<Set<string>>(new Set());
   const auth = useAuth();
+  const isOwnStore = !!auth.user?.did && auth.user.did === profile?.did;
   const [hiddenUris, setHiddenUris] = useState<Set<string>>(new Set());
 
   // "Hide from friends" — resolved here rather than on the server, which has no
@@ -351,10 +357,27 @@ export default function StorePageClient({
               </div>
             </div>
 
-            {/* Bio */}
-            {profile.description && (
+            {/* Bio — the shop's own description wins over the Bluesky one when
+                set, since the seller wrote it specifically for this page. */}
+            {(shop?.description || profile.description) && (
               <div className="mt-4 max-w-2xl">
-                <p className="text-gray-700 whitespace-pre-wrap">{linkifyText(profile.description)}</p>
+                <p className="text-gray-700 whitespace-pre-wrap">
+                  {linkifyText(shop?.description || profile.description || '')}
+                </p>
+              </div>
+            )}
+
+            {/* Owner-only: the shop form is otherwise unreachable, since the
+                store page is the only place a seller looks at their own shop. */}
+            {isOwnStore && (
+              <div className="mt-3">
+                <Link
+                  href="/my-store/settings"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 border border-neutral-light rounded-full text-xs font-medium text-text-secondary hover:bg-neutral-light/50"
+                >
+                  <Settings size={12} />
+                  {t('editShop')}
+                </Link>
               </div>
             )}
 
@@ -392,6 +415,13 @@ export default function StorePageClient({
           </div>
         </div>
       </div>
+
+      {/* Shop details: policies, handling time, where they ship. */}
+      {shop && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+          <ShopDetails shop={shop} />
+        </div>
+      )}
 
       {/* Listings Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
