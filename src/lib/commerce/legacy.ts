@@ -29,6 +29,7 @@ function toLegacyPriceString(amount: number | null | undefined, currency: string
 /** The shape the app has always used. Kept structural to avoid a circular import. */
 export type LegacyListing = {
   title: string;
+  type?: 'goods' | 'service' | 'digital';
   description: string;
   price: string;
   currency?: string;
@@ -112,6 +113,11 @@ export function toLegacyListing(listing: Listing): LegacyListing {
     // Provenance, so UI can offer "update this listing" on old records without
     // having to re-derive which format it came from.
     schemaVersion: listing.schemaVersion,
+
+    // The listing type travels with the listing so consumers stop inferring it
+    // from the category. normalize sets it for both record formats, so this is
+    // populated even for a v1 record that never stored one.
+    type: listing.type,
   };
 }
 

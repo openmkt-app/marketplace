@@ -50,6 +50,12 @@ export type ListingMetadata = {
 
 export type MarketplaceListing = {
   title: string;
+  /**
+   * goods / service / digital. Set by the commerce normalizer for both record
+   * formats — a v1 record has no such field, so it is inferred from the
+   * category there. Read this instead of guessing from `category`.
+   */
+  type?: 'goods' | 'service' | 'digital';
   description: string;
   price: string;
   currency?: string;

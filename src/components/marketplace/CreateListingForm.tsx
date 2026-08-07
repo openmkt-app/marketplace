@@ -102,7 +102,11 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   // Commission-specific state
   const [slotsAvailable, setSlotsAvailable] = useState<string>('');
   const [turnaroundTime, setTurnaroundTime] = useState<string>('');
-  const isCommissionCategory = selectedCategory === 'digital_arts';
+  // The listing's own type, not a guess from its category. Gallery/Mall
+  // routing and the commission fields key on this, so a seller can offer a
+  // service without being forced into one particular category.
+  const [listingType, setListingType] = useState<'goods' | 'service'>('goods');
+  const isService = listingType === 'service';
 
   // Add state for external URL
   const [externalUrl, setExternalUrl] = useState('');
@@ -244,6 +248,9 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       setCurrency(initialData.currency || 'USD');
       setCondition(initialData.condition);
       setSelectedCategory(initialData.category);
+      // A v1 record has no type; inferring from the category is what the
+      // normalizer does for those, so the form agrees with the stored value.
+      setListingType(initialData.type === 'service' || initialData.category === 'digital_arts' ? 'service' : 'goods');
       setHideFromFriends(initialData.hideFromFriends || false);
       const hasNsfwLabel = initialData.labels?.values?.some((l: any) => 
         ['nsfw', 'porn', 'sexual', 'nudity', 'graphic-media'].includes(l.val)
@@ -1058,8 +1065,10 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         metadata.externalPlatform = detectedPlatform.toLowerCase().replace(/\s+/g, '');
       }
 
-      // Commission-specific metadata
-      if (categoryId === 'digital_arts') {
+      // Commission-specific metadata. Keyed on the listing type, not the
+      // category — a seller offering a service outside digital_arts still has
+      // slots and a turnaround, and the fields are shown to them.
+      if (isService) {
         if (slotsAvailable !== '') {
           const slots = parseInt(slotsAvailable, 10);
           metadata.slotsAvailable = slots;
@@ -1072,13 +1081,14 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
       // Prepare listing data with metadata embedded as JSON
       const listingDataRaw = {
+        type: listingType,
         title: formData.get('title') as string,
         description: description,
         price: formattedPrice,
         currency: currency,
         location: locationData,
         category: categoryId,
-        condition: isCommissionCategory ? '' : (formData.get('condition') as string),
+        condition: isService ? '' : (formData.get('condition') as string),
         images: images as any, // The client handles mixed types now
         hideFromFriends: hideFromFriends,
         isNsfw: isNsfw,
@@ -1266,28 +1276,33 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                   <button
                     type="button"
                     onClick={() => {
-                      if (isCommissionCategory) {
+                      if (isService) {
+                        setListingType('goods');
                         setSelectedCategory('');
                         setSelectedSubcategory('');
                         setIsOnlineStore(false);
                       }
                     }}
                     className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-150 ${
-                      !isCommissionCategory
+                      !isService
                         ? 'border-slate-900 bg-slate-900 text-white shadow-md'
                         : 'border-neutral-light bg-white text-text-secondary hover:border-slate-300'
                     }`}
                   >
                     <Package size={24} />
                     <span className="font-semibold text-sm">{tCreate('physicalProduct')}</span>
-                    <span className={`text-xs text-center leading-tight ${!isCommissionCategory ? 'text-slate-300' : 'text-text-secondary'}`}>
+                    <span className={`text-xs text-center leading-tight ${!isService ? 'text-slate-300' : 'text-text-secondary'}`}>
                       {tCreate('physicalProductDesc')}
                     </span>
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      if (!isCommissionCategory) {
+                      if (!isService) {
+                        setListingType('service');
+                        // Seeded, not forced: the category can be changed
+                        // afterwards without the listing stopping being a
+                        // service, which is the whole point of the split.
                         setSelectedCategory('digital_arts');
                         setSelectedSubcategory('');
                         setIsOnlineStore(true);
@@ -1295,14 +1310,14 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                       }
                     }}
                     className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-150 ${
-                      isCommissionCategory
+                      isService
                         ? 'border-rose-600 bg-rose-600 text-white shadow-md'
                         : 'border-neutral-light bg-white text-text-secondary hover:border-rose-300'
                     }`}
                   >
                     <Palette size={24} />
                     <span className="font-semibold text-sm">{tCreate('digitalArts')}</span>
-                    <span className={`text-xs text-center leading-tight ${isCommissionCategory ? 'text-rose-200' : 'text-text-secondary'}`}>
+                    <span className={`text-xs text-center leading-tight ${isService ? 'text-rose-200' : 'text-text-secondary'}`}>
                       {tCreate('digitalArtsDesc')}
                     </span>
                   </button>
@@ -1463,13 +1478,13 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
               {/* Item Details */}
               <div className="bg-white p-6 rounded-lg shadow-sm border border-neutral-light">
                 <h2 className="text-xl font-semibold mb-4 text-text-primary">
-                  {isCommissionCategory ? tCreate('detailsHeaderCommission') : tCreate('detailsHeader')}
+                  {isService ? tCreate('detailsHeaderCommission') : tCreate('detailsHeader')}
                 </h2>
 
                 <div className="space-y-4">
                   <div>
                     <label htmlFor="title" className="block text-sm font-medium text-text-secondary mb-1">
-                      {isCommissionCategory ? tCreate('labelTitleCommission') : tCreate('labelTitle')} <span className="text-red-500">*</span>
+                      {isService ? tCreate('labelTitleCommission') : tCreate('labelTitle')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -1478,14 +1493,14 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                       required
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      placeholder={isCommissionCategory ? tCreate('placeholderTitleCommission') : tCreate('placeholderTitle')}
+                      placeholder={isService ? tCreate('placeholderTitleCommission') : tCreate('placeholderTitle')}
                       className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
                     />
                   </div>
 
                   <div>
                     <label htmlFor="price" className="block text-sm font-medium text-text-secondary mb-1">
-                      {isCommissionCategory ? tCreate('labelPriceCommission') : tCreate('labelPrice')} <span className="text-red-500">*</span>
+                      {isService ? tCreate('labelPriceCommission') : tCreate('labelPrice')} <span className="text-red-500">*</span>
                     </label>
                     <div className="flex rounded-md shadow-sm">
                       <select
@@ -1560,7 +1575,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                     </select>
                   </div>
 
-                  {isCommissionCategory && (
+                  {isService && (
                     <div className="space-y-4 p-4 bg-rose-50 border border-rose-100 rounded-lg">
                       <p className="text-sm font-semibold text-rose-800">{tCreate('commissionSettings')}</p>
                       <div>
@@ -1596,7 +1611,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                     </div>
                   )}
 
-                  {!isCommissionCategory && (
+                  {!isService && (
                   <div>
                     <label htmlFor="condition" className="block text-sm font-medium text-text-secondary mb-1">
                       {tCreate('labelCondition')} <span className="text-red-500">*</span>
@@ -1621,7 +1636,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
                   <div>
                     <label htmlFor="description" className="block text-sm font-medium text-text-secondary mb-1">
-                      {isCommissionCategory ? tCreate('labelDescriptionCommission') : tCreate('labelDescription')} <span className="text-red-500">*</span>
+                      {isService ? tCreate('labelDescriptionCommission') : tCreate('labelDescription')} <span className="text-red-500">*</span>
                     </label>
                     <textarea
                       id="description"
@@ -1630,7 +1645,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                       onChange={(e) => setDescription(e.target.value)}
                       required
                       rows={4}
-                      placeholder={isCommissionCategory
+                      placeholder={isService
                         ? tCreate('placeholderDescriptionCommission')
                         : tCreate('placeholderDescription')}
                       className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
@@ -1678,7 +1693,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                   <div className="flex-1">
                     <div className="flex items-center">
                       <h2 className="text-xl font-semibold text-text-primary">
-                        {isCommissionCategory ? tCreate('locationHeaderCommission') : tCreate('locationHeader')}
+                        {isService ? tCreate('locationHeaderCommission') : tCreate('locationHeader')}
                       </h2>
                       {locationSaved && (
                         <span className="ml-3 animate-pulse text-sm text-green-600 bg-green-50 rounded-full px-3 py-0.5">
@@ -1689,7 +1704,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                     {isOnlineStore ? (
                       <p className="text-sm text-text-secondary mt-1">
                         <span className="font-medium text-blue-600">
-                          {isCommissionCategory ? 'Global / Remote Work' : tCreate('onlineStoreToggle')}
+                          {isService ? 'Global / Remote Work' : tCreate('onlineStoreToggle')}
                         </span>
                       </p>
                     ) : selectedLocation && (

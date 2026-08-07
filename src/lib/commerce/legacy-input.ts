@@ -11,11 +11,13 @@
 import { inferListingType, normalizeCategory } from './normalize.ts';
 import { toMinorUnits } from './money.ts';
 import { DEFAULT_CURRENCY } from './money.ts';
-import type { CommerceLocation, ListingInput, ServiceDetails } from './types.ts';
+import type { CommerceLocation, ListingInput, ListingType, ServiceDetails } from './types.ts';
 
 /** What CreateListingForm and etsy-client build today. */
 export type LegacyListingInput = {
   title: string;
+  /** Set by the form. Falls back to inferring from the category when absent. */
+  type?: ListingType;
   description: string;
   price: string;
   currency?: string;
@@ -99,7 +101,10 @@ export function buildSelfLabels(isNsfw?: boolean) {
 export function toListingInput(input: LegacyListingInput): ListingInput {
   const currency = input.currency || DEFAULT_CURRENCY;
   const category = normalizeCategory(input.category);
-  const type = inferListingType(input.category);
+  // The form's own answer wins. Inference is the fallback for callers that do
+  // not ask — the Etsy importer, and any older caller — and for v1 records,
+  // which never had a type field to read.
+  const type = input.type ?? inferListingType(input.category);
 
   const listingInput: ListingInput = {
     type,
