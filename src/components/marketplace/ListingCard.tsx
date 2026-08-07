@@ -85,14 +85,19 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, prior
 
         {/* Condition / Commission Status Badge */}
         <div className="absolute top-3 left-3 z-20 pointer-events-none">
-          {listing.category === COMMISSION_CATEGORY_ID ? (
-            listing.metadata?.slotsAvailable === 0 || listing.metadata?.commissionStatus === 'waitlist' ? (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 shadow-sm">
-                {t('waitlist')}
-              </span>
-            ) : listing.metadata?.commissionStatus === 'closed' ? (
+          {/* Services show availability, goods show condition. Keyed on the
+              listing type rather than the category, so a service outside
+              digital_arts gets the right badge. commissionStatus is derived in
+              legacy.ts, and `closed` is checked first — a closed shop with zero
+              slots was previously reported as a waitlist. */}
+          {(listing.type === 'service' || listing.category === COMMISSION_CATEGORY_ID) ? (
+            listing.metadata?.commissionStatus === 'closed' ? (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 shadow-sm">
                 {t('closed')}
+              </span>
+            ) : listing.metadata?.slotsAvailable === 0 || listing.metadata?.commissionStatus === 'waitlist' ? (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 shadow-sm">
+                {t('waitlist')}
               </span>
             ) : (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 shadow-sm">

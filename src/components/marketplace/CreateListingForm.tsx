@@ -106,6 +106,9 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   // routing and the commission fields key on this, so a seller can offer a
   // service without being forced into one particular category.
   const [listingType, setListingType] = useState<'goods' | 'service'>('goods');
+  // Whether the seller is taking commissions. Stored as the lexicon's
+  // `availability`, which is why "closed" finally has somewhere to live.
+  const [commissionOpen, setCommissionOpen] = useState<'open' | 'closed'>('open');
   const isService = listingType === 'service';
 
   // Add state for external URL
@@ -251,6 +254,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       // A v1 record has no type; inferring from the category is what the
       // normalizer does for those, so the form agrees with the stored value.
       setListingType(initialData.type === 'service' || initialData.category === 'digital_arts' ? 'service' : 'goods');
+      setCommissionOpen(initialData.metadata?.commissionStatus === 'closed' ? 'closed' : 'open');
       setHideFromFriends(initialData.hideFromFriends || false);
       const hasNsfwLabel = initialData.labels?.values?.some((l: any) => 
         ['nsfw', 'porn', 'sexual', 'nudity', 'graphic-media'].includes(l.val)
@@ -1072,16 +1076,26 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         if (slotsAvailable !== '') {
           const slots = parseInt(slotsAvailable, 10);
           metadata.slotsAvailable = slots;
-          metadata.commissionStatus = slots === 0 ? 'waitlist' : 'open';
         }
         if (turnaroundTime.trim()) {
           metadata.turnaroundTime = turnaroundTime.trim();
         }
+        // commissionStatus is derived on read, never stored — the record says
+        // whether the seller is available, and the badge follows from that.
+        metadata.commissionStatus =
+          commissionOpen === 'closed'
+            ? 'closed'
+            : slotsAvailable !== '' && parseInt(slotsAvailable, 10) === 0
+              ? 'waitlist'
+              : 'open';
       }
 
       // Prepare listing data with metadata embedded as JSON
       const listingDataRaw = {
         type: listingType,
+        // The lexicon's own availability field. Only meaningful for services
+        // today; goods listings do not ask, so it stays unset for them.
+        ...(isService && { availability: commissionOpen === 'closed' ? 'out_of_stock' : 'in_stock' }),
         title: formData.get('title') as string,
         description: description,
         price: formattedPrice,
@@ -1578,6 +1592,28 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                   {isService && (
                     <div className="space-y-4 p-4 bg-rose-50 border border-rose-100 rounded-lg">
                       <p className="text-sm font-semibold text-rose-800">{tCreate('commissionSettings')}</p>
+                      <div>
+                        <label className="block text-sm font-medium text-text-secondary mb-1">
+                          {tCreate('commissionAvailability')}
+                        </label>
+                        <div className="flex gap-2">
+                          {(['open', 'closed'] as const).map(value => (
+                            <button
+                              key={value}
+                              type="button"
+                              onClick={() => setCommissionOpen(value)}
+                              className={`px-3 py-1.5 rounded-md text-sm border transition-colors ${
+                                commissionOpen === value
+                                  ? 'border-rose-600 bg-rose-600 text-white'
+                                  : 'border-neutral-light bg-white text-text-secondary hover:border-rose-300'
+                              }`}
+                            >
+                              {tCreate(value === 'open' ? 'commissionOpenLabel' : 'commissionClosedLabel')}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-xs text-text-secondary mt-1">{tCreate('commissionAvailabilityDesc')}</p>
+                      </div>
                       <div>
                         <label className="block text-sm font-medium text-text-secondary mb-1">
                           {tCreate('openSlots')}{' '}

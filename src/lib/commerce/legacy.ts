@@ -59,6 +59,29 @@ export type LegacyListing = {
   [key: string]: any;
 };
 
+/**
+ * Work out whether a seller is taking commissions.
+ *
+ * `closed` used to be unreachable: ListingCard renders a badge for it, but the
+ * form could only ever produce open or waitlist from the slot count, so the
+ * branch was dead. It now comes from the lexicon's own `availability` field
+ * rather than a bespoke one — commissionStatus is app state, not something to
+ * invent a place in the record for.
+ *
+ * Slots stay the finer-grained signal: zero slots means a waitlist, which is
+ * different from having closed the shop.
+ */
+function deriveCommissionStatus(
+  availability: Listing['availability'],
+  slotsAvailable: number | undefined,
+): 'open' | 'waitlist' | 'closed' | undefined {
+  if (availability === 'out_of_stock' || availability === 'discontinued') return 'closed';
+  if (availability === 'backorder' || availability === 'pre_order') return 'waitlist';
+  if (slotsAvailable === 0) return 'waitlist';
+  if (slotsAvailable === undefined) return availability === 'in_stock' ? 'open' : undefined;
+  return 'open';
+}
+
 export function toLegacyListing(listing: Listing): LegacyListing {
   const currency = listing.pricing.currency;
 
@@ -67,14 +90,13 @@ export function toLegacyListing(listing: Listing): LegacyListing {
   const metadata: Record<string, any> = {};
   if (listing.subcategory) metadata.subcategory = listing.subcategory;
   if (listing.externalPlatform) metadata.externalPlatform = listing.externalPlatform;
-  if (listing.serviceDetails) {
-    const { slotsAvailable, turnaroundTime, commissionStatus } = listing.serviceDetails;
+  if (listing.serviceDetails || listing.type === 'service') {
+    const { slotsAvailable, turnaroundTime, commissionStatus } = listing.serviceDetails ?? {};
     if (slotsAvailable !== undefined) metadata.slotsAvailable = slotsAvailable;
     if (turnaroundTime !== undefined) metadata.turnaroundTime = turnaroundTime;
     // Derived, never stored. v1 wrote it; v2 does not, so recompute when absent
     // rather than losing the open/waitlist badge on ListingCard.
-    metadata.commissionStatus =
-      commissionStatus ?? (slotsAvailable === 0 ? 'waitlist' : slotsAvailable === undefined ? undefined : 'open');
+    metadata.commissionStatus = commissionStatus ?? deriveCommissionStatus(listing.availability, slotsAvailable);
   }
 
   return {
