@@ -142,6 +142,11 @@ export function buildShopRecord(input: ShopInput, createdAt?: string): Record<st
 
     name: input.name,
     description: input.description,
+    // Absent means open, so an open shop writes nothing — the field only
+    // appears once a seller has actually stepped away.
+    status: input.status && input.status !== 'open' ? input.status : undefined,
+    statusMessage: input.status && input.status !== 'open' ? input.statusMessage : undefined,
+    reopensAt: input.status === 'vacation' ? input.reopensAt : undefined,
     website: input.website,
     location: stripLegacyFields(input.location),
     policies: input.policies ? compact(input.policies) : undefined,

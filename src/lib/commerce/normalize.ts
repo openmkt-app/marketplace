@@ -17,6 +17,7 @@ import type {
   ListingType,
   Pricing,
   Shop,
+  ShopStatus,
 } from './types.ts';
 
 export type RecordIdentity = {
@@ -221,6 +222,9 @@ export function normalizeShop(record: RawRecord, id: Identity): Shop {
     // but better than rendering "undefined" as a shop title.
     name: record.name || id.authorDid || 'Shop',
     description: record.description,
+    status: record.status as ShopStatus | undefined,
+    statusMessage: record.statusMessage,
+    reopensAt: record.reopensAt,
     website: record.website,
     location: record.location,
     policies: record.policies,

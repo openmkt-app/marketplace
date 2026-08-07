@@ -6,7 +6,7 @@ import { useRouter } from '@/i18n/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { InsufficientScopeError } from '@/lib/marketplace-client';
 import { CURRENCIES } from '@/lib/price-utils';
-import type { Shop, ShopInput } from '@/lib/commerce/types';
+import type { Shop, ShopInput, ShopStatus } from '@/lib/commerce/types';
 import { Loader2 } from 'lucide-react';
 
 /**
@@ -81,6 +81,9 @@ export default function ShopSettingsForm() {
   const [shipping, setShipping] = useState('');
   const [terms, setTerms] = useState('');
   const [privacy, setPrivacy] = useState('');
+  const [status, setStatus] = useState<ShopStatus>('open');
+  const [statusMessage, setStatusMessage] = useState('');
+  const [reopensAt, setReopensAt] = useState('');
 
   useEffect(() => {
     if (authLoading) return;
@@ -107,6 +110,10 @@ export default function ShopSettingsForm() {
         setShipping(shop.policies?.shipping || '');
         setTerms(shop.policies?.terms || '');
         setPrivacy(shop.policies?.privacy || '');
+        setStatus(shop.status || 'open');
+        setStatusMessage(shop.statusMessage || '');
+        // <input type="date"> wants YYYY-MM-DD, the record holds a datetime.
+        setReopensAt(shop.reopensAt ? shop.reopensAt.slice(0, 10) : '');
       }
       setLoading(false);
     });
@@ -140,6 +147,10 @@ export default function ShopSettingsForm() {
       handlingTime: handlingTime.trim() || undefined,
       defaultCurrency: defaultCurrency || undefined,
       shipsTo: parseCountryCodes(shipsTo),
+      status,
+      statusMessage: statusMessage.trim() || undefined,
+      // End of the chosen day, so "back on the 20th" includes the 20th.
+      reopensAt: reopensAt ? new Date(`${reopensAt}T23:59:59Z`).toISOString() : undefined,
       policies: Object.values(policies).some(Boolean) ? policies : undefined,
     };
 
@@ -226,6 +237,52 @@ export default function ShopSettingsForm() {
           <label htmlFor="website" className={label}>{t('labelWebsite')}</label>
           <input id="website" type="url" className={field} value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://example.com" />
         </div>
+      </section>
+
+      <section className="bg-white p-6 rounded-lg border border-neutral-light space-y-4">
+        <h2 className="font-semibold text-text-primary">{t('statusHeader')}</h2>
+        <p className={hint}>{t('statusDesc')}</p>
+        <div className="flex flex-wrap gap-2">
+          {(['open', 'vacation', 'closed'] as const).map(value => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setStatus(value)}
+              className={`px-3 py-1.5 rounded-md text-sm border transition-colors ${
+                status === value
+                  ? 'border-primary-color bg-primary-color text-white'
+                  : 'border-neutral-light bg-white text-text-secondary hover:border-primary-light'
+              }`}
+            >
+              {t(`status_${value}`)}
+            </button>
+          ))}
+        </div>
+
+        {/* Only asked once the shop is not open — an open shop has nothing to
+            explain and no date to come back on. */}
+        {status !== 'open' && (
+          <>
+            <div>
+              <label htmlFor="statusMessage" className={label}>{t('labelStatusMessage')}</label>
+              <input
+                id="statusMessage"
+                className={field}
+                value={statusMessage}
+                onChange={e => setStatusMessage(e.target.value)}
+                maxLength={300}
+                placeholder={t('placeholderStatusMessage')}
+              />
+            </div>
+            {status === 'vacation' && (
+              <div>
+                <label htmlFor="reopensAt" className={label}>{t('labelReopensAt')}</label>
+                <input id="reopensAt" type="date" className={field} value={reopensAt} onChange={e => setReopensAt(e.target.value)} />
+                <p className={hint}>{t('hintReopensAt')}</p>
+              </div>
+            )}
+          </>
+        )}
       </section>
 
       <section className="bg-white p-6 rounded-lg border border-neutral-light space-y-4">

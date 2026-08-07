@@ -1145,6 +1145,9 @@
     "pleaseWait": "Aguarde um momento enquanto conectamos você."
   },
   "shop": {
+    "statusVacationTitle": "Esta loja está ausente no momento",
+    "statusClosedTitle": "Esta loja fechou",
+    "statusBackOn": "Volta em {date}",
     "detailsHeader": "Detalhes da loja",
     "handlingTime": "Envia em {time}",
     "shipsTo": "Envia para {places}",
@@ -1155,6 +1158,15 @@
     "policyPrivacy": "Privacidade"
   },
   "shopSettings": {
+    "statusHeader": "Aberto ao público",
+    "statusDesc": "Os compradores veem isso na sua loja. Seus anúncios ficam como estão, então nada muda quando você voltar.",
+    "status_open": "Aberto",
+    "status_vacation": "Ausente",
+    "status_closed": "Fechado de vez",
+    "labelStatusMessage": "O que os compradores devem ver?",
+    "placeholderStatusMessage": "ex.: Volto no dia 20",
+    "labelReopensAt": "Volto em",
+    "hintReopensAt": "Opcional. É só o que você está dizendo aos compradores.",
     "title": "Configurações da loja",
     "subtitle": "É isto que os compradores veem na página da sua loja.",
     "labelName": "Nome da loja",

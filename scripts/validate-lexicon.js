@@ -109,6 +109,13 @@ try {
     }],
     // Everything optional left out — compact() must not emit empty objects.
     ['shop with empty policies', { name: 'Bare', policies: {}, shipsTo: [] }],
+    ['shop on vacation', {
+      name: 'Acme Goods',
+      status: 'vacation',
+      statusMessage: 'Back on the 20th',
+      reopensAt: '2026-08-20T23:59:59.000Z',
+    }],
+    ['shop closed for good', { name: 'Acme Goods', status: 'closed', statusMessage: 'Thanks for six good years.' }],
   ];
 
   for (const [name, input] of shopCases) {

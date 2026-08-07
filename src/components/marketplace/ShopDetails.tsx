@@ -1,7 +1,7 @@
 'use client';
 
 import { useLocale, useTranslations } from 'next-intl';
-import { Clock, Globe, Truck, Undo2, FileText, ShieldCheck } from 'lucide-react';
+import { Clock, Globe, Truck, Undo2, FileText, ShieldCheck, Moon } from 'lucide-react';
 import { linkifyText } from '@/lib/linkify';
 import type { Shop } from '@/lib/commerce/types';
 
@@ -43,6 +43,33 @@ function PolicyBlock({ icon, label, value }: { icon: React.ReactNode; label: str
         ) : (
           <p className="text-sm text-gray-600 whitespace-pre-wrap">{linkifyText(value)}</p>
         )}
+      </div>
+    </div>
+  );
+}
+
+/** The banner a shop shows while it is not trading. Exported so the store page
+ *  can put it above the fold rather than down with the policies. */
+export function ShopStatusBanner({ shop }: { shop: Shop | null }) {
+  const t = useTranslations('shop');
+  const locale = useLocale();
+
+  if (!shop?.status || shop.status === 'open') return null;
+
+  const reopens =
+    shop.status === 'vacation' && shop.reopensAt
+      ? new Date(shop.reopensAt).toLocaleDateString(locale, { day: 'numeric', month: 'long' })
+      : null;
+
+  return (
+    <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 flex items-start gap-3">
+      <Moon size={18} className="text-amber-600 mt-0.5 flex-shrink-0" />
+      <div>
+        <p className="font-semibold text-amber-900">
+          {shop.status === 'closed' ? t('statusClosedTitle') : t('statusVacationTitle')}
+        </p>
+        {shop.statusMessage && <p className="text-sm text-amber-900 mt-0.5">{shop.statusMessage}</p>}
+        {reopens && <p className="text-sm text-amber-800 mt-0.5">{t('statusBackOn', { date: reopens })}</p>}
       </div>
     </div>
   );

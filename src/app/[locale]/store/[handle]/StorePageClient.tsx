@@ -13,7 +13,7 @@ import { linkifyText } from '@/lib/linkify';
 import { isOnlineStore } from '@/lib/location-utils';
 import { isArtistStore } from '@/lib/artist-store-utils';
 import { getStoreName } from '@/lib/seller-display';
-import ShopDetails from '@/components/marketplace/ShopDetails';
+import ShopDetails, { ShopStatusBanner } from '@/components/marketplace/ShopDetails';
 import type { Shop } from '@/lib/commerce/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { filterForViewer } from '@/lib/viewer-visibility';
@@ -416,6 +416,14 @@ export default function StorePageClient({
           </div>
         </div>
       </div>
+
+      {/* Shown before anything else: whether the seller is trading at all is
+          the first thing a buyer needs, ahead of the catalogue. */}
+      {shop?.status && shop.status !== 'open' && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+          <ShopStatusBanner shop={shop} />
+        </div>
+      )}
 
       {/* Shop details: policies, handling time, where they ship. */}
       {shop && (

@@ -1145,6 +1145,9 @@
     "pleaseWait": "Please wait a moment while we connect you."
   },
   "shop": {
+    "statusVacationTitle": "This shop is away right now",
+    "statusClosedTitle": "This shop has closed",
+    "statusBackOn": "Back on {date}",
     "detailsHeader": "Shop details",
     "handlingTime": "Ships in {time}",
     "shipsTo": "Ships to {places}",
@@ -1155,6 +1158,15 @@
     "policyPrivacy": "Privacy"
   },
   "shopSettings": {
+    "statusHeader": "Open for business",
+    "statusDesc": "Buyers see this on your store page. Your listings are left exactly as they are, so nothing changes when you come back.",
+    "status_open": "Open",
+    "status_vacation": "Away",
+    "status_closed": "Closed for good",
+    "labelStatusMessage": "What should buyers see?",
+    "placeholderStatusMessage": "e.g. Back on the 20th",
+    "labelReopensAt": "Back on",
+    "hintReopensAt": "Optional. Just what you are telling buyers.",
     "title": "Shop settings",
     "subtitle": "This is what buyers see on your store page.",
     "labelName": "Shop name",

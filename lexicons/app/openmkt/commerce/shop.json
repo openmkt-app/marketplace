@@ -7,7 +7,10 @@
       "key": "self",
       "record": {
         "type": "object",
-        "required": ["name", "createdAt"],
+        "required": [
+          "name",
+          "createdAt"
+        ],
         "properties": {
           "name": {
             "type": "string",
@@ -17,14 +20,37 @@
             "type": "string",
             "maxLength": 3000
           },
+          "status": {
+            "type": "string",
+            "knownValues": [
+              "open",
+              "vacation",
+              "closed"
+            ],
+            "description": "Whether the shop is trading. Absent means open."
+          },
+          "statusMessage": {
+            "type": "string",
+            "maxGraphemes": 300,
+            "description": "What buyers are told while the shop is not open, e.g. 'Back on the 20th'."
+          },
+          "reopensAt": {
+            "type": "string",
+            "format": "datetime",
+            "description": "When the seller expects to trade again. Only meaningful with status 'vacation'."
+          },
           "logo": {
             "type": "blob",
-            "accept": ["image/*"],
+            "accept": [
+              "image/*"
+            ],
             "maxSize": 1000000
           },
           "banner": {
             "type": "blob",
-            "accept": ["image/*"],
+            "accept": [
+              "image/*"
+            ],
             "maxSize": 1000000
           },
           "website": {
@@ -53,7 +79,11 @@
           },
           "shipsTo": {
             "type": "array",
-            "items": { "type": "string", "minLength": 2, "maxLength": 2 },
+            "items": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2
+            },
             "maxLength": 250,
             "description": "ISO 3166-1 alpha-2 country codes the shop ships to. Absent means unstated, not worldwide."
           },
@@ -68,10 +98,22 @@
       "type": "object",
       "description": "Seller policies. For a shop a buyer has never heard of, on a server they have never heard of, these are the only trust signal available. Each may be a URL or inline text.",
       "properties": {
-        "returns": { "type": "string", "maxLength": 3000 },
-        "shipping": { "type": "string", "maxLength": 3000 },
-        "terms": { "type": "string", "maxLength": 3000 },
-        "privacy": { "type": "string", "maxLength": 3000 }
+        "returns": {
+          "type": "string",
+          "maxLength": 3000
+        },
+        "shipping": {
+          "type": "string",
+          "maxLength": 3000
+        },
+        "terms": {
+          "type": "string",
+          "maxLength": 3000
+        },
+        "privacy": {
+          "type": "string",
+          "maxLength": 3000
+        }
       }
     }
   }

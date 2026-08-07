@@ -172,6 +172,12 @@ export type ShopPolicies = {
   privacy?: string;
 };
 
+/**
+ * Whether a shop is trading. Absent means open, so no existing record has to
+ * be touched for a seller to carry on as they are.
+ */
+export type ShopStatus = 'open' | 'vacation' | 'closed';
+
 export type Shop = {
   uri: string;
   cid?: string;
@@ -179,6 +185,11 @@ export type Shop = {
 
   name: string;
   description?: string;
+  status?: ShopStatus;
+  /** Shown to buyers while the shop is not open, e.g. "Back on the 20th". */
+  statusMessage?: string;
+  /** What the seller tells buyers, not an instruction to any server. */
+  reopensAt?: string;
   website?: string;
   location?: CommerceLocation;
   policies?: ShopPolicies;
