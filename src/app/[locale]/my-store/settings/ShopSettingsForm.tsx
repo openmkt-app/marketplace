@@ -263,6 +263,17 @@ export default function ShopSettingsForm() {
             explain and no date to come back on. */}
         {status !== 'open' && (
           <>
+            {/* Date first. It is the thing most sellers want to say, and seeing
+                it filled in is what stops them typing it again in the message
+                below — which produced two lines both reading "Back on the
+                15th". */}
+            {status === 'vacation' && (
+              <div>
+                <label htmlFor="reopensAt" className={label}>{t('labelReopensAt')}</label>
+                <input id="reopensAt" type="date" className={field} value={reopensAt} onChange={e => setReopensAt(e.target.value)} />
+                <p className={hint}>{t('hintReopensAt')}</p>
+              </div>
+            )}
             <div>
               <label htmlFor="statusMessage" className={label}>{t('labelStatusMessage')}</label>
               <input
@@ -271,16 +282,12 @@ export default function ShopSettingsForm() {
                 value={statusMessage}
                 onChange={e => setStatusMessage(e.target.value)}
                 maxLength={300}
-                placeholder={t('placeholderStatusMessage')}
+                placeholder={status === 'closed' ? t('placeholderStatusClosed') : t('placeholderStatusVacation')}
               />
+              <p className={hint}>
+                {status === 'vacation' && reopensAt ? t('hintStatusMessageWithDate') : t('hintStatusMessage')}
+              </p>
             </div>
-            {status === 'vacation' && (
-              <div>
-                <label htmlFor="reopensAt" className={label}>{t('labelReopensAt')}</label>
-                <input id="reopensAt" type="date" className={field} value={reopensAt} onChange={e => setReopensAt(e.target.value)} />
-                <p className={hint}>{t('hintReopensAt')}</p>
-              </div>
-            )}
           </>
         )}
       </section>
