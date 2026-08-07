@@ -14,6 +14,7 @@ type NotifyBody = {
     location: { state: string; county: string; locality: string; isOnlineStore?: boolean };
     description?: string;
     images?: unknown[];
+    hideFromFriends?: boolean;
   };
   // When the user shares the listing themselves, they pass the post URI directly
   postUri?: string;
@@ -54,6 +55,15 @@ export async function POST(req: NextRequest) {
 
   if (!listingData) {
     return NextResponse.json({ error: 'listingData required' }, { status: 400 });
+  }
+
+  // A listing the seller wants kept from their followers must not be announced
+  // by the bot or put in the public Open Market feed. Both are broadcasts, and
+  // broadcasting it is the one thing the flag exists to prevent — the bot
+  // follows every seller, so its post reaches precisely the wrong audience.
+  if (listingData.hideFromFriends) {
+    invalidateAppViewListingsCache();
+    return NextResponse.json({ success: true, announced: false, reason: 'hideFromFriends' });
   }
 
   try {

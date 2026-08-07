@@ -12,6 +12,7 @@ import { formatPrice, formatDate } from '@/lib/price-utils';
 import { CATEGORIES } from '@/lib/category-data';
 import { extractSubcategoryFromDescription, formatCategoryDisplay, getCategoryName } from '@/lib/category-utils';
 import { getSellerDisplayName } from '@/lib/seller-display';
+import { isAdminHandle } from '@/lib/constants';
 import { linkifyText } from '@/lib/linkify';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
@@ -94,7 +95,7 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
   const [isNsfwRevealed, setNsfwRevealed] = useState(false);
 
   // Admin check
-  const isAdmin = user?.handle === 'openmkt.app';
+  const isAdmin = isAdminHandle(user?.handle);
 
   // Fetch moderation status on mount
   React.useEffect(() => {

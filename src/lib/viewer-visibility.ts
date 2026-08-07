@@ -12,6 +12,10 @@
 // Deliberately plain fetch rather than the AT Protocol SDK: browse loads this,
 // and the SDK was moved off the critical path on purpose.
 
+// .ts extension, matching src/lib/commerce/: it keeps this module runnable
+// under plain node, which is how the visibility rules are tested.
+import { isAdminHandle } from './constants.ts';
+
 const RELATIONSHIPS_URL = 'https://public.api.bsky.app/xrpc/app.bsky.graph.getRelationships';
 
 /** The lexicon caps `others` at 30 per call. */
@@ -119,12 +123,19 @@ export function applyFriendVisibility<T extends HideableListing>(
  * A signed-out viewer has no follow graph, so nothing is hidden from them.
  * Sellers always see their own listings — hiding a listing from its author in
  * their own store or browse would look like it had been lost.
+ *
+ * The Open Market account is exempt. It follows every seller, because that
+ * follow graph is how discovery works, so the plain rule would hide every
+ * flagged listing from the one account that moderates them. Being invisible to
+ * moderation is not a privacy feature anyone asked for.
  */
 export async function filterForViewer<T extends HideableListing>(
   listings: T[],
   viewerDid: string | undefined | null,
+  viewerHandle?: string | undefined | null,
 ): Promise<T[]> {
   if (!viewerDid) return listings;
+  if (isAdminHandle(viewerHandle)) return listings;
 
   const flagged = listings.filter((l) => l.hideFromFriends);
   if (flagged.length === 0) return listings;

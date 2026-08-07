@@ -349,6 +349,9 @@ export class MarketplaceClient {
           category: listingData.category || '',
           location: listingData.location || { state: '', county: '', locality: '' },
           description: listingData.description,
+          // The announcement decision is made server-side, so the flag has to
+          // travel with the notification.
+          hideFromFriends: listingData.hideFromFriends || false,
         },
       }),
     }).catch(() => {});

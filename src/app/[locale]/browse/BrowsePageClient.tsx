@@ -733,7 +733,7 @@ const BrowsePageClient = ({ initialListings = [] }: BrowsePageClientProps) => {
         // graph and the server render has no viewer. The server withholds every
         // flagged listing; this is what puts back the ones this viewer is
         // allowed to see.
-        listings = await filterForViewer(listings, auth.user?.did);
+        listings = await filterForViewer(listings, auth.user?.did, auth.user?.handle);
 
         if (listings && listings.length > 0) {
           // Show the listings straight away. Profile enrichment used to be
@@ -769,7 +769,7 @@ const BrowsePageClient = ({ initialListings = [] }: BrowsePageClientProps) => {
     };
 
     fetchListings();
-  }, [auth.client, auth.isLoggedIn, auth.isLoading, auth.user?.did, initialized, enhanceWithProfiles, hasInitialListings]);
+  }, [auth.client, auth.isLoggedIn, auth.isLoading, auth.user?.did, auth.user?.handle, initialized, enhanceWithProfiles, hasInitialListings]);
 
   // Locations used to be geocoded here speculatively, to make the distance
   // filter instant if the visitor reached for it. That cost every first-time

@@ -476,6 +476,7 @@
     "markNsfwDesc": "Etiqueta este anuncio como contenido gráfico, sexual o para adultos. Las imágenes se difuminarán explícitamente para los espectadores hasta que se haga clic en ellas.",
     "shareToFeed": "Compartir en mi feed",
     "shareToFeedDesc": "Crear automáticamente una publicación en mi feed de Atmosphere para que mis seguidores se enteren de este anuncio.",
+    "shareBlockedByHide": "Desactivado porque este anuncio está oculto para tus amigos: publicarlo lo pondría en las fuentes de quienes te siguen.",
     "submitCreate": "Crear anuncio",
     "submitEdit": "Guardar cambios",
     "legalWarning": "Tu anuncio será visible para toda la comunidad del AT Protocol. Ten en cuenta que no permitimos anuncios de animales vivos, sustancias controladas, armas, artículos falsificados o cualquier cosa que viole los derechos de propiedad intelectual. ¡Mantenlo legal y amigable para la comunidad!",

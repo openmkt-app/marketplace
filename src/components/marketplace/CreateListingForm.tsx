@@ -1098,8 +1098,12 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         // Create new listing
         result = await client.createListing(listingDataRaw);
 
-        // Post to Bluesky feed if requested (only for new listings)
-        if (postToBluesky && result && result.uri) {
+        // Post to Bluesky feed if requested (only for new listings).
+        // Never when the listing is hidden from friends: that post lands in
+        // the feeds of the seller's followers, which is the audience the flag
+        // exists to keep it from. The checkbox is disabled in that case, but
+        // it defaults to on, so this guard is what actually decides.
+        if (postToBluesky && !hideFromFriends && result && result.uri) {
           try {
             // We need to pass the processed blobs which are in result.images
             const shareData = {
@@ -1916,23 +1920,24 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
               {/* Post to Bluesky Checkbox (Create Mode Only) */}
               {mode === 'create' && (
-                <div className="bg-blue-50 border border-blue-100 p-4 rounded-lg flex items-start">
+                <div className={`border p-4 rounded-lg flex items-start ${hideFromFriends ? 'bg-gray-50 border-gray-200' : 'bg-blue-50 border-blue-100'}`}>
                   <div className="flex items-center h-5">
                     <input
                       id="postToBluesky"
                       name="postToBluesky"
                       type="checkbox"
-                      checked={postToBluesky}
+                      checked={postToBluesky && !hideFromFriends}
+                      disabled={hideFromFriends}
                       onChange={(e) => setPostToBluesky(e.target.checked)}
-                      className="focus:ring-primary-500 h-4 w-4 text-primary-color border-gray-300 rounded"
+                      className="focus:ring-primary-500 h-4 w-4 text-primary-color border-gray-300 rounded disabled:opacity-50"
                     />
                   </div>
                   <div className="ml-3 text-sm">
-                    <label htmlFor="postToBluesky" className="font-medium text-blue-900">
+                    <label htmlFor="postToBluesky" className={`font-medium ${hideFromFriends ? 'text-gray-500' : 'text-blue-900'}`}>
                       {tCreate('shareToFeed')}
                     </label>
-                    <p className="text-blue-700">
-                      {tCreate('shareToFeedDesc')}
+                    <p className={hideFromFriends ? 'text-gray-500' : 'text-blue-700'}>
+                      {hideFromFriends ? tCreate('shareBlockedByHide') : tCreate('shareToFeedDesc')}
                     </p>
                   </div>
                 </div>

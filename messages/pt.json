@@ -476,6 +476,7 @@
     "markNsfwDesc": "Marque este anúncio como contendo conteúdo gráfico, sexual ou adulto. As imagens serão explicitamente borradas para os espectadores até que sejam clicadas.",
     "shareToFeed": "Compartilhar no seu feed",
     "shareToFeedDesc": "Cria automaticamente uma postagem no seu feed do Atmosphere para informar seus seguidores sobre este anúncio.",
+    "shareBlockedByHide": "Desativado porque este anúncio está oculto dos amigos: publicá-lo o colocaria nos feeds de quem segue você.",
     "submitCreate": "Criar anúncio",
     "submitEdit": "Atualizar anúncio",
     "submitLoading": "Anunciando...",

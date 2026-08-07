@@ -64,13 +64,13 @@ export default function StorePageClient({
       setHiddenUris(prev => (prev.size === 0 ? prev : new Set()));
       return;
     }
-    filterForViewer(allListings, auth.user.did).then(visible => {
+    filterForViewer(allListings, auth.user.did, auth.user.handle).then(visible => {
       if (cancelled) return;
       const shown = new Set(visible.map(l => l.uri));
       setHiddenUris(new Set(allListings.filter(l => !shown.has(l.uri)).map(l => l.uri)));
     });
     return () => { cancelled = true; };
-  }, [allListings, auth.user?.did]);
+  }, [allListings, auth.user?.did, auth.user?.handle]);
 
   const listings = useMemo(
     () => (hiddenUris.size === 0 ? allListings : allListings.filter(l => !hiddenUris.has(l.uri))),

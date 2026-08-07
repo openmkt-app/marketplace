@@ -476,6 +476,7 @@
     "markNsfwDesc": "Label this listing as containing graphic, sexual, or mature content. The images will be explicitly blurred for viewers until clicked.",
     "shareToFeed": "Share to your feed",
     "shareToFeedDesc": "Automatically create a post on your Atmosphere feed to let your followers know about this listing.",
+    "shareBlockedByHide": "Turned off because this listing is hidden from friends — posting it would put it in your followers' feeds.",
     "submitCreate": "Create Listing",
     "submitEdit": "Save Changes",
     "legalWarning": "Your listing will be visible to the entire AT Protocol community. Please note that we don't allow listings for live animals, controlled substances, weapons, counterfeit items, or anything that violates intellectual property rights. Keep it legal and community-friendly!",

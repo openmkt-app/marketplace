@@ -1,6 +1,8 @@
 import { Agent } from '@atproto/api';
+import { ADMIN_HANDLE } from './constants';
 
-export const BOT_HANDLE = 'openmkt.app';
+/** The bot and the moderation admin are the same account. */
+export const BOT_HANDLE = ADMIN_HANDLE;
 
 // Use a public agent for reads to bypass granular RPC scope limitations
 const publicAgent = new Agent({ service: 'https://public.api.bsky.app' });

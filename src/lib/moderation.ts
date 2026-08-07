@@ -4,11 +4,14 @@
 
 import fs from 'fs';
 import path from 'path';
+import { ADMIN_HANDLE } from './constants';
 
 const MODERATION_FILE = path.join(process.cwd(), 'data', 'moderation.json');
 
-// Admin handle that is allowed to moderate
-export const ADMIN_HANDLE = 'openmkt.app';
+// Admin handle that is allowed to moderate. Re-exported so the many server
+// routes importing it from here keep working; the value lives in constants.ts,
+// which a client bundle can also reach.
+export { ADMIN_HANDLE };
 
 export type ModerationEntry = {
   uri: string;
