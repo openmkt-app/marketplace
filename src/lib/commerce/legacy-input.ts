@@ -11,7 +11,7 @@
 import { inferListingType, normalizeCategory } from './normalize.ts';
 import { toMinorUnits } from './money.ts';
 import { DEFAULT_CURRENCY } from './money.ts';
-import type { CommerceLocation, ListingInput, ListingType, ServiceDetails } from './types.ts';
+import type { BillingPeriod, CommerceLocation, ListingInput, ListingType, ServiceDetails } from './types.ts';
 
 /** What CreateListingForm and etsy-client build today. */
 export type LegacyListingInput = {
@@ -24,6 +24,8 @@ export type LegacyListingInput = {
   salePrice?: string;
   saleStartsAt?: string;
   saleEndsAt?: string;
+  /** Absent means a one-off price, which is what it always used to be. */
+  billingPeriod?: BillingPeriod;
   taxInclusive?: boolean;
   acceptingOffers?: boolean;
   currency?: string;
@@ -31,7 +33,7 @@ export type LegacyListingInput = {
   gtin?: string;
   brand?: string;
   tags?: string[];
-  specifications?: Array<{ name: string; value: string }>;
+  specifications?: Array<{ name: string; value?: string }>;
   manageStock?: boolean;
   quantity?: number;
   lowStockThreshold?: number;
@@ -142,6 +144,7 @@ export function toListingInput(input: LegacyListingInput): ListingInput {
       taxInclusive: input.taxInclusive,
       saleStartsAt: input.saleStartsAt,
       saleEndsAt: input.saleEndsAt,
+      billingPeriod: input.billingPeriod,
     },
     acceptingOffers: input.acceptingOffers,
     category,

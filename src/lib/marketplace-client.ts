@@ -66,6 +66,11 @@ export type MarketplaceListing = {
   salePrice?: string;
   saleStartsAt?: string;
   saleEndsAt?: string;
+  /**
+   * How often `price` recurs. Absent means a one-off purchase, which is what
+   * every listing was before subscriptions existed in the schema.
+   */
+  billingPeriod?: 'day' | 'week' | 'month' | 'quarter' | 'year';
   /** Undefined means the seller never said whether tax is included. */
   taxInclusive?: boolean;
   /** The seller will consider offers; any price shown is a guide. */
@@ -78,7 +83,8 @@ export type MarketplaceListing = {
   gtin?: string;
   brand?: string;
   tags?: string[];
-  specifications?: Array<{ name: string; value: string }>;
+  /** A row with no value is a feature the listing includes, not a property. */
+  specifications?: Array<{ name: string; value?: string }>;
   manageStock?: boolean;
   quantity?: number;
   lowStockThreshold?: number;

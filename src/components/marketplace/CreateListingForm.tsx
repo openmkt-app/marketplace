@@ -14,7 +14,8 @@ import LiveListingPreview from './LiveListingPreview';
 import { createBlueskyCdnImageUrls } from '@/lib/image-utils';
 import { trackCreateListing } from '@/lib/analytics';
 import { processExternalLink, getPlatformDisplayName } from '@/lib/external-link-utils';
-import { Wand2, Loader2, Sparkles, Package, Palette } from 'lucide-react';
+import { Wand2, Loader2, Sparkles, Package, Palette, Download } from 'lucide-react';
+import type { BillingPeriod, ListingType } from '@/lib/commerce/types';
 import { useSearchParams } from 'next/navigation';
 import { CURRENCIES } from '@/lib/price-utils';
 
@@ -27,11 +28,19 @@ function parseTags(raw: string): string[] {
     .filter(t => t && !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));
 }
 
-/** A spec row needs both halves; a name with no value says nothing. */
+/**
+ * A spec row needs a name; the value is optional.
+ *
+ * With both it is a property — "Material: oak". With only a name it is a
+ * feature the listing includes — "Priority support" — which is how every tiered
+ * product states what a plan comes with. A value on its own says nothing and is
+ * dropped.
+ */
 function cleanSpecs(rows: Array<{ name: string; value: string }>) {
   return rows
     .map(r => ({ name: r.name.trim(), value: r.value.trim() }))
-    .filter(r => r.name && r.value);
+    .filter(r => r.name)
+    .map(r => (r.value ? r : { name: r.name }));
 }
 
 function numberOrUndefined(raw: string): number | undefined {
@@ -109,6 +118,8 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   const [saleEndsAt, setSaleEndsAt] = useState('');
   const [taxInclusive, setTaxInclusive] = useState<boolean | undefined>(undefined);
   const [acceptingOffers, setAcceptingOffers] = useState(false);
+  // Empty means a one-off price, which is what every listing was until now.
+  const [billingPeriod, setBillingPeriod] = useState<'' | BillingPeriod>('');
   const [showSaleFields, setShowSaleFields] = useState(false);
 
   // Catalogue detail. Folded away by default: someone selling one used chair
@@ -149,11 +160,15 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   // The listing's own type, not a guess from its category. Gallery/Mall
   // routing and the commission fields key on this, so a seller can offer a
   // service without being forced into one particular category.
-  const [listingType, setListingType] = useState<'goods' | 'service'>('goods');
+  const [listingType, setListingType] = useState<ListingType>('goods');
   // Whether the seller is taking commissions. Stored as the lexicon's
   // `availability`, which is why "closed" finally has somewhere to live.
   const [commissionOpen, setCommissionOpen] = useState<'open' | 'closed'>('open');
   const isService = listingType === 'service';
+  const isDigital = listingType === 'digital';
+  // Weight, size and condition describe something you can hold. Neither a
+  // commission nor a download has any of them.
+  const isPhysical = listingType === 'goods';
   const detailField = 'w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light';
 
   // Add state for external URL
@@ -309,12 +324,15 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       setSaleEndsAt(initialData.saleEndsAt ? initialData.saleEndsAt.slice(0, 10) : '');
       setTaxInclusive(initialData.taxInclusive);
       setAcceptingOffers(!!initialData.acceptingOffers);
+      setBillingPeriod(initialData.billingPeriod ?? '');
 
       setSku(initialData.sku || '');
       setGtin(initialData.gtin || '');
       setBrand(initialData.brand || '');
       setTagsInput((initialData.tags || []).join(', '));
-      setSpecs(initialData.specifications || []);
+      // The record may omit `value` for a feature row; the inputs are
+      // controlled, so it comes back as an empty string rather than undefined.
+      setSpecs((initialData.specifications || []).map(s => ({ name: s.name, value: s.value ?? '' })));
       setManageStock(!!initialData.manageStock);
       setQuantity(initialData.quantity !== undefined ? String(initialData.quantity) : '');
       setLowStockThreshold(initialData.lowStockThreshold !== undefined ? String(initialData.lowStockThreshold) : '');
@@ -335,7 +353,13 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       setSelectedCategory(initialData.category);
       // A v1 record has no type; inferring from the category is what the
       // normalizer does for those, so the form agrees with the stored value.
-      setListingType(initialData.type === 'service' || initialData.category === 'digital_arts' ? 'service' : 'goods');
+      setListingType(
+        initialData.type === 'digital'
+          ? 'digital'
+          : initialData.type === 'service' || initialData.category === 'digital_arts'
+            ? 'service'
+            : 'goods'
+      );
       setCommissionOpen(initialData.metadata?.commissionStatus === 'closed' ? 'closed' : 'open');
       setHideFromFriends(initialData.hideFromFriends || false);
       const hasNsfwLabel = initialData.labels?.values?.some((l: any) => 
@@ -1169,6 +1193,10 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         }),
         ...(taxInclusive !== undefined && { taxInclusive }),
         ...(acceptingOffers && { acceptingOffers: true }),
+        // Recurrence describes an amount, so with no amount there is nothing
+        // for it to describe. A listing taking offers can say "per year" once
+        // it names a number, and not before.
+        ...(billingPeriod && priceValue > 0 && { billingPeriod }),
 
         // Blank fields are left out entirely rather than sent as empty
         // strings, so nothing writes a field the seller did not fill in.
@@ -1183,10 +1211,10 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
           ...(lowStockThreshold.trim() !== '' && { lowStockThreshold: parseInt(lowStockThreshold, 10) }),
         }),
         ...(soldIndividually && { soldIndividually: true }),
-        ...(!isService && numberOrUndefined(shippingWeight) !== undefined && {
+        ...(isPhysical && numberOrUndefined(shippingWeight) !== undefined && {
           shippingWeight: numberOrUndefined(shippingWeight),
         }),
-        ...(!isService && (numberOrUndefined(dimL) !== undefined || numberOrUndefined(dimW) !== undefined || numberOrUndefined(dimH) !== undefined) && {
+        ...(isPhysical && (numberOrUndefined(dimL) !== undefined || numberOrUndefined(dimW) !== undefined || numberOrUndefined(dimH) !== undefined) && {
           dimensions: {
             length: numberOrUndefined(dimL),
             width: numberOrUndefined(dimW),
@@ -1202,7 +1230,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         currency: currency,
         location: locationData,
         category: categoryId,
-        condition: isService ? '' : (formData.get('condition') as string),
+        condition: isPhysical ? (formData.get('condition') as string) : '',
         images: images as any, // The client handles mixed types now
         hideFromFriends: hideFromFriends,
         isNsfw: isNsfw,
@@ -1360,11 +1388,11 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
               {/* Listing Type Selector */}
               <div className="bg-white p-6 rounded-lg shadow-sm border border-neutral-light">
                 <h2 className="text-xl font-semibold mb-4 text-text-primary">{tCreate('sellingHeader')}</h2>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <button
                     type="button"
                     onClick={() => {
-                      if (isService) {
+                      if (listingType !== 'goods') {
                         setListingType('goods');
                         setSelectedCategory('');
                         setSelectedSubcategory('');
@@ -1372,14 +1400,14 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                       }
                     }}
                     className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-150 ${
-                      !isService
+                      listingType === 'goods'
                         ? 'border-slate-900 bg-slate-900 text-white shadow-md'
                         : 'border-neutral-light bg-white text-text-secondary hover:border-slate-300'
                     }`}
                   >
                     <Package size={24} />
                     <span className="font-semibold text-sm">{tCreate('physicalProduct')}</span>
-                    <span className={`text-xs text-center leading-tight ${!isService ? 'text-slate-300' : 'text-text-secondary'}`}>
+                    <span className={`text-xs text-center leading-tight ${listingType === 'goods' ? 'text-slate-300' : 'text-text-secondary'}`}>
                       {tCreate('physicalProductDesc')}
                     </span>
                   </button>
@@ -1407,6 +1435,32 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                     <span className="font-semibold text-sm">{tCreate('digitalArts')}</span>
                     <span className={`text-xs text-center leading-tight ${isService ? 'text-rose-200' : 'text-text-secondary'}`}>
                       {tCreate('digitalArtsDesc')}
+                    </span>
+                  </button>
+                  {/* A licence or a download: nothing is posted, and the buyer
+                      gets it wherever the seller sends them. Separate from a
+                      commission, which is work done for one person. */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isDigital) {
+                        setListingType('digital');
+                        setSelectedCategory('digital');
+                        setSelectedSubcategory('');
+                        setIsOnlineStore(true);
+                        setIsLocationExpanded(false);
+                      }
+                    }}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-150 ${
+                      isDigital
+                        ? 'border-indigo-600 bg-indigo-600 text-white shadow-md'
+                        : 'border-neutral-light bg-white text-text-secondary hover:border-indigo-300'
+                    }`}
+                  >
+                    <Download size={24} />
+                    <span className="font-semibold text-sm">{tCreate('digitalProduct')}</span>
+                    <span className={`text-xs text-center leading-tight ${isDigital ? 'text-indigo-200' : 'text-text-secondary'}`}>
+                      {tCreate('digitalProductDesc')}
                     </span>
                   </button>
                 </div>
@@ -1639,6 +1693,33 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                       </p>
                     )}
 
+                    {/* A price that repeats is a different price. Without this
+                        the seller writes "$69/yr" in the title, where no filter
+                        or sort can read it and every comparison is wrong. */}
+                    {!isPriceZero && (
+                      <div className="mt-3">
+                        <label htmlFor="billingPeriod" className="block text-sm font-medium text-text-secondary mb-1">
+                          {tCreate('labelBillingPeriod')}
+                        </label>
+                        <select
+                          id="billingPeriod"
+                          value={billingPeriod}
+                          onChange={(e) => setBillingPeriod(e.target.value as '' | BillingPeriod)}
+                          className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
+                        >
+                          <option value="">{tCreate('billingOneOff')}</option>
+                          <option value="week">{tCreate('billingWeek')}</option>
+                          <option value="month">{tCreate('billingMonth')}</option>
+                          <option value="quarter">{tCreate('billingQuarter')}</option>
+                          <option value="year">{tCreate('billingYear')}</option>
+                          <option value="day">{tCreate('billingDay')}</option>
+                        </select>
+                        {billingPeriod && (
+                          <p className="mt-1 text-xs text-text-secondary">{tCreate('hintBillingPeriod')}</p>
+                        )}
+                      </div>
+                    )}
+
                     {/* Sales are the exception, so the fields stay folded away
                         until asked for — an always-visible sale price invites
                         people to fill it in for no reason. */}
@@ -1836,7 +1917,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                     </div>
                   )}
 
-                  {!isService && (
+                  {isPhysical && (
                   <div>
                     <label htmlFor="condition" className="block text-sm font-medium text-text-secondary mb-1">
                       {tCreate('labelCondition')} <span className="text-red-500">*</span>
@@ -2210,9 +2291,9 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                       </label>
                     </div>
 
-                    {/* Weight and size describe a physical thing, so a service
-                        is not asked for them. */}
-                    {!isService && (
+                    {/* Weight and size describe a physical thing, so neither a
+                        service nor a download is asked for them. */}
+                    {isPhysical && (
                       <div className="pt-4 border-t border-neutral-light">
                         <p className="text-sm font-medium text-text-secondary mb-2">{tCreate('shippingDetailsHeader')}</p>
                         <div className="grid sm:grid-cols-4 gap-3">

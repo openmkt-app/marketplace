@@ -56,6 +56,17 @@
           "type": "string",
           "format": "datetime",
           "description": "When the sale price stops applying. Absent means indefinitely."
+        },
+        "billingPeriod": {
+          "type": "string",
+          "knownValues": [
+            "day",
+            "week",
+            "month",
+            "quarter",
+            "year"
+          ],
+          "description": "How often the amounts recur. Absent means a one-off purchase. Applies to regularPrice and salePrice alike, for the same reason currency does: a subscription and its discounted rate cannot bill on different schedules. Not a unit price — 'per hour' or 'per 100g' is a different fact and has no field here."
         }
       }
     },
@@ -86,10 +97,9 @@
     },
     "specification": {
       "type": "object",
-      "description": "A product property that does not vary between variants (e.g. Material, Model). Distinct from #optionAxis, which drives variant selection.",
+      "description": "A product property that does not vary between variants (e.g. Material, Model). Distinct from #optionAxis, which drives variant selection. A name with no value is a feature the listing includes, which is how a plan or tier states what it comes with.",
       "required": [
-        "name",
-        "value"
+        "name"
       ],
       "properties": {
         "name": {

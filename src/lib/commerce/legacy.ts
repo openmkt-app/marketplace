@@ -39,6 +39,8 @@ export type LegacyListing = {
   salePrice?: string;
   saleStartsAt?: string;
   saleEndsAt?: string;
+  /** Set when the price repeats: 'year' means the amount is charged yearly. */
+  billingPeriod?: 'day' | 'week' | 'month' | 'quarter' | 'year';
   /** Undefined means the seller never said. Do not render a guess. */
   taxInclusive?: boolean;
   /** The seller will consider offers; any price shown is a guide. */
@@ -51,7 +53,8 @@ export type LegacyListing = {
   gtin?: string;
   brand?: string;
   tags?: string[];
-  specifications?: Array<{ name: string; value: string }>;
+  /** A row with no value is a feature the listing includes, not a property. */
+  specifications?: Array<{ name: string; value?: string }>;
   manageStock?: boolean;
   quantity?: number;
   lowStockThreshold?: number;
@@ -149,6 +152,11 @@ export function toLegacyListing(listing: Listing): LegacyListing {
         : toLegacyPriceString(listing.pricing.salePrice, currency),
     saleStartsAt: listing.pricing.saleStartsAt,
     saleEndsAt: listing.pricing.saleEndsAt,
+
+    // Recurrence belongs to both amounts, so it sits beside `price` rather than
+    // inside the sale block. A card showing "$69" for something charged every
+    // year is not a display bug, it is the wrong number.
+    billingPeriod: listing.pricing.billingPeriod,
 
     // Passed straight through. These have no v1 equivalent, so there is
     // nothing to translate — they exist here only so the edit form can reload

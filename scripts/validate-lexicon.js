@@ -172,6 +172,26 @@ try {
       condition: 'used_fair',
       location: { state: 'Tokyo', county: '', locality: 'Shibuya' },
     }],
+    // A software tier: recurring price, an introductory rate, and a feature
+    // list written as specifications with no value.
+    ['annual software licence', {
+      title: 'Migro Professional',
+      type: 'digital',
+      description: 'Five site licences, renewed yearly.',
+      price: '99.00',
+      salePrice: '69.00',
+      billingPeriod: 'year',
+      currency: 'USD',
+      category: 'digital',
+      condition: '',
+      taxInclusive: false,
+      metadata: { subcategory: 'software' },
+      specifications: [
+        { name: 'Site licences', value: '5' },
+        { name: 'Priority support' },
+        { name: 'White-label reports' },
+      ],
+    }],
   ];
 
   for (const [name, formOutput] of cases) {

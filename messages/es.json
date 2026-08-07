@@ -7,7 +7,14 @@
     "cancel": "Cancelar",
     "free": "Gratis",
     "onlineStore": "Tienda en línea",
-    "online": "En línea"
+    "online": "En línea",
+    "billingPeriod": {
+      "day": "/día",
+      "week": "/semana",
+      "month": "/mes",
+      "quarter": "/trimestre",
+      "year": "/año"
+    }
   },
   "nav": {
     "home": "Inicio",
@@ -461,6 +468,16 @@
     "physicalProductDesc": "Bienes, artículos hechos a mano, hallazgos vintage",
     "digitalArts": "Artes digitales",
     "digitalArtsDesc": "Comisiones, ilustraciones, diseño",
+    "digitalProduct": "Producto digital",
+    "digitalProductDesc": "Software, ebooks, plantillas, descargas",
+    "labelBillingPeriod": "¿Cada cuánto se cobra?",
+    "billingOneOff": "Pago único",
+    "billingDay": "Cada día",
+    "billingWeek": "Cada semana",
+    "billingMonth": "Cada mes",
+    "billingQuarter": "Cada tres meses",
+    "billingYear": "Cada año",
+    "hintBillingPeriod": "Los compradores lo ven junto al precio, así nadie tiene que leer la descripción para enterarse.",
     "magicImport": "Importación mágica",
     "magicImportDesc": "Pega un enlace de Amazon, Shopify, Etsy u otras tiendas para autocompletar detalles.",
     "magicImportBeta": "Beta",
@@ -635,6 +652,7 @@
     "cell_phones": "Celulares y Accesorios",
     "collectibles": "Coleccionables",
     "computers": "Computación y Tecnología",
+    "digital": "Software y productos digitales",
     "digital_arts": "Arte Digital y Comisiones",
     "electronics": "Electrónica",
     "entertainment": "Entretenimiento",
@@ -896,6 +914,16 @@
       "peripherals": "Monitores y Periféricos",
       "tablets": "Tablets y E-readers",
       "other_computers": "Otros de Computación"
+    },
+    "digital": {
+      "software": "Software y apps",
+      "games": "Juegos",
+      "ebooks": "Ebooks y guías",
+      "audio": "Música y audio",
+      "templates": "Plantillas y presets",
+      "fonts": "Tipografías y gráficos",
+      "courses": "Cursos y tutoriales",
+      "other_digital_goods": "Otros productos digitales"
     },
     "digital_arts": {
       "commissions": "Comisiones",

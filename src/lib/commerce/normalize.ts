@@ -32,11 +32,19 @@ export type RecordIdentity = {
  */
 export const LEGACY_SERVICE_CATEGORY = 'digital_arts';
 
-/** Etsy import wrote categories that were never in CATEGORIES (etsy-client.ts). */
+/** Downloads and licences: software, ebooks, presets. Never a physical thing. */
+export const DIGITAL_CATEGORY = 'digital';
+
+/**
+ * Etsy import wrote categories that were never in CATEGORIES (etsy-client.ts).
+ *
+ * `digital` used to be here too, mapped to `hobbies` for want of anywhere
+ * better. It is a real category now — software, ebooks, presets — so the Etsy
+ * digital downloads that were being filed under Hobbies land where they belong.
+ */
 const ORPHAN_CATEGORY_MAP: Record<string, string> = {
   vintage: 'collectibles',
   handmade: 'other',
-  digital: 'hobbies',
 };
 
 /**
@@ -94,7 +102,11 @@ type Identity = RecordIdentity;
  * `digital_arts` means. Phase 5 replaces this with a real discriminator.
  */
 export function inferListingType(category: string | undefined): ListingType {
-  return category === LEGACY_SERVICE_CATEGORY ? 'service' : 'goods';
+  if (category === LEGACY_SERVICE_CATEGORY) return 'service';
+  // The Etsy importer writes `digital` for downloads, and now so does the form.
+  // Nothing physical is ever filed there, so the type follows from the category.
+  if (category === DIGITAL_CATEGORY) return 'digital';
+  return 'goods';
 }
 
 export function normalizeCategory(category: string | undefined): string {
@@ -208,6 +220,9 @@ function normalizeV2(record: RawRecord, id: Identity): Listing {
       taxInclusive: record.pricing?.taxInclusive,
       saleStartsAt: record.pricing?.saleStartsAt,
       saleEndsAt: record.pricing?.saleEndsAt,
+      // v1 had no recurring prices, so this only ever appears here. Absent
+      // means one-off, which is what every older record meant anyway.
+      billingPeriod: record.pricing?.billingPeriod,
     },
     category: resolvedCategory.category,
     subcategory: resolvedCategory.subcategory,

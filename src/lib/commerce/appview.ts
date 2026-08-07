@@ -92,6 +92,7 @@ function toListing(rec: AppViewRecord): Listing | null {
       taxInclusive: pricing.taxInclusive,
       saleStartsAt: pricing.saleStartsAt,
       saleEndsAt: pricing.saleEndsAt,
+      billingPeriod: pricing.billingPeriod,
     },
     // Same resolver the PDS read path uses. Reading the raw value here meant
     // an Etsy orphan category was mapped on one path and not the other.

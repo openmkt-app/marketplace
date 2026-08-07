@@ -31,6 +31,7 @@ import {
   Info,
   ExternalLink,
   Clock,
+  Check,
 } from 'lucide-react';
 import { COMMISSION_CATEGORY_ID } from '@/lib/artist-store-utils';
 import { isOnlineStore, formatLocationShort } from '@/lib/location-utils';
@@ -425,6 +426,14 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                 {listing.noPrice
                   ? t('makeAnOffer')
                   : formatPrice(listing.price, listing.currency, locale, tCommon('free'))}
+                {/* Recurrence belongs to the amount, not beside it: "$69" and
+                    "$69 a year" are different prices, and a buyer who reads the
+                    first and pays the second was misled by the page. */}
+                {listing.billingPeriod && !listing.noPrice && (
+                  <span className="text-base font-semibold text-gray-500 ml-1">
+                    {tCommon(`billingPeriod.${listing.billingPeriod}`)}
+                  </span>
+                )}
               </p>
               {listing.acceptingOffers && !listing.noPrice && (
                 <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold">
@@ -528,8 +537,22 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                   {listing.brand && (
                     <tr><td className="px-3 py-2 text-gray-500 w-2/5">{t('brand')}</td><td className="px-3 py-2 text-gray-900">{listing.brand}</td></tr>
                   )}
+                  {/* A row with no value is a feature the listing includes —
+                      "Priority support" — so it spans both columns and gets a
+                      tick rather than an empty right-hand cell. */}
                   {listing.specifications?.map((spec, i) => (
-                    <tr key={i}><td className="px-3 py-2 text-gray-500">{spec.name}</td><td className="px-3 py-2 text-gray-900">{spec.value}</td></tr>
+                    spec.value ? (
+                      <tr key={i}><td className="px-3 py-2 text-gray-500 w-2/5">{spec.name}</td><td className="px-3 py-2 text-gray-900">{spec.value}</td></tr>
+                    ) : (
+                      <tr key={i}>
+                        <td className="px-3 py-2 text-gray-900" colSpan={2}>
+                          <span className="inline-flex items-center gap-2">
+                            <Check size={14} className="text-emerald-600 flex-shrink-0" />
+                            {spec.name}
+                          </span>
+                        </td>
+                      </tr>
+                    )
                   ))}
                   {listing.manageStock && listing.quantity !== undefined && (
                     <tr>

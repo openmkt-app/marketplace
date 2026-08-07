@@ -104,11 +104,13 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, prior
                 {t('open')}
               </span>
             )
-          ) : (
+          ) : listing.condition ? (
+            // A download has no condition, and neither does a listing imported
+            // without one. tConds('') resolves to nothing but a console warning.
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/90 backdrop-blur-sm text-slate-800 shadow-sm">
               {tConds(listing.condition)}
             </span>
-          )}
+          ) : null}
         </div>
 
         {/* External Buy Badge */}
@@ -168,6 +170,13 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, prior
             {listing.noPrice
               ? t('makeAnOffer')
               : formatPrice(listing.price, listing.currency, locale, tCommon('free'))}
+            {/* Attached to the payable price, and only once: a sale price and
+                the price it replaced always bill on the same schedule. */}
+            {listing.billingPeriod && !listing.noPrice && (
+              <span className="text-sm font-semibold text-slate-500">
+                {tCommon(`billingPeriod.${listing.billingPeriod}`)}
+              </span>
+            )}
           </span>
           {listing.acceptingOffers && !listing.noPrice && (
             <span className="text-xs font-medium text-slate-500">{t('orOffer')}</span>

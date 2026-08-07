@@ -70,6 +70,7 @@ export function buildListingRecord(input: ListingInput, options: BuildOptions = 
     taxInclusive: input.pricing?.taxInclusive,
     saleStartsAt: input.pricing?.saleStartsAt,
     saleEndsAt: input.pricing?.saleEndsAt,
+    billingPeriod: input.pricing?.billingPeriod,
   });
 
   const record = compact({

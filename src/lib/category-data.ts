@@ -150,6 +150,23 @@ export const CATEGORIES: Category[] = [
     ]
   },
   {
+    // Things you download or are licensed, as opposed to digital_arts, which is
+    // work commissioned from a person. Software licences had nowhere to go
+    // before this: "Computers & Tech > Other" is a shelf of laptops.
+    id: 'digital',
+    name: 'Software & Digital Goods',
+    subcategories: [
+      { id: 'software', name: 'Software & Apps' },
+      { id: 'games', name: 'Games' },
+      { id: 'ebooks', name: 'Ebooks & Guides' },
+      { id: 'audio', name: 'Music & Audio' },
+      { id: 'templates', name: 'Templates & Presets' },
+      { id: 'fonts', name: 'Fonts & Graphics' },
+      { id: 'courses', name: 'Courses & Tutorials' },
+      { id: 'other_digital_goods', name: 'Other Digital Goods' }
+    ]
+  },
+  {
     id: 'digital_arts',
     name: 'Digital Arts & Commissions',
     subcategories: [

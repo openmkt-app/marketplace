@@ -18,6 +18,15 @@ export type TaxStatus = 'taxable' | 'shipping' | 'none';
 
 export type CommissionStatus = 'open' | 'waitlist' | 'closed';
 
+/**
+ * How often a price recurs. Absent means a one-off purchase.
+ *
+ * Deliberately a word rather than an interval + count: `{month, 12}` and
+ * `{year, 1}` are the same price written two ways, and every reader would have
+ * to normalize before it could compare. See AMENDMENT-3.
+ */
+export type BillingPeriod = 'day' | 'week' | 'month' | 'quarter' | 'year';
+
 export type Pricing = {
   /**
    * Minor currency units. Null means the seller named no price — show "make an
@@ -34,6 +43,12 @@ export type Pricing = {
   taxInclusive?: boolean;
   saleStartsAt?: string;
   saleEndsAt?: string;
+  /**
+   * Set when the amounts repeat on a schedule. Applies to both prices — a plan
+   * and its discounted rate cannot bill differently. Absent means one-off, so
+   * every record written before this existed still says the right thing.
+   */
+  billingPeriod?: BillingPeriod;
 };
 
 export type CommerceLocation = {
@@ -47,7 +62,12 @@ export type CommerceLocation = {
   legacyCounty?: string;
 };
 
-export type Specification = { name: string; value: string };
+/**
+ * A property the listing has, or — with no value — a feature it includes.
+ * "Material: oak" and "Priority support" are both things a listing says about
+ * itself, so they share one array rather than being merged back at render time.
+ */
+export type Specification = { name: string; value?: string };
 
 export type TaxonomyRef = { scheme: string; id: string; version?: string; path?: string };
 

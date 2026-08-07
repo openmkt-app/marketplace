@@ -7,7 +7,14 @@
     "cancel": "Cancel",
     "free": "Free",
     "onlineStore": "Online Store",
-    "online": "Online"
+    "online": "Online",
+    "billingPeriod": {
+      "day": "/day",
+      "week": "/week",
+      "month": "/month",
+      "quarter": "/quarter",
+      "year": "/year"
+    }
   },
   "nav": {
     "home": "Home",
@@ -461,6 +468,16 @@
     "physicalProductDesc": "Goods, handmade items, vintage finds",
     "digitalArts": "Digital Arts",
     "digitalArtsDesc": "Commissions, illustrations, design",
+    "digitalProduct": "Digital product",
+    "digitalProductDesc": "Software, ebooks, presets, downloads",
+    "labelBillingPeriod": "How often is this charged?",
+    "billingOneOff": "One-off payment",
+    "billingDay": "Every day",
+    "billingWeek": "Every week",
+    "billingMonth": "Every month",
+    "billingQuarter": "Every three months",
+    "billingYear": "Every year",
+    "hintBillingPeriod": "Buyers see this next to the price, so nobody has to read the description to find out.",
     "magicImport": "Magic Import",
     "magicImportDesc": "Paste a link from Amazon, Shopify, Etsy, or other stores to auto-fill details.",
     "magicImportBeta": "Beta",
@@ -635,6 +652,7 @@
     "cell_phones": "Cell Phones & Accessories",
     "collectibles": "Collectibles",
     "computers": "Computers & Tech",
+    "digital": "Software & Digital Goods",
     "digital_arts": "Digital Arts & Commissions",
     "electronics": "Electronics",
     "entertainment": "Entertainment",
@@ -896,6 +914,16 @@
       "peripherals": "Monitors & Peripherals",
       "tablets": "Tablets & E-readers",
       "other_computers": "Other Computer Items"
+    },
+    "digital": {
+      "software": "Software & Apps",
+      "games": "Games",
+      "ebooks": "Ebooks & Guides",
+      "audio": "Music & Audio",
+      "templates": "Templates & Presets",
+      "fonts": "Fonts & Graphics",
+      "courses": "Courses & Tutorials",
+      "other_digital_goods": "Other Digital Goods"
     },
     "digital_arts": {
       "commissions": "Commissions",
