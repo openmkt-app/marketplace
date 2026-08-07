@@ -17,6 +17,7 @@ import ShopDetails, { ShopStatusBanner } from '@/components/marketplace/ShopDeta
 import type { Shop } from '@/lib/commerce/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { filterForViewer } from '@/lib/viewer-visibility';
+import { collapseVariants } from '@/lib/commerce/variants';
 
 interface SellerListing extends MarketplaceListing {
   uri: string;
@@ -440,10 +441,15 @@ export default function StorePageClient({
           const localListings = listings.filter(l => !isOnlineStore(l.location));
           const hasBothTypes = onlineListings.length > 0 && localListings.length > 0;
 
-          // Determine which listings to show
-          const displayListings = hasBothTypes
-            ? (activeTab === 'store' ? onlineListings : localListings)
-            : listings;
+          // Determine which listings to show. Variants of one product collapse
+          // to a single card — a shop selling four tiers of one thing is
+          // selling one thing. The counts above stay uncollapsed on purpose:
+          // the seller's catalogue really does hold four listings.
+          const displayListings = collapseVariants(
+            hasBothTypes
+              ? (activeTab === 'store' ? onlineListings : localListings)
+              : listings
+          );
 
           const galleryMode = isArtistStore(displayListings);
 

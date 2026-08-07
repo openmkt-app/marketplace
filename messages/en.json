@@ -550,10 +550,24 @@
     "botFollowTitle": "Enable Buyer Notifications",
     "botFollowBody": "To receive inquiries from interested buyers, you need to follow our Introduction Bot. Listing creation is disabled until you follow.",
     "botFollowButton": "Follow Marketplace Bot",
+    "labelIsVariant": "This is one option of a product",
+    "hintIsVariant": "For a product sold in tiers, sizes or colours. Each option is its own listing, and they show together as one product.",
+    "labelProduct": "Product",
+    "newProduct": "New product…",
+    "currentProduct": "Current product",
+    "labelProductName": "Product name",
+    "placeholderProductName": "e.g. Migro",
+    "labelAxisName": "What the options are called",
+    "variantAxisDefault": "Tier",
+    "labelOptionValue": "This listing's {axis}",
+    "placeholderOptionValue": "e.g. Professional",
+    "hintOptionValue": "Buyers switch between options by this name.",
     "errors": {
       "freeAndOffers": "A free item can't also take offers. Set a price, or leave it blank and keep offers on.",
       "freeWithExternalUrl": "A free item can't have a buy-it-elsewhere link. Remove the link, or set a price.",
       "salePriceTooHigh": "The sale price has to be lower than the normal price.",
+      "variantValueRequired": "Give this option a name, so buyers can tell it apart from the others.",
+      "variantProductRequired": "Name the product these options belong to.",
       "saleDatesBackwards": "The sale cannot end before it starts.",
       "followBot": "Failed to follow the bot. Please try again.",
       "maxImages": "You can only upload a maximum of 10 images. Please remove some images first.",
@@ -681,6 +695,7 @@
     "forParts": "For Parts / Not Working"
   },
   "listingDetail": {
+    "variantPopular": "Popular",
     "makeAnOffer": "Make an offer",
     "orOffer": "or make an offer",
     "brand": "Brand",
@@ -790,6 +805,8 @@
     }
   },
   "listingCard": {
+    "optionCount": "{count, plural, one {# option} other {# options}}",
+    "fromPrice": "from",
     "makeAnOffer": "Make an offer",
     "orOffer": "or make an offer",
     "onlineStore": "Online Store",

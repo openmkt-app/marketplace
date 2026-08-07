@@ -11,6 +11,7 @@ import { fetchPublicListings, fetchPublicProfile } from '@/lib/public-listings';
 import { useAuth } from '@/contexts/AuthContext';
 import { filterForViewer } from '@/lib/viewer-visibility';
 import ListingCard from '@/components/marketplace/ListingCard';
+import { collapseVariants } from '@/lib/commerce/variants';
 import ListingImageDisplay from '@/components/marketplace/ListingImageDisplay';
 import FilterPanel, { FilterValues } from '@/components/marketplace/filters/FilterPanel';
 import SmartFilterSummary from '@/components/marketplace/SmartFilterSummary';
@@ -467,6 +468,10 @@ const BrowsePageClient = ({ initialListings = [] }: BrowsePageClientProps) => {
   const [allListings, setAllListings] = useState<MarketplaceListing[]>(initialListings);
   const [newRealTimeListings, setNewRealTimeListings] = useState<MarketplaceListing[]>([]);
   const [filteredListings, setFilteredListings] = useState<MarketplaceListing[]>(initialListings);
+  // Collapsed at the point of display, not in state: filters, sorts and counts
+  // all work on individual listings, and a filter that matches one tier should
+  // still surface the product.
+  const gridListings = useMemo(() => collapseVariants(filteredListings), [filteredListings]);
   // Only a spinner when there is genuinely nothing to show. With server-rendered
   // listings the grid is already on screen, and the client fetch refreshes it in
   // place rather than replacing products with a loading state.
@@ -1048,7 +1053,7 @@ const BrowsePageClient = ({ initialListings = [] }: BrowsePageClientProps) => {
             )}
             {filters.viewMode === 'grid' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {filteredListings.map((listing: any, index) => (
+                {gridListings.map((listing: any, index) => (
                   <div key={index} onClick={() => listing.uri ? recordListingView(listing.uri) : null}>
                     <ListingCard
                       listing={{
@@ -1067,7 +1072,7 @@ const BrowsePageClient = ({ initialListings = [] }: BrowsePageClientProps) => {
 
             {filters.viewMode === 'list' && (
               <div className="space-y-3">
-                {filteredListings.map((listing, index) => {
+                {gridListings.map((listing, index) => {
                   // Get clean description without subcategory text
                   const { cleanDescription, subcategory } = extractSubcategoryFromDescription(listing.description);
 

@@ -550,10 +550,24 @@
     "botFollowTitle": "Habilitar notificaciones de comprador",
     "botFollowBody": "Para recibir consultas de compradores interesados, debes seguir a nuestro Bot de Introducción. La creación de anuncios está deshabilitada hasta que lo sigas.",
     "botFollowButton": "Seguir al Bot del Mercado",
+    "labelIsVariant": "Esta es una opción de un producto",
+    "hintIsVariant": "Para un producto que se vende en niveles, tallas o colores. Cada opción es su propio anuncio y se muestran juntas como un producto.",
+    "labelProduct": "Producto",
+    "newProduct": "Nuevo producto…",
+    "currentProduct": "Producto actual",
+    "labelProductName": "Nombre del producto",
+    "placeholderProductName": "p. ej. Migro",
+    "labelAxisName": "Cómo se llaman las opciones",
+    "variantAxisDefault": "Nivel",
+    "labelOptionValue": "{axis} de este anuncio",
+    "placeholderOptionValue": "p. ej. Professional",
+    "hintOptionValue": "Los compradores cambian de opción por este nombre.",
     "errors": {
       "freeAndOffers": "Un artículo gratis no puede aceptar ofertas. Pon un precio, o déjalo vacío y mantén las ofertas activadas.",
       "freeWithExternalUrl": "Un artículo gratis no puede tener un enlace de compra externo. Quita el enlace o pon un precio.",
       "salePriceTooHigh": "El precio de oferta tiene que ser menor que el precio normal.",
+      "variantValueRequired": "Ponle nombre a esta opción, para que los compradores la distingan de las demás.",
+      "variantProductRequired": "Escribe el nombre del producto al que pertenecen estas opciones.",
       "saleDatesBackwards": "La oferta no puede terminar antes de empezar.",
       "followBot": "Error al seguir al bot. Por favor, inténtalo de nuevo.",
       "maxImages": "Solo puedes subir un máximo de 10 imágenes. Por favor, elimina algunas primero.",
@@ -681,6 +695,7 @@
     "forParts": "Para Repuestos / No Funciona"
   },
   "listingDetail": {
+    "variantPopular": "Popular",
     "makeAnOffer": "Haz una oferta",
     "orOffer": "o haz una oferta",
     "brand": "Marca",
@@ -790,6 +805,8 @@
     }
   },
   "listingCard": {
+    "optionCount": "{count, plural, one {# opción} other {# opciones}}",
+    "fromPrice": "desde",
     "makeAnOffer": "Haz una oferta",
     "orOffer": "o haz una oferta",
     "onlineStore": "Tienda en línea",

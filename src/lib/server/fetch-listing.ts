@@ -6,6 +6,7 @@ import { isListingCollection } from '../commerce/collections';
 import { fetchPublicProfile } from '../public-listings';
 import { normalizeAndHydrate } from '../commerce/hydrate';
 import { toLegacyListing } from '../commerce/legacy';
+import { fetchVariantGroup, type VariantGroup } from './fetch-variants';
 
 export type ListingData = {
   title: string;
@@ -47,6 +48,8 @@ export type ListingData = {
     fullsize: string;
     mimeType: string;
   }>;
+  /** The product's other options, when this listing is one variant of one. */
+  variantGroup?: VariantGroup | null;
 };
 
 export async function fetchListingById(id: string): Promise<ListingData | 'removed' | null> {
@@ -128,6 +131,13 @@ export async function fetchListingById(id: string): Promise<ListingData | 'remov
     const value = toLegacyListing(listing);
     const formattedImages = listing.formattedImages ?? [];
 
+    // Started before the profile is awaited, so the two overlap. Skipped
+    // entirely for a listing that is not part of a group, which is almost all
+    // of them — a plain listing pays nothing for this.
+    const variantPromise = listing.partOf
+      ? fetchVariantGroup(pdsEndpoint, did, listing.partOf)
+      : Promise.resolve(null);
+
     // Seller profile, started before the record fetch above.
     //
     // app.bsky.actor.getProfile returns the handle, display name and a ready
@@ -157,6 +167,7 @@ export async function fetchListingById(id: string): Promise<ListingData | 'remov
       authorDisplayName,
       authorAvatarUrl,
       formattedImages,
+      variantGroup: await variantPromise,
     };
   } catch (error) {
     if (error instanceof Error && error.message.includes('Could not locate record')) {

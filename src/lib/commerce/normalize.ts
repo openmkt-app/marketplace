@@ -16,6 +16,7 @@ import type {
   Listing,
   ListingType,
   Pricing,
+  ProductGroup,
   Shop,
   ShopStatus,
 } from './types.ts';
@@ -284,6 +285,40 @@ export function normalizeListing(record: RawRecord, id: Identity): Listing {
 
   // Unknown or missing collection — decide structurally rather than guessing.
   return record.pricing ? normalizeV2(record, id) : normalizeV1(record, id);
+}
+
+/**
+ * Normalize an `app.openmkt.commerce.productGroup` record.
+ *
+ * Like the shop, there is no v1 equivalent, so this is a straight read. Axes
+ * are defended rather than trusted: the lexicon requires at least one, but a
+ * record written by another client is not obliged to be sensible, and a group
+ * with a malformed axis should render as a plain product rather than crash.
+ */
+export function normalizeProductGroup(record: RawRecord, id: Identity): ProductGroup {
+  const axes = Array.isArray(record.optionAxes) ? record.optionAxes : [];
+
+  return {
+    uri: id.uri,
+    cid: id.cid,
+    ownerDid: id.authorDid ?? didFromUri(id.uri) ?? '',
+
+    title: record.title || 'Untitled product',
+    description: record.description,
+    shopRef: record.shopRef,
+    optionAxes: axes
+      .filter((axis: RawRecord) => axis && typeof axis.name === 'string' && Array.isArray(axis.values))
+      .map((axis: RawRecord) => ({ name: axis.name, values: axis.values.filter((v: unknown) => typeof v === 'string') })),
+    defaultVariant: Array.isArray(record.defaultVariant) ? record.defaultVariant : undefined,
+    sku: record.sku,
+    specifications: record.specifications,
+    category: normalizeCategory(record.category),
+    taxonomy: record.taxonomy,
+    type: (record.type as ListingType) || 'goods',
+    images: record.images as ImageBlob[] | undefined,
+    createdAt: record.createdAt || new Date().toISOString(),
+    updatedAt: record.updatedAt,
+  };
 }
 
 /**

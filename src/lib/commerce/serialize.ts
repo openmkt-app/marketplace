@@ -5,9 +5,9 @@
 // never reach the repo. Spreading an app object into a record is how those
 // leaked in the first place.
 
-import { COMMERCE_COLLECTION, SHOP_COLLECTION } from './collections.ts';
+import { COMMERCE_COLLECTION, PRODUCT_GROUP_COLLECTION, SHOP_COLLECTION } from './collections.ts';
 import { DEFAULT_CURRENCY } from './money.ts';
-import type { ListingInput, ShopInput } from './types.ts';
+import type { ListingInput, ProductGroupInput, ShopInput } from './types.ts';
 
 const DETAILS_TYPE = {
   goods: `${COMMERCE_COLLECTION}#goodsDetails`,
@@ -159,6 +159,45 @@ export function buildShopRecord(input: ShopInput, createdAt?: string): Record<st
     shipsTo: input.shipsTo,
 
     createdAt: createdAt || input.createdAt || new Date().toISOString(),
+  });
+
+  return record as Record<string, any>;
+}
+
+/**
+ * Build an `app.openmkt.commerce.productGroup` record.
+ *
+ * Whitelisted like the other two builders. Note what is absent: no price, no
+ * availability, no condition. Those live on the variants, and a group that
+ * carried its own copy could disagree with every one of them.
+ */
+export function buildProductGroupRecord(
+  input: ProductGroupInput,
+  createdAt?: string,
+): Record<string, any> {
+  // An axis with no values is a choice with nothing to choose, and the lexicon
+  // requires at least one axis — so empties are dropped before, not after.
+  const optionAxes = (input.optionAxes || [])
+    .map(axis => ({ name: axis.name?.trim(), values: (axis.values || []).map(v => v.trim()).filter(Boolean) }))
+    .filter(axis => axis.name && axis.values.length > 0);
+
+  const record = compact({
+    $type: PRODUCT_GROUP_COLLECTION,
+
+    title: input.title,
+    description: input.description,
+    shopRef: input.shopRef,
+    optionAxes,
+    defaultVariant: input.defaultVariant,
+    sku: input.sku,
+    specifications: input.specifications,
+    category: input.category,
+    taxonomy: input.taxonomy ? compact(input.taxonomy) : undefined,
+    type: input.type,
+    images: input.images,
+
+    createdAt: createdAt || input.createdAt || new Date().toISOString(),
+    updatedAt: input.updatedAt,
   });
 
   return record as Record<string, any>;

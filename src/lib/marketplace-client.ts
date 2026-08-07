@@ -8,15 +8,17 @@ import { MARKETPLACE_COLLECTION } from './constants';
 import {
   COMMERCE_COLLECTION,
   LEGACY_COLLECTION,
+  PRODUCT_GROUP_COLLECTION,
   READ_COLLECTIONS,
   SHOP_COLLECTION,
   SHOP_RKEY,
+  rkeyFromUri,
 } from './commerce/collections';
-import { buildListingRecord, buildShopRecord } from './commerce/serialize';
+import { buildListingRecord, buildProductGroupRecord, buildShopRecord } from './commerce/serialize';
 import { buildSelfLabels, toListingInput } from './commerce/legacy-input';
 import { normalizeAndHydrate, normalizeListings } from './commerce/hydrate';
-import { normalizeShop } from './commerce/normalize';
-import type { Shop, ShopInput } from './commerce/types';
+import { normalizeProductGroup, normalizeShop } from './commerce/normalize';
+import type { ProductGroup, ProductGroupInput, Shop, ShopInput } from './commerce/types';
 import { toLegacyListing } from './commerce/legacy';
 import type { OAuthSession } from './oauth-client';
 
@@ -85,6 +87,14 @@ export type MarketplaceListing = {
   tags?: string[];
   /** A row with no value is a feature the listing includes, not a property. */
   specifications?: Array<{ name: string; value?: string }>;
+  /** AT URI of the productGroup this listing is one option of. */
+  partOf?: string;
+  variantProperties?: Array<{ axis: string; value?: string }>;
+  /**
+   * How many listings this card stands for, once a grid has collapsed a
+   * product's variants into one. Never stored — set by collapseVariants.
+   */
+  variantCount?: number;
   manageStock?: boolean;
   quantity?: number;
   lowStockThreshold?: number;
@@ -351,6 +361,105 @@ export class MarketplaceClient {
         throw new InsufficientScopeError(SHOP_COLLECTION, error);
       }
       logger.error('Failed to update shop', error as Error);
+      throw error;
+    }
+  }
+
+  /**
+   * The signed-in seller's product groups, newest first.
+   *
+   * Read straight from their own repo rather than the index: a seller who has
+   * just created a group has to see it in the picker on the very next listing,
+   * and the index is seconds behind. Same reason my-listings reads the PDS.
+   */
+  async listProductGroups(): Promise<ProductGroup[]> {
+    if (!this.isLoggedIn || !this.agent.did) return [];
+
+    const repo = this.agent.accountDid;
+    try {
+      const res = await this.agent.api.com.atproto.repo.listRecords({
+        repo,
+        collection: PRODUCT_GROUP_COLLECTION,
+        limit: 100,
+      });
+
+      return (res.data?.records || [])
+        .map(record =>
+          normalizeProductGroup(record.value as Record<string, any>, {
+            uri: record.uri,
+            cid: record.cid,
+            authorDid: repo,
+          }),
+        )
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch {
+      // No groups yet reads as an error on some PDS implementations. A seller
+      // who has never made one should see an empty picker, not a broken form.
+      return [];
+    }
+  }
+
+  /**
+   * Create or update a product group.
+   *
+   * Pass `uri` to update an existing one — the rkey is taken from it, so the
+   * group keeps its identity and every variant's `partOf` stays valid. Without
+   * a uri this creates a new group and returns its own.
+   */
+  async saveProductGroup(input: ProductGroupInput, uri?: string): Promise<ProductGroup> {
+    if (!this.isLoggedIn || !this.agent.did) {
+      throw new Error('User must be logged in to save a product group');
+    }
+
+    const repo = this.agent.accountDid;
+
+    try {
+      const shopRef = input.shopRef || (await this.ensureShopRecord());
+      const rkey = uri ? rkeyFromUri(uri) : null;
+
+      // An update has to keep the original createdAt for the same reason a
+      // listing does: it orders the seller's catalogue, and renaming a product
+      // is not the same event as creating one.
+      let createdAt: string | undefined;
+      if (rkey) {
+        try {
+          const existing = await this.agent.api.com.atproto.repo.getRecord({
+            repo,
+            collection: PRODUCT_GROUP_COLLECTION,
+            rkey,
+          });
+          createdAt = (existing.data?.value as Record<string, any>)?.createdAt;
+        } catch {
+          // Gone or unreadable. Falls through to a fresh createdAt below, which
+          // is better than refusing to save the seller's edit.
+        }
+      }
+
+      const record = buildProductGroupRecord({ ...input, shopRef }, createdAt);
+
+      const res = rkey
+        ? await this.agent.api.com.atproto.repo.putRecord({
+            repo,
+            collection: PRODUCT_GROUP_COLLECTION,
+            rkey,
+            record,
+          })
+        : await this.agent.api.com.atproto.repo.createRecord({
+            repo,
+            collection: PRODUCT_GROUP_COLLECTION,
+            record,
+          });
+
+      return normalizeProductGroup(record, {
+        uri: res.data.uri,
+        cid: res.data.cid,
+        authorDid: repo,
+      });
+    } catch (error) {
+      if (isScopeError(error)) {
+        throw new InsufficientScopeError(PRODUCT_GROUP_COLLECTION, error);
+      }
+      logger.error('Failed to save product group', error as Error);
       throw error;
     }
   }

@@ -8,6 +8,7 @@ import { MARKETPLACE_COLLECTION } from '../constants.ts';
 
 const PRODUCTION_COMMERCE = 'app.openmkt.commerce.listing';
 const PRODUCTION_SHOP = 'app.openmkt.commerce.shop';
+const PRODUCTION_GROUP = 'app.openmkt.commerce.productGroup';
 
 // Dev writes to a distinct NSID so test listings never land in the production
 // index, mirroring the reason the old app.atprotomkt.* split existed.
@@ -16,6 +17,7 @@ const PRODUCTION_SHOP = 'app.openmkt.commerce.shop';
 // no longer ours, which is not a good basis for NSID authority.
 const DEVELOPMENT_COMMERCE = 'app.openmkt.test.commerce.listing';
 const DEVELOPMENT_SHOP = 'app.openmkt.test.commerce.shop';
+const DEVELOPMENT_GROUP = 'app.openmkt.test.commerce.productGroup';
 
 const IS_PRODUCTION = process.env.NEXT_PUBLIC_MARKETPLACE_ENV === 'production';
 
@@ -32,6 +34,14 @@ export const SHOP_COLLECTION = IS_PRODUCTION ? PRODUCTION_SHOP : DEVELOPMENT_SHO
 
 /** Every repo has at most one shop, so the record key is fixed. */
 export const SHOP_RKEY = 'self';
+
+/**
+ * A product whose variants are separate listings.
+ *
+ * Unlike the shop there are many per repo, so these get generated rkeys and a
+ * listing points at one through `partOf`.
+ */
+export const PRODUCT_GROUP_COLLECTION = IS_PRODUCTION ? PRODUCTION_GROUP : DEVELOPMENT_GROUP;
 
 /** The v1 collection. Read-only — nothing should write here again. */
 export const LEGACY_COLLECTION = MARKETPLACE_COLLECTION;

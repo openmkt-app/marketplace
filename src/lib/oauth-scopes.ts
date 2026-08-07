@@ -8,7 +8,12 @@
 // The collection scopes are derived from the same constants the write path
 // uses, so dev and production ask for the collection they actually write.
 
-import { COMMERCE_COLLECTION, LEGACY_COLLECTION, SHOP_COLLECTION } from './commerce/collections';
+import {
+  COMMERCE_COLLECTION,
+  LEGACY_COLLECTION,
+  PRODUCT_GROUP_COLLECTION,
+  SHOP_COLLECTION,
+} from './commerce/collections';
 
 /**
  * Why the legacy collection is still here: upgrading a v1 listing deletes the
@@ -23,6 +28,10 @@ const SCOPES = [
   // record first. Asking for it now avoids a second round of re-consent when
   // the shop gets a UI of its own.
   `repo:${SHOP_COLLECTION}`,
+  // Only sellers who group variants ever write one, but the scope has to be
+  // granted before the first attempt — a seller cannot be asked to re-consent
+  // halfway through saving a listing.
+  `repo:${PRODUCT_GROUP_COLLECTION}`,
   `repo:${LEGACY_COLLECTION}`,
   'repo:app.bsky.feed.post',
   'repo:app.bsky.graph.follow',

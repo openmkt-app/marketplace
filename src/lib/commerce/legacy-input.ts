@@ -42,6 +42,10 @@ export type LegacyListingInput = {
   dimensions?: { length?: number; width?: number; height?: number };
   category: string;
   condition?: string;
+  /** AT URI of the productGroup this listing is one option of. */
+  partOf?: string;
+  /** Which option this listing is, e.g. [{axis: 'Tier', value: 'Professional'}]. */
+  variantProperties?: Array<{ axis: string; value?: string }>;
   location?: {
     state?: string;
     county?: string;
@@ -153,6 +157,12 @@ export function toListingInput(input: LegacyListingInput): ListingInput {
     location: toCommerceLocation(input.location),
     externalUrl: input.externalUrl,
     hideFromFriends: input.hideFromFriends,
+
+    // A variant only makes sense as part of a group, so the pair travels
+    // together: variantProperties without partOf names an axis on nothing.
+    ...(input.partOf
+      ? { partOf: input.partOf, variantProperties: input.variantProperties }
+      : {}),
 
     sku: input.sku,
     gtin: input.gtin,

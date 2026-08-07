@@ -549,11 +549,25 @@
     "botFollowTitle": "Ativar notificações de comprador",
     "botFollowBody": "Para receber consultas de compradores interessados, você precisa seguir nosso Bot de Introdução. A criação de anúncios está desabilitada até que você o siga.",
     "botFollowButton": "Seguir Bot do Mercado",
+    "labelIsVariant": "Este é uma opção de um produto",
+    "hintIsVariant": "Para um produto vendido em níveis, tamanhos ou cores. Cada opção é o seu próprio anúncio e elas aparecem juntas como um produto.",
+    "labelProduct": "Produto",
+    "newProduct": "Novo produto…",
+    "currentProduct": "Produto atual",
+    "labelProductName": "Nome do produto",
+    "placeholderProductName": "ex.: Migro",
+    "labelAxisName": "Como as opções se chamam",
+    "variantAxisDefault": "Nível",
+    "labelOptionValue": "{axis} deste anúncio",
+    "placeholderOptionValue": "ex.: Professional",
+    "hintOptionValue": "Os compradores trocam de opção por este nome.",
     "legalWarning": "Seu anúncio será visível para toda a comunidade do AT Protocol. Observe que não permitimos anúncios de animais vivos, substâncias controladas, armas, itens falsificados ou qualquer coisa que viole os direitos de propriedade intelectual. Mantenha-o legal e amigável para a comunidade!",
     "errors": {
       "freeAndOffers": "Um item grátis não pode aceitar ofertas. Coloque um preço, ou deixe vazio e mantenha as ofertas ativadas.",
       "freeWithExternalUrl": "Um item grátis não pode ter link de compra externo. Remova o link ou coloque um preço.",
       "salePriceTooHigh": "O preço promocional precisa ser menor que o preço normal.",
+      "variantValueRequired": "Dê um nome a esta opção, para os compradores diferenciarem das outras.",
+      "variantProductRequired": "Escreva o nome do produto ao qual estas opções pertencem.",
       "saleDatesBackwards": "A promoção não pode terminar antes de começar.",
       "followBot": "Falha ao seguir o bot. Por favor, tente novamente.",
       "maxImages": "Você só pode enviar no máximo 10 imagens. Por favor, remova algumas primeiro.",
@@ -681,6 +695,7 @@
     "forParts": "Para Peças / Não Funciona"
   },
   "listingDetail": {
+    "variantPopular": "Popular",
     "makeAnOffer": "Faça uma oferta",
     "orOffer": "ou faça uma oferta",
     "brand": "Marca",
@@ -790,6 +805,8 @@
     }
   },
   "listingCard": {
+    "optionCount": "{count, plural, one {# opção} other {# opções}}",
+    "fromPrice": "a partir de",
     "makeAnOffer": "Faça uma oferta",
     "orOffer": "ou faça uma oferta",
     "onlineStore": "Loja Online",

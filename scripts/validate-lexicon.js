@@ -86,7 +86,8 @@ process.env.NEXT_PUBLIC_MARKETPLACE_ENV = 'production';
 
 try {
   const { toListingInput, buildSelfLabels } = await import('../src/lib/commerce/legacy-input.ts');
-  const { buildListingRecord, buildShopRecord } = await import('../src/lib/commerce/serialize.ts');
+  const { buildListingRecord, buildProductGroupRecord, buildShopRecord } =
+    await import('../src/lib/commerce/serialize.ts');
 
   // Both ends of the shop form: the bare record created automatically on a
   // seller's first save, and one with every field the form can set.
@@ -123,6 +124,37 @@ try {
       const shop = buildShopRecord(input, '2025-03-11T10:04:00.000Z');
       lexicons.assertValidRecord(shop.$type, shop);
       console.log(`  ✅ ${name} (${shop.$type})`);
+    } catch (e) {
+      console.error(`  ❌ ${name}\n     ${e.message}`);
+      writeErrors++;
+    }
+  }
+
+  const groupCases = [
+    ['software tiers', {
+      title: 'Migro',
+      optionAxes: [{ name: 'Tier', values: ['Professional', 'Business', 'Agency', 'Enterprise'] }],
+      defaultVariant: [{ axis: 'Tier', value: 'Business' }],
+      category: 'digital',
+      type: 'digital',
+      shopRef: 'at://did:plc:seller/app.openmkt.commerce.shop/self',
+    }],
+    // The form writes a group with one value on the first save and adds the
+    // rest as each variant is created, so a single-value axis is a real state.
+    ['first variant of a new product', {
+      title: 'Enamel mug',
+      optionAxes: [{ name: 'Colour', values: ['Navy'] }],
+      category: 'home_goods',
+      type: 'goods',
+      shopRef: 'at://did:plc:seller/app.openmkt.commerce.shop/self',
+    }],
+  ];
+
+  for (const [name, input] of groupCases) {
+    try {
+      const group = buildProductGroupRecord(input, '2025-03-11T10:04:00.000Z');
+      lexicons.assertValidRecord(group.$type, group);
+      console.log(`  ✅ ${name} (${group.$type})`);
     } catch (e) {
       console.error(`  ❌ ${name}\n     ${e.message}`);
       writeErrors++;

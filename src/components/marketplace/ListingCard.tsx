@@ -52,6 +52,9 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, prior
   // Format date
   const postedDate = formatDate(listing.createdAt, locale);
 
+  // A collapsed product: one card standing for several variant listings.
+  const hasOptions = (listing.variantCount ?? 0) > 1;
+
   // Format location - clean up prefixes and abbreviate state
   const isOnline = listing.location ? isOnlineStore(listing.location) : false;
   const locationString = isOnline
@@ -156,6 +159,12 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, prior
           {listing.title}
         </h3>
 
+        {hasOptions && (
+          <span className="text-xs text-slate-500 mb-0.5">
+            {t('optionCount', { count: listing.variantCount! })}
+          </span>
+        )}
+
         {listing.category === COMMISSION_CATEGORY_ID && (
           <span className="text-xs text-slate-400 -mb-1 block">{t('startingAt')}</span>
         )}
@@ -166,6 +175,11 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, prior
           {/* A missing price and a price of zero format identically once they
               are strings, and they mean opposite things. noPrice is checked
               first so "make an offer" is never rendered as "Free". */}
+          {/* This card stands for several listings, and the price shown is the
+              cheapest of them — say so, or it reads as the price. */}
+          {hasOptions && !listing.noPrice && (
+            <span className="text-xs font-medium text-slate-400">{t('fromPrice')}</span>
+          )}
           <span className={listing.isOnSale ? 'text-emerald-700' : undefined}>
             {listing.noPrice
               ? t('makeAnOffer')

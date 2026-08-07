@@ -55,6 +55,9 @@ export type LegacyListing = {
   tags?: string[];
   /** A row with no value is a feature the listing includes, not a property. */
   specifications?: Array<{ name: string; value?: string }>;
+  /** AT URI of the productGroup this listing is one option of. */
+  partOf?: string;
+  variantProperties?: Array<{ axis: string; value?: string }>;
   manageStock?: boolean;
   quantity?: number;
   lowStockThreshold?: number;
@@ -166,6 +169,10 @@ export function toLegacyListing(listing: Listing): LegacyListing {
     brand: listing.brand,
     tags: listing.tags,
     specifications: listing.specifications,
+    // Carried so browse can collapse siblings into one card and the detail page
+    // can offer the other options, both without fetching the group record.
+    partOf: listing.partOf,
+    variantProperties: listing.variantProperties,
     manageStock: listing.manageStock,
     quantity: listing.quantity,
     lowStockThreshold: listing.lowStockThreshold,

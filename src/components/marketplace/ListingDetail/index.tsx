@@ -33,6 +33,7 @@ import {
   Clock,
   Check,
 } from 'lucide-react';
+import VariantChooser from '../VariantChooser';
 import { COMMISSION_CATEGORY_ID } from '@/lib/artist-store-utils';
 import { isOnlineStore, formatLocationShort } from '@/lib/location-utils';
 import { getPlatformDisplayName } from '@/lib/external-link-utils';
@@ -459,6 +460,10 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
               </p>
             )}
           </div>
+
+          {/* Directly under the price, because the price shown is this option's
+              price and the buyer needs to see what changes when they switch. */}
+          <VariantChooser group={(listing as any).variantGroup} currentUri={listing.uri} />
 
           {/* Seller Info */}
           {(sellerDisplayName || sellerHandle) && (

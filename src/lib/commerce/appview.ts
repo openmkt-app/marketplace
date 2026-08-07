@@ -113,6 +113,7 @@ function toListing(rec: AppViewRecord): Listing | null {
     sku: rec.sku,
     gtin: rec.gtin,
     partOf: rec.partOf,
+    variantProperties: rec.variantProperties,
     groupedItems: rec.groupedItems,
     specifications: rec.specifications,
 

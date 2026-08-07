@@ -233,6 +233,53 @@ export type Shop = {
   createdAt: string;
 };
 
+/**
+ * One axis a product varies along: Tier, Colour, Size.
+ *
+ * Declared on the group, not on the variants, so every variant agrees on what
+ * the choices are. A variant that names a value outside `values` is a variant
+ * nobody can pick.
+ */
+export type OptionAxis = { name: string; values: string[] };
+
+/**
+ * A product whose variants are separate listings.
+ *
+ * Carries no price of its own. The group's price is a range worked out from
+ * its children, and the moment a group stores one it can disagree with them.
+ */
+export type ProductGroup = {
+  uri: string;
+  cid?: string;
+  ownerDid: string;
+
+  title: string;
+  description?: string;
+  shopRef?: string;
+  optionAxes: OptionAxis[];
+  /** Preselected when the product is first shown, e.g. the "most popular" tier. */
+  defaultVariant?: Array<{ axis: string; value?: string }>;
+  sku?: string;
+  specifications?: Specification[];
+  category: string;
+  taxonomy?: TaxonomyRef;
+  /** Every variant mirrors this. The group is the source of truth. */
+  type: ListingType;
+  images?: ImageBlob[];
+  createdAt: string;
+  updatedAt?: string;
+
+  /** Hydration only, never written. */
+  formattedImages?: FormattedImage[];
+};
+
+export type ProductGroupInput = Omit<
+  ProductGroup,
+  'uri' | 'cid' | 'ownerDid' | 'createdAt' | 'formattedImages'
+> & {
+  createdAt?: string;
+};
+
 /** What the shop form produces, before it becomes a record. */
 export type ShopInput = Omit<Shop, 'uri' | 'cid' | 'ownerDid' | 'createdAt'> & {
   createdAt?: string;
