@@ -23,7 +23,7 @@ import {
 } from '@/lib/location-utils';
 import { formatConditionForDisplay } from '@/lib/condition-utils';
 import { formatPrice, formatDate, formatLocation } from '@/lib/price-utils';
-import { formatCategoryDisplay, getCategoryName, getSubcategoryName, getListingSubcategory, extractSubcategoryFromDescription } from '@/lib/category-utils';
+import { formatCategoryDisplay, getCategoryName, getSubcategoryName, getListingSubcategory, getListingSubcategoryId, extractSubcategoryFromDescription } from '@/lib/category-utils';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { isOnlineStore } from '@/lib/location-utils';
 import { Globe, MapPin } from 'lucide-react';
@@ -172,18 +172,15 @@ function filterListingsByCategory(
     // Filter by main category
     if (listing.category !== category) return false;
 
-    // If subcategory is specified, check it
+    // If subcategory is specified, check it.
+    //
+    // Compared as ids. Records hold either the id (new) or the English display
+    // name (old), and comparing the raw stored values would have silently
+    // stopped matching the day the write path switched.
     if (subcategory) {
-      // Get the subcategory name from the ID (e.g., "vintage" -> "Vintage Items")
-      const subcategoryName = getSubcategoryName(category, subcategory);
-      if (!subcategoryName) return true; // If subcategory name not found, don't filter
-
-      // Get the listing's subcategory (from metadata or description)
-      const listingSubcategory = getListingSubcategory(listing);
-      if (!listingSubcategory) return false; // Listing has no subcategory, exclude it
-
-      // Compare subcategory names (case-insensitive)
-      return listingSubcategory.toLowerCase() === subcategoryName.toLowerCase();
+      const listingSubcategoryId = getListingSubcategoryId(listing);
+      if (!listingSubcategoryId) return false; // No subcategory: excluded
+      return listingSubcategoryId === subcategory;
     }
 
     return true;

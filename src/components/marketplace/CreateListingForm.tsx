@@ -8,6 +8,7 @@ import { LocationFilterValue } from './filters/LocationFilter';
 import { formatZipPrefix } from '@/lib/location-utils';
 import Image from 'next/image';
 import { CATEGORIES, CONDITIONS, SubcategoryOption } from '@/lib/category-data';
+import { resolveSubcategoryId } from '@/lib/category-utils';
 import { isFollowingBot, followBot } from '@/lib/bot-utils';
 import LiveListingPreview from './LiveListingPreview';
 import { createBlueskyCdnImageUrls } from '@/lib/image-utils';
@@ -313,7 +314,9 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
           setSubcategories(categoryFn.subcategories);
 
           // Find the ID matching the stored name
-          const subObj = categoryFn.subcategories.find(s => s.name === initialData.metadata!.subcategory);
+          // Records may hold either the id (new) or the English name (old).
+        const subId = resolveSubcategoryId(initialData.category, initialData.metadata!.subcategory);
+        const subObj = categoryFn.subcategories.find(s => s.id === subId);
           if (subObj) {
             setSelectedSubcategory(subObj.id);
           }
@@ -957,19 +960,6 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       const description = formData.get('description') as string;
 
       // Prepare listing data
-      let subcategoryName = '';
-
-      // Get subcategory name if selected
-      if (subcategory) {
-        const categorySelect = event.currentTarget.elements.namedItem('category') as HTMLSelectElement;
-        const category = CATEGORIES.find(c => c.id === categorySelect.value);
-        const subcategoryObj = category?.subcategories.find(s => s.id === subcategory);
-
-        if (subcategoryObj) {
-          subcategoryName = subcategoryObj.name;
-        }
-      }
-
       // Collect the location data from the form or use selected location
       let locationData;
 
@@ -1056,8 +1046,10 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       }
 
       // Create custom metadata for inclusion in description
+      // The id, not the display name. Storing "Vintage Items" locale-locked the
+      // record and broke every reverse lookup the moment a name was reworded.
       const metadata: Record<string, any> = {
-        subcategory: subcategoryName
+        subcategory: subcategory || undefined
       };
 
       // Store detected platform in metadata for badge display
