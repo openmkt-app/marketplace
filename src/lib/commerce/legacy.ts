@@ -41,6 +41,19 @@ export type LegacyListing = {
   saleEndsAt?: string;
   /** Undefined means the seller never said. Do not render a guess. */
   taxInclusive?: boolean;
+
+  // Catalogue detail. All optional, all absent on a v1 record.
+  sku?: string;
+  gtin?: string;
+  brand?: string;
+  tags?: string[];
+  specifications?: Array<{ name: string; value: string }>;
+  manageStock?: boolean;
+  quantity?: number;
+  lowStockThreshold?: number;
+  soldIndividually?: boolean;
+  shippingWeight?: number;
+  dimensions?: { length?: number; width?: number; height?: number };
   description: string;
   currency?: string;
   category: string;
@@ -132,6 +145,21 @@ export function toLegacyListing(listing: Listing): LegacyListing {
         : toLegacyPriceString(listing.pricing.salePrice, currency),
     saleStartsAt: listing.pricing.saleStartsAt,
     saleEndsAt: listing.pricing.saleEndsAt,
+
+    // Passed straight through. These have no v1 equivalent, so there is
+    // nothing to translate — they exist here only so the edit form can reload
+    // what the seller typed. Three fields have already been lost this way.
+    sku: listing.sku,
+    gtin: listing.gtin,
+    brand: listing.brand,
+    tags: listing.tags,
+    specifications: listing.specifications,
+    manageStock: listing.manageStock,
+    quantity: listing.quantity,
+    lowStockThreshold: listing.lowStockThreshold,
+    soldIndividually: listing.soldIndividually,
+    shippingWeight: listing.goodsDetails?.shippingWeight,
+    dimensions: listing.goodsDetails?.dimensions,
     taxInclusive: listing.pricing.taxInclusive,
     currency,
     category: listing.category,

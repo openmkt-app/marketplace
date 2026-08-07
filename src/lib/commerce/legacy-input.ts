@@ -26,6 +26,17 @@ export type LegacyListingInput = {
   saleEndsAt?: string;
   taxInclusive?: boolean;
   currency?: string;
+  sku?: string;
+  gtin?: string;
+  brand?: string;
+  tags?: string[];
+  specifications?: Array<{ name: string; value: string }>;
+  manageStock?: boolean;
+  quantity?: number;
+  lowStockThreshold?: number;
+  soldIndividually?: boolean;
+  shippingWeight?: number;
+  dimensions?: { length?: number; width?: number; height?: number };
   category: string;
   condition?: string;
   location?: {
@@ -59,10 +70,14 @@ function toCommerceLocation(loc: LegacyListingInput['location']): CommerceLocati
   if (loc.locality) out.locality = loc.locality;
   if (loc.zipPrefix) out.postalPrefix = loc.zipPrefix;
 
+  // Nothing was actually said, so say nothing. Writing { isRemote: false }
+  // asserts "this has a physical location" for a listing with no location.
+  if (!out.region && !out.locality && !out.postalPrefix) return undefined;
+
   // Only claim a country when there is a place to attach it to. The form is
   // still US-only, and an empty location with countryCode: "US" would assert
   // something the seller never said.
-  if (out.region || out.locality || out.postalPrefix) out.countryCode = 'US';
+  out.countryCode = 'US';
 
   return out;
 }
@@ -133,7 +148,31 @@ export function toListingInput(input: LegacyListingInput): ListingInput {
     location: toCommerceLocation(input.location),
     externalUrl: input.externalUrl,
     hideFromFriends: input.hideFromFriends,
+
+    sku: input.sku,
+    gtin: input.gtin,
+    brand: input.brand,
+    tags: input.tags,
+    specifications: input.specifications,
+    manageStock: input.manageStock,
+    quantity: input.quantity,
+    lowStockThreshold: input.lowStockThreshold,
+    soldIndividually: input.soldIndividually,
   };
+
+  // Weight and dimensions describe a physical thing, so they only exist on a
+  // goods listing. A service with a shipping weight would be nonsense.
+  //
+  // `dimensions` is dropped unless at least one side was given: compact() does
+  // not recurse, so an empty object would otherwise be written as one.
+  const dims = input.dimensions;
+  const hasDims = !!dims && (dims.length !== undefined || dims.width !== undefined || dims.height !== undefined);
+  if (type === 'goods' && (input.shippingWeight !== undefined || hasDims)) {
+    listingInput.goodsDetails = {
+      shippingWeight: input.shippingWeight,
+      dimensions: hasDims ? dims : undefined,
+    };
+  }
 
   if (type === 'service') {
     listingInput.serviceDetails = toServiceDetails(input.metadata);

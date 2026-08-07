@@ -18,6 +18,28 @@ import { Wand2, Loader2, Sparkles, Package, Palette } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { CURRENCIES } from '@/lib/price-utils';
 
+/** "oak, mid-century , " -> ["oak", "mid-century"]. Order kept, blanks dropped. */
+function parseTags(raw: string): string[] {
+  const seen = new Set<string>();
+  return raw
+    .split(',')
+    .map(t => t.trim())
+    .filter(t => t && !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));
+}
+
+/** A spec row needs both halves; a name with no value says nothing. */
+function cleanSpecs(rows: Array<{ name: string; value: string }>) {
+  return rows
+    .map(r => ({ name: r.name.trim(), value: r.value.trim() }))
+    .filter(r => r.name && r.value);
+}
+
+function numberOrUndefined(raw: string): number | undefined {
+  if (raw.trim() === '') return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : undefined;
+}
+
 // Define the SavedLocation type
 interface SavedLocation {
   name: string;
@@ -87,6 +109,24 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   const [saleEndsAt, setSaleEndsAt] = useState('');
   const [taxInclusive, setTaxInclusive] = useState<boolean | undefined>(undefined);
   const [showSaleFields, setShowSaleFields] = useState(false);
+
+  // Catalogue detail. Folded away by default: someone selling one used chair
+  // needs none of it, and a form that opens with twelve empty boxes reads as
+  // twelve things you are expected to fill in.
+  const [showMoreDetails, setShowMoreDetails] = useState(false);
+  const [sku, setSku] = useState('');
+  const [gtin, setGtin] = useState('');
+  const [brand, setBrand] = useState('');
+  const [tagsInput, setTagsInput] = useState('');
+  const [specs, setSpecs] = useState<Array<{ name: string; value: string }>>([]);
+  const [manageStock, setManageStock] = useState(false);
+  const [quantity, setQuantity] = useState('');
+  const [lowStockThreshold, setLowStockThreshold] = useState('');
+  const [soldIndividually, setSoldIndividually] = useState(false);
+  const [shippingWeight, setShippingWeight] = useState('');
+  const [dimL, setDimL] = useState('');
+  const [dimW, setDimW] = useState('');
+  const [dimH, setDimH] = useState('');
   const [currency, setCurrency] = useState('USD');
 
   // Add state for controlled inputs (Title, Description, Condition)
@@ -115,6 +155,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   // `availability`, which is why "closed" finally has somewhere to live.
   const [commissionOpen, setCommissionOpen] = useState<'open' | 'closed'>('open');
   const isService = listingType === 'service';
+  const detailField = 'w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light';
 
   // Add state for external URL
   const [externalUrl, setExternalUrl] = useState('');
@@ -268,6 +309,27 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       setSaleStartsAt(initialData.saleStartsAt ? initialData.saleStartsAt.slice(0, 10) : '');
       setSaleEndsAt(initialData.saleEndsAt ? initialData.saleEndsAt.slice(0, 10) : '');
       setTaxInclusive(initialData.taxInclusive);
+
+      setSku(initialData.sku || '');
+      setGtin(initialData.gtin || '');
+      setBrand(initialData.brand || '');
+      setTagsInput((initialData.tags || []).join(', '));
+      setSpecs(initialData.specifications || []);
+      setManageStock(!!initialData.manageStock);
+      setQuantity(initialData.quantity !== undefined ? String(initialData.quantity) : '');
+      setLowStockThreshold(initialData.lowStockThreshold !== undefined ? String(initialData.lowStockThreshold) : '');
+      setSoldIndividually(!!initialData.soldIndividually);
+      setShippingWeight(initialData.shippingWeight !== undefined ? String(initialData.shippingWeight) : '');
+      setDimL(initialData.dimensions?.length !== undefined ? String(initialData.dimensions.length) : '');
+      setDimW(initialData.dimensions?.width !== undefined ? String(initialData.dimensions.width) : '');
+      setDimH(initialData.dimensions?.height !== undefined ? String(initialData.dimensions.height) : '');
+      // Opened when there is something in it, so an edit never hides data.
+      setShowMoreDetails(
+        !!(initialData.sku || initialData.gtin || initialData.brand || initialData.tags?.length ||
+           initialData.specifications?.length || initialData.manageStock ||
+           initialData.soldIndividually || initialData.shippingWeight !== undefined ||
+           initialData.dimensions)
+      );
       setCurrency(initialData.currency || 'USD');
       setCondition(initialData.condition);
       setSelectedCategory(initialData.category);
@@ -1135,6 +1197,30 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
           saleEndsAt: saleEndsAt ? new Date(`${saleEndsAt}T23:59:59Z`).toISOString() : undefined,
         }),
         ...(taxInclusive !== undefined && { taxInclusive }),
+
+        // Blank fields are left out entirely rather than sent as empty
+        // strings, so nothing writes a field the seller did not fill in.
+        ...(sku.trim() && { sku: sku.trim() }),
+        ...(gtin.trim() && { gtin: gtin.trim() }),
+        ...(brand.trim() && { brand: brand.trim() }),
+        ...(parseTags(tagsInput).length > 0 && { tags: parseTags(tagsInput) }),
+        ...(cleanSpecs(specs).length > 0 && { specifications: cleanSpecs(specs) }),
+        ...(manageStock && {
+          manageStock: true,
+          ...(quantity.trim() !== '' && { quantity: parseInt(quantity, 10) }),
+          ...(lowStockThreshold.trim() !== '' && { lowStockThreshold: parseInt(lowStockThreshold, 10) }),
+        }),
+        ...(soldIndividually && { soldIndividually: true }),
+        ...(!isService && numberOrUndefined(shippingWeight) !== undefined && {
+          shippingWeight: numberOrUndefined(shippingWeight),
+        }),
+        ...(!isService && (numberOrUndefined(dimL) !== undefined || numberOrUndefined(dimW) !== undefined || numberOrUndefined(dimH) !== undefined) && {
+          dimensions: {
+            length: numberOrUndefined(dimL),
+            width: numberOrUndefined(dimW),
+            height: numberOrUndefined(dimH),
+          },
+        }),
         // The lexicon's own availability field. Only meaningful for services
         // today; goods listings do not ask, so it stays unset for them.
         ...(isService && { availability: commissionOpen === 'closed' ? 'out_of_stock' : 'in_stock' }),
@@ -2054,6 +2140,125 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                           {tCreate('locationHelp')}
                         </p>
                       </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Catalogue detail — folded away by default. */}
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-neutral-light">
+                <button
+                  type="button"
+                  onClick={() => setShowMoreDetails(v => !v)}
+                  className="flex items-center justify-between w-full text-left"
+                >
+                  <div>
+                    <h2 className="text-xl font-semibold text-text-primary">{tCreate('moreDetailsHeader')}</h2>
+                    <p className="text-sm text-text-secondary">{tCreate('moreDetailsDesc')}</p>
+                  </div>
+                  <span className="text-text-secondary text-sm">{showMoreDetails ? '−' : '+'}</span>
+                </button>
+
+                {showMoreDetails && (
+                  <div className="mt-5 space-y-5">
+                    <div className="grid sm:grid-cols-3 gap-3">
+                      <div>
+                        <label htmlFor="brand" className="block text-sm font-medium text-text-secondary mb-1">{tCreate('labelBrand')}</label>
+                        <input id="brand" value={brand} onChange={e => setBrand(e.target.value)} className={detailField} />
+                      </div>
+                      <div>
+                        <label htmlFor="sku" className="block text-sm font-medium text-text-secondary mb-1">{tCreate('labelSku')}</label>
+                        <input id="sku" value={sku} onChange={e => setSku(e.target.value)} className={detailField} />
+                      </div>
+                      <div>
+                        <label htmlFor="gtin" className="block text-sm font-medium text-text-secondary mb-1">{tCreate('labelGtin')}</label>
+                        <input id="gtin" value={gtin} onChange={e => setGtin(e.target.value)} className={detailField} placeholder="01234567890128" />
+                      </div>
+                    </div>
+                    <p className="text-xs text-text-secondary -mt-3">{tCreate('hintGtin')}</p>
+
+                    <div>
+                      <label htmlFor="tags" className="block text-sm font-medium text-text-secondary mb-1">{tCreate('labelTags')}</label>
+                      <input id="tags" value={tagsInput} onChange={e => setTagsInput(e.target.value)} className={detailField} placeholder={tCreate('placeholderTags')} />
+                      <p className="text-xs text-text-secondary mt-1">{tCreate('hintTags')}</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-text-secondary mb-1">{tCreate('labelSpecs')}</label>
+                      <div className="space-y-2">
+                        {specs.map((row, i) => (
+                          <div key={i} className="flex gap-2">
+                            <input
+                              value={row.name}
+                              onChange={e => setSpecs(specs.map((r, j) => j === i ? { ...r, name: e.target.value } : r))}
+                              placeholder={tCreate('placeholderSpecName')}
+                              className={`${detailField} flex-1`}
+                            />
+                            <input
+                              value={row.value}
+                              onChange={e => setSpecs(specs.map((r, j) => j === i ? { ...r, value: e.target.value } : r))}
+                              placeholder={tCreate('placeholderSpecValue')}
+                              className={`${detailField} flex-1`}
+                            />
+                            <button type="button" onClick={() => setSpecs(specs.filter((_, j) => j !== i))}
+                              className="px-3 text-text-secondary hover:text-red-600" aria-label={tCreate('removeSpec')}>×</button>
+                          </div>
+                        ))}
+                      </div>
+                      <button type="button" onClick={() => setSpecs([...specs, { name: '', value: '' }])}
+                        className="mt-2 text-sm text-primary-color hover:underline">{tCreate('addSpec')}</button>
+                    </div>
+
+                    <div className="pt-4 border-t border-neutral-light">
+                      <label className="flex items-center gap-2 text-sm font-medium text-text-secondary">
+                        <input type="checkbox" checked={manageStock} onChange={e => setManageStock(e.target.checked)}
+                          className="h-4 w-4 rounded border-gray-300 text-primary-color" />
+                        {tCreate('labelManageStock')}
+                      </label>
+                      {manageStock && (
+                        <div className="grid sm:grid-cols-2 gap-3 mt-3">
+                          <div>
+                            <label htmlFor="quantity" className="block text-sm font-medium text-text-secondary mb-1">{tCreate('labelQuantity')}</label>
+                            <input id="quantity" type="number" min="0" value={quantity} onChange={e => setQuantity(e.target.value)} className={detailField} />
+                          </div>
+                          <div>
+                            <label htmlFor="lowStock" className="block text-sm font-medium text-text-secondary mb-1">{tCreate('labelLowStock')}</label>
+                            <input id="lowStock" type="number" min="0" value={lowStockThreshold} onChange={e => setLowStockThreshold(e.target.value)} className={detailField} />
+                          </div>
+                        </div>
+                      )}
+                      <label className="flex items-center gap-2 text-sm font-medium text-text-secondary mt-3">
+                        <input type="checkbox" checked={soldIndividually} onChange={e => setSoldIndividually(e.target.checked)}
+                          className="h-4 w-4 rounded border-gray-300 text-primary-color" />
+                        {tCreate('labelSoldIndividually')}
+                      </label>
+                    </div>
+
+                    {/* Weight and size describe a physical thing, so a service
+                        is not asked for them. */}
+                    {!isService && (
+                      <div className="pt-4 border-t border-neutral-light">
+                        <p className="text-sm font-medium text-text-secondary mb-2">{tCreate('shippingDetailsHeader')}</p>
+                        <div className="grid sm:grid-cols-4 gap-3">
+                          <div>
+                            <label htmlFor="weight" className="block text-xs text-text-secondary mb-1">{tCreate('labelWeight')}</label>
+                            <input id="weight" type="number" min="0" step="any" value={shippingWeight} onChange={e => setShippingWeight(e.target.value)} className={detailField} />
+                          </div>
+                          <div>
+                            <label htmlFor="dimL" className="block text-xs text-text-secondary mb-1">{tCreate('labelLength')}</label>
+                            <input id="dimL" type="number" min="0" step="any" value={dimL} onChange={e => setDimL(e.target.value)} className={detailField} />
+                          </div>
+                          <div>
+                            <label htmlFor="dimW" className="block text-xs text-text-secondary mb-1">{tCreate('labelWidth')}</label>
+                            <input id="dimW" type="number" min="0" step="any" value={dimW} onChange={e => setDimW(e.target.value)} className={detailField} />
+                          </div>
+                          <div>
+                            <label htmlFor="dimH" className="block text-xs text-text-secondary mb-1">{tCreate('labelHeight')}</label>
+                            <input id="dimH" type="number" min="0" step="any" value={dimH} onChange={e => setDimH(e.target.value)} className={detailField} />
+                          </div>
+                        </div>
+                        <p className="text-xs text-text-secondary mt-1">{tCreate('hintShippingUnits')}</p>
+                      </div>
                     )}
                   </div>
                 )}

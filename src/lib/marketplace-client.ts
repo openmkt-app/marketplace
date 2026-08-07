@@ -68,6 +68,19 @@ export type MarketplaceListing = {
   saleEndsAt?: string;
   /** Undefined means the seller never said whether tax is included. */
   taxInclusive?: boolean;
+
+  // Catalogue detail. All optional, all absent on a v1 record.
+  sku?: string;
+  gtin?: string;
+  brand?: string;
+  tags?: string[];
+  specifications?: Array<{ name: string; value: string }>;
+  manageStock?: boolean;
+  quantity?: number;
+  lowStockThreshold?: number;
+  soldIndividually?: boolean;
+  shippingWeight?: number;
+  dimensions?: { length?: number; width?: number; height?: number };
   currency?: string;
   images?: ListingImage[];
   location: ListingLocation;

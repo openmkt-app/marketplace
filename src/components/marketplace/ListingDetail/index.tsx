@@ -509,6 +509,62 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
             </div>
           </div>
 
+          {/* Catalogue detail. Each row appears only when the seller filled
+              it in, so a plain listing stays as plain as it was before. */}
+          {(listing.brand || listing.gtin || listing.specifications?.length ||
+            listing.shippingWeight !== undefined || listing.dimensions ||
+            (listing.manageStock && listing.quantity !== undefined)) && (
+            <div className="mb-4 border border-gray-200 rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <tbody className="divide-y divide-gray-100">
+                  {listing.brand && (
+                    <tr><td className="px-3 py-2 text-gray-500 w-2/5">{t('brand')}</td><td className="px-3 py-2 text-gray-900">{listing.brand}</td></tr>
+                  )}
+                  {listing.specifications?.map((spec, i) => (
+                    <tr key={i}><td className="px-3 py-2 text-gray-500">{spec.name}</td><td className="px-3 py-2 text-gray-900">{spec.value}</td></tr>
+                  ))}
+                  {listing.manageStock && listing.quantity !== undefined && (
+                    <tr>
+                      <td className="px-3 py-2 text-gray-500">{t('inStock')}</td>
+                      <td className="px-3 py-2 text-gray-900">
+                        {listing.quantity === 0 ? (
+                          <span className="text-red-700">{t('soldOut')}</span>
+                        ) : listing.lowStockThreshold !== undefined && listing.quantity <= listing.lowStockThreshold ? (
+                          <span className="text-amber-700">{t('onlyLeft', { count: listing.quantity })}</span>
+                        ) : (
+                          listing.quantity
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                  {listing.shippingWeight !== undefined && (
+                    <tr><td className="px-3 py-2 text-gray-500">{t('weight')}</td><td className="px-3 py-2 text-gray-900">{listing.shippingWeight}</td></tr>
+                  )}
+                  {listing.dimensions && (
+                    <tr>
+                      <td className="px-3 py-2 text-gray-500">{t('dimensions')}</td>
+                      <td className="px-3 py-2 text-gray-900">
+                        {[listing.dimensions.length, listing.dimensions.width, listing.dimensions.height]
+                          .filter(d => d !== undefined).join(' × ')}
+                      </td>
+                    </tr>
+                  )}
+                  {listing.gtin && (
+                    <tr><td className="px-3 py-2 text-gray-500">{t('gtin')}</td><td className="px-3 py-2 text-gray-900 font-mono text-xs">{listing.gtin}</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {listing.tags && listing.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {listing.tags.map(tag => (
+                <span key={tag} className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">{tag}</span>
+              ))}
+            </div>
+          )}
+
           {/* Commission Metadata */}
           {listing.category === COMMISSION_CATEGORY_ID && (
             <div className="space-y-2 mb-4">
