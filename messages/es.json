@@ -210,6 +210,29 @@
     "reportBody": "Si encuentras un anuncio o usuario sospechoso, repórtalo de inmediato con la función \"Reportar anuncio\" o contactando con nosotros directamente.",
     "reportCta": "Reportar un problema"
   },
+  "leaving": {
+    "metadata": {
+      "title": "Revisa este enlace | Open Market",
+      "description": "Comprueba adónde lleva un enlace de pago antes de continuar."
+    },
+    "title": "Revisa este enlace antes de continuar",
+    "lead": "Open Market no gestiona pagos. Este enlace te lleva a otro sitio para terminar la compra, y algo en él no encaja.",
+    "destinationLabel": "Este enlace lleva a",
+    "whatWeFound": "Lo que encontramos",
+    "lookalike": "Esta dirección es casi idéntica a {target}. La diferencia se pasa por alto con facilidad.",
+    "brandElsewhere": "Esta dirección contiene el nombre “{brand}”, pero el sitio al que pertenece en realidad es {domain}. Cualquiera puede poner un nombre conocido delante de su propio dominio.",
+    "punycode": "Esta dirección usa caracteres que parecen letras normales pero no lo son. Tu navegador muestra su forma real como {host}.",
+    "insecure": "Este enlace no está cifrado. Lo que escribas en la página se puede leer por el camino.",
+    "invalidTitle": "Este enlace no se puede abrir",
+    "invalidBody": "El vendedor publicó algo que no es una dirección web válida, así que no hay ningún sitio seguro al que enviarte.",
+    "adviceTitle": "Antes de pagar",
+    "advice1": "Nunca escribas los datos de tu tarjeta en una página de la que no estés seguro.",
+    "advice2": "Las páginas de pago reales de Stripe están en checkout.stripe.com o buy.stripe.com, nunca en un dominio parecido.",
+    "advice3": "Si dudas, cierra esto y busca tú mismo la tienda del vendedor en vez de seguir el enlace.",
+    "notEndorsed": "Open Market es un índice de anuncios. No formamos parte de esta venta y no podemos recuperar tu dinero si algo sale mal.",
+    "continue": "Continuar a {host} de todos modos",
+    "back": "Volver a Open Market"
+  },
   "sellerGuide": {
     "metadata": {
       "title": "Guía del vendedor | Open Market",
@@ -737,6 +760,8 @@
     "location": "Ubicación",
     "buyOn": "Comprar en {platform}",
     "getItFree": "Consíguelo gratis",
+    "checkThisLink": "Revisa este enlace primero",
+    "sellerOwnsDomain": "El identificador de este vendedor demuestra que {domain} es suyo",
     "opensInNewTab": "Se abre en una nueva pestaña en {platform}",
     "ownListing": "Este es tu anuncio.",
     "manageListings": "Haz clic aquí para gestionar tus anuncios",

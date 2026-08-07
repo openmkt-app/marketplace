@@ -25,6 +25,7 @@ import {
   Calendar,
   Share2,
   ShieldCheck,
+  ShieldAlert,
   Tag,
   UserPlus,
   CheckCircle,
@@ -38,6 +39,7 @@ import VariantChooser from '../VariantChooser';
 import { COMMISSION_CATEGORY_ID } from '@/lib/artist-store-utils';
 import { isOnlineStore, formatLocationShort } from '@/lib/location-utils';
 import { getPlatformDisplayName } from '@/lib/external-link-utils';
+import { assessCheckoutLink, checkoutDestinationLabel, checkoutHref, needsWarning } from '@/lib/checkout-safety';
 import { trackListingView, trackInterest } from '@/lib/analytics';
 import { hasNsfwLabel, shouldBlurListing } from '@/lib/content-labels';
 
@@ -76,6 +78,16 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
   // identically to one priced at zero.
   const isFreeDownload =
     !listing.noPrice && parseFloat(listing.price) === 0 && !!listing.externalUrl;
+
+  // Where the buy button actually sends people, and whether that deserves a
+  // word of warning first. The seller's handle is passed in because a handle
+  // on a domain proves DNS control of it — so a seller linking to their own
+  // site is already verified, with no badge for us to award.
+  const checkoutTrust = listing.externalUrl
+    ? assessCheckoutLink(listing.externalUrl, {
+        sellerHandle: sellerProfile?.handle ?? listing.authorHandle,
+      })
+    : null;
 
   // Determine if we have formatted images to display
   const hasFormattedImages = listing.formattedImages && listing.formattedImages.length > 0;
@@ -525,29 +537,54 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
               A tiered product can carry twenty specifications, and the button
               used to sit under all of them plus the location — far enough down
               that a buyer who had decided scrolled to find it. */}
-          {listing.externalUrl && (
+          {listing.externalUrl && checkoutTrust && (
             <div className="space-y-2">
               {/* A free thing is not bought. Labelling the link "Buy on
                   Gumroad" for something priced at zero contradicts the price
                   directly above it. */}
               <a
-                href={listing.externalUrl}
+                href={checkoutHref(checkoutTrust)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`w-full flex items-center justify-center gap-2 px-6 py-4 text-lg font-bold rounded-xl shadow-sm hover:shadow-md transition-all transform hover:-translate-y-0.5 active:translate-y-0 ${
-                  isFreeDownload
-                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                    : 'bg-yellow-400 hover:bg-yellow-300 text-slate-900'
+                  needsWarning(checkoutTrust)
+                    ? 'bg-amber-100 hover:bg-amber-200 text-amber-900 border-2 border-amber-400'
+                    : isFreeDownload
+                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                      : 'bg-yellow-400 hover:bg-yellow-300 text-slate-900'
                 }`}
               >
-                {isFreeDownload && listing.type === 'digital' ? <Download size={24} /> : <ExternalLink size={24} />}
-                {isFreeDownload
-                  ? t('getItFree')
-                  : t('buyOn', { platform: getPlatformDisplayName(listing.externalUrl) || 'Website' })}
+                {needsWarning(checkoutTrust) ? (
+                  <ShieldAlert size={24} />
+                ) : isFreeDownload && listing.type === 'digital' ? (
+                  <Download size={24} />
+                ) : (
+                  <ExternalLink size={24} />
+                )}
+                {needsWarning(checkoutTrust)
+                  ? t('checkThisLink')
+                  : isFreeDownload
+                    ? t('getItFree')
+                    : /* Naming the actual host is what an allow-list cannot do. A
+                         generic "Website" hides the one detail that separates a
+                         seller's own shop from a page imitating one. */
+                      t('buyOn', { platform: checkoutDestinationLabel(checkoutTrust) })}
               </a>
-              <p className="text-center text-xs text-gray-500">
-                {t('opensInNewTab', { platform: getPlatformDisplayName(listing.externalUrl) || 'external website' })}
-              </p>
+              {checkoutTrust.level === 'sellerDomain' ? (
+                <p className="flex items-center justify-center gap-1.5 text-center text-xs text-emerald-700">
+                  <ShieldCheck size={14} />
+                  {t('sellerOwnsDomain', { domain: checkoutTrust.handle })}
+                </p>
+              ) : (
+                <p className="text-center text-xs text-gray-500">
+                  {t('opensInNewTab', {
+                    platform:
+                      getPlatformDisplayName(listing.externalUrl) ||
+                      checkoutTrust.host ||
+                      'external website',
+                  })}
+                </p>
+              )}
             </div>
           )}
 

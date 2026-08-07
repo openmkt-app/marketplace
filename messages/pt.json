@@ -210,6 +210,29 @@
     "reportBody": "Se encontrar um anúncio ou usuário suspeito, denuncie imediatamente usando o recurso \"Denunciar anúncio\" ou entrando em contato conosco.",
     "reportCta": "Relatar um problema"
   },
+  "leaving": {
+    "metadata": {
+      "title": "Confira este link | Open Market",
+      "description": "Veja para onde vai um link de pagamento antes de continuar."
+    },
+    "title": "Confira este link antes de continuar",
+    "lead": "O Open Market não processa pagamentos. Este link leva você a outro site para concluir a compra, e há algo estranho nele.",
+    "destinationLabel": "Este link leva a",
+    "whatWeFound": "O que encontramos",
+    "lookalike": "Este endereço é quase igual a {target}. A diferença passa despercebida com facilidade.",
+    "brandElsewhere": "Este endereço contém o nome “{brand}”, mas o site a que ele pertence de verdade é {domain}. Qualquer um pode colocar um nome conhecido na frente do próprio domínio.",
+    "punycode": "Este endereço usa caracteres que parecem letras comuns, mas não são. Seu navegador mostra a forma real como {host}.",
+    "insecure": "Este link não é criptografado. O que você digitar na página pode ser lido no caminho.",
+    "invalidTitle": "Não dá para abrir este link",
+    "invalidBody": "O vendedor publicou algo que não é um endereço web válido, então não há para onde mandar você com segurança.",
+    "adviceTitle": "Antes de pagar",
+    "advice1": "Nunca digite os dados do seu cartão em uma página sobre a qual você tem dúvida.",
+    "advice2": "As páginas de pagamento reais da Stripe ficam em checkout.stripe.com ou buy.stripe.com, nunca em um domínio parecido.",
+    "advice3": "Na dúvida, feche isto e procure você mesmo a loja do vendedor em vez de seguir o link.",
+    "notEndorsed": "O Open Market é um índice de anúncios. Não fazemos parte desta venda e não podemos recuperar seu dinheiro se algo der errado.",
+    "continue": "Continuar para {host} mesmo assim",
+    "back": "Voltar ao Open Market"
+  },
   "sellerGuide": {
     "metadata": {
       "title": "Guia do vendedor | Open Market",
@@ -737,6 +760,8 @@
     "location": "Localização",
     "buyOn": "Comprar no {platform}",
     "getItFree": "Baixe grátis",
+    "checkThisLink": "Confira este link antes",
+    "sellerOwnsDomain": "O identificador deste vendedor comprova que {domain} é dele",
     "opensInNewTab": "Abre em uma nova aba no {platform}",
     "ownListing": "Este é o seu anúncio.",
     "manageListings": "Clique aqui para gerenciar seus anúncios",

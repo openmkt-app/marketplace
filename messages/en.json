@@ -210,6 +210,29 @@
     "reportBody": "If you encounter a suspicious listing or user, please report it to us immediately using the \"Report Listing\" feature or contacting us directly.",
     "reportCta": "Report an Issue"
   },
+  "leaving": {
+    "metadata": {
+      "title": "Check this link | Open Market",
+      "description": "Check where a checkout link goes before you continue."
+    },
+    "title": "Check this link before you continue",
+    "lead": "Open Market does not handle payments. This link takes you to another site to finish the purchase, and something about it looks wrong.",
+    "destinationLabel": "This link goes to",
+    "whatWeFound": "What we found",
+    "lookalike": "This address is a near-copy of {target}. The difference is easy to miss when you glance at it.",
+    "brandElsewhere": "This address contains the name “{brand}”, but the site it actually belongs to is {domain}. Anyone can put a familiar name in front of their own domain.",
+    "punycode": "This address uses characters that look like ordinary letters but are not. Your browser shows its real form as {host}.",
+    "insecure": "This link is not encrypted. Anything you type on the page can be read on the way.",
+    "invalidTitle": "This link cannot be opened",
+    "invalidBody": "The seller published something that is not a usable web address, so there is nothing safe to send you to.",
+    "adviceTitle": "Before you pay",
+    "advice1": "Never type card details on a page you are not sure about.",
+    "advice2": "Real Stripe checkout pages are on checkout.stripe.com or buy.stripe.com, never on a lookalike domain.",
+    "advice3": "If in doubt, close this and find the seller's shop yourself instead of following the link.",
+    "notEndorsed": "Open Market is an index of listings. We are not part of this sale and we cannot recover your money if it goes wrong.",
+    "continue": "Continue to {host} anyway",
+    "back": "Return to Open Market"
+  },
   "sellerGuide": {
     "metadata": {
       "title": "Seller Guide | Open Market",
@@ -737,6 +760,8 @@
     "location": "Location",
     "buyOn": "Buy on {platform}",
     "getItFree": "Get it free",
+    "checkThisLink": "Check this link first",
+    "sellerOwnsDomain": "This seller's handle proves they own {domain}",
     "opensInNewTab": "Opens in a new tab on {platform}",
     "ownListing": "This is your listing.",
     "manageListings": "Click here to manage your listings",
