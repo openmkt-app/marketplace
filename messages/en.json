@@ -664,7 +664,7 @@
   },
   "listingDetail": {
     "makeAnOffer": "Make an offer",
-    "orOffer": "or offer",
+    "orOffer": "or make an offer",
     "brand": "Brand",
     "gtin": "Barcode",
     "weight": "Weight",
@@ -773,7 +773,7 @@
   },
   "listingCard": {
     "makeAnOffer": "Make an offer",
-    "orOffer": "or offer",
+    "orOffer": "or make an offer",
     "onlineStore": "Online Store",
     "waitlist": "Waitlist",
     "closed": "Closed",
