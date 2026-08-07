@@ -521,6 +521,36 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
             </div>
           )}
 
+          {/* The buy button, above everything that describes the listing.
+              A tiered product can carry twenty specifications, and the button
+              used to sit under all of them plus the location — far enough down
+              that a buyer who had decided scrolled to find it. */}
+          {listing.externalUrl && (
+            <div className="space-y-2">
+              {/* A free thing is not bought. Labelling the link "Buy on
+                  Gumroad" for something priced at zero contradicts the price
+                  directly above it. */}
+              <a
+                href={listing.externalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`w-full flex items-center justify-center gap-2 px-6 py-4 text-lg font-bold rounded-xl shadow-sm hover:shadow-md transition-all transform hover:-translate-y-0.5 active:translate-y-0 ${
+                  isFreeDownload
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                    : 'bg-yellow-400 hover:bg-yellow-300 text-slate-900'
+                }`}
+              >
+                {isFreeDownload && listing.type === 'digital' ? <Download size={24} /> : <ExternalLink size={24} />}
+                {isFreeDownload
+                  ? t('getItFree')
+                  : t('buyOn', { platform: getPlatformDisplayName(listing.externalUrl) || 'Website' })}
+              </a>
+              <p className="text-center text-xs text-gray-500">
+                {t('opensInNewTab', { platform: getPlatformDisplayName(listing.externalUrl) || 'external website' })}
+              </p>
+            </div>
+          )}
+
           {/* Condition and Listed Date Grid */}
           <div className={`grid ${listing.condition && listing.category !== 'digital_arts' ? 'grid-cols-2' : 'grid-cols-1'} gap-3 mb-4`}>
             {listing.condition && listing.category !== 'digital_arts' && (
@@ -656,33 +686,6 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
 
           {/* Show Interest Section */}
           <div className="space-y-3">
-            {/* External Buy Button - Always show if externalUrl exists */}
-            {listing.externalUrl && (
-              <div className="space-y-2">
-                {/* A free thing is not bought. Labelling the link "Buy on
-                    Gumroad" for something priced at zero contradicts the price
-                    directly above it. */}
-                <a
-                  href={listing.externalUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`w-full flex items-center justify-center gap-2 px-6 py-4 text-lg font-bold rounded-xl shadow-sm hover:shadow-md transition-all transform hover:-translate-y-0.5 active:translate-y-0 ${
-                    isFreeDownload
-                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                      : 'bg-yellow-400 hover:bg-yellow-300 text-slate-900'
-                  }`}
-                >
-                  {isFreeDownload && listing.type === 'digital' ? <Download size={24} /> : <ExternalLink size={24} />}
-                  {isFreeDownload
-                    ? t('getItFree')
-                    : t('buyOn', { platform: getPlatformDisplayName(listing.externalUrl) || 'Website' })}
-                </a>
-                <p className="text-center text-xs text-gray-500">
-                  {t('opensInNewTab', { platform: getPlatformDisplayName(listing.externalUrl) || 'external website' })}
-                </p>
-              </div>
-            )}
-
             {isLoggedIn ? (
               <>
                 {/* 1. Own Listing State */}
