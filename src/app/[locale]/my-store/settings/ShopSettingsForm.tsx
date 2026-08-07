@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,6 +20,19 @@ import { Loader2 } from 'lucide-react';
  * the seller's Bluesky avatar and banner, and a second pair of images to keep
  * in sync buys nothing today.
  */
+
+/**
+ * Bring a status message into view when it appears.
+ *
+ * The banners render at the top of a long form, so a save from the bottom of
+ * the page showed "Saved." somewhere off screen and looked like nothing had
+ * happened. Scrolling is the message; without it the message is not delivered.
+ */
+function useScrollToMessage(ref: React.RefObject<HTMLElement | null>, show: boolean) {
+  useEffect(() => {
+    if (show) ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [ref, show]);
+}
 
 /** "USD" -> "US Dollar", in the viewer's language. Empty when Intl has no name. */
 function currencyName(code: string, locale: string): string {
@@ -54,6 +67,9 @@ export default function ShopSettingsForm() {
   const [error, setError] = useState<string | null>(null);
   const [needsReauth, setNeedsReauth] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const messageRef = useRef<HTMLDivElement>(null);
+  useScrollToMessage(messageRef, saved || !!error || needsReauth);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -157,6 +173,7 @@ export default function ShopSettingsForm() {
         <p className="text-sm text-text-secondary mt-1">{t('subtitle')}</p>
       </div>
 
+      <div ref={messageRef}>
       {needsReauth && (
         <div className="bg-amber-50 border border-amber-300 text-amber-900 px-4 py-3 rounded">
           <p className="font-semibold mb-1">{t('reauthTitle')}</p>
@@ -181,6 +198,8 @@ export default function ShopSettingsForm() {
           )}
         </div>
       )}
+
+      </div>
 
       <section className="bg-white p-6 rounded-lg border border-neutral-light space-y-4">
         <div>

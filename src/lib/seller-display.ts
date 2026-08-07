@@ -26,3 +26,20 @@ export function getSellerDisplayName(
   }
   return 'Unknown Seller';
 }
+
+/**
+ * What to call a store.
+ *
+ * The shop record's name wins, but only when the seller actually chose one. A
+ * shop is created automatically on their first listing with `name` set to their
+ * handle, so preferring it unconditionally would replace every seller's display
+ * name with their handle — a worse title that nobody asked for.
+ */
+export function getStoreName(
+  shop: { name?: string } | null | undefined,
+  profile: { displayName?: string; handle: string },
+): string {
+  const shopName = shop?.name?.trim();
+  if (shopName && shopName !== profile.handle) return shopName;
+  return profile.displayName || profile.handle;
+}

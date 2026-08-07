@@ -46,6 +46,9 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   // Set when the PDS refuses a write because the session predates the commerce
   // collection being added to the OAuth scopes. Signing in again fixes it.
   const [needsReauth, setNeedsReauth] = useState(false);
+  // The banners sit at the top of a very long form. Submitting from the bottom
+  // showed the message off screen, which reads as nothing having happened.
+  const messageRef = useRef<HTMLDivElement>(null);
   const [images, setImages] = useState<(File | ListingImage)[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -224,6 +227,12 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       setError('Error following bot');
     }
   };
+
+  useEffect(() => {
+    if (error || needsReauth) {
+      messageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [error, needsReauth]);
 
   // Populate form for Edit Mode
   useEffect(() => {
@@ -1168,6 +1177,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         {/* Main Form Column */}
         <div className="flex-1 min-w-0">
           <div className="max-w-2xl mx-auto lg:mx-0 lg:max-w-none">
+            <div ref={messageRef}>
             {needsReauth && (
               <div className="bg-amber-50 border border-amber-300 text-amber-900 px-4 py-3 rounded mb-4">
                 <p className="font-semibold mb-1">{tCreate('errors.reauthTitle')}</p>
@@ -1195,6 +1205,8 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                 </button>
               </div>
             )}
+
+            </div>
 
             {/* Free Category Confirmation Dialog */}
             {showFreeConfirmation && (

@@ -12,6 +12,7 @@ import type { SellerProfile, StoreListing } from '@/lib/server/fetch-store';
 import { linkifyText } from '@/lib/linkify';
 import { isOnlineStore } from '@/lib/location-utils';
 import { isArtistStore } from '@/lib/artist-store-utils';
+import { getStoreName } from '@/lib/seller-display';
 import ShopDetails from '@/components/marketplace/ShopDetails';
 import type { Shop } from '@/lib/commerce/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -327,7 +328,7 @@ export default function StorePageClient({
               {/* Name and Handle - vertically centered with avatar */}
               <div className="mt-4 sm:mt-0 sm:pt-10 flex-1 min-w-0">
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                  {profile.displayName || profile.handle}
+                  {getStoreName(shop, profile)}
                 </h1>
                 <p className="text-gray-500 flex items-center gap-2">
                   <span>@{profile.handle}</span>

@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { fetchStoreByHandle } from '@/lib/server/fetch-store';
 import { isSellerExcluded } from '@/lib/excluded-sellers';
+import { getStoreName } from '@/lib/seller-display';
 import StorePageClient from './StorePageClient';
 
 type Props = {
@@ -37,11 +38,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const { profile, listingsCount } = storeData;
-  const displayName = profile.displayName || profile.handle;
+  const { profile, listingsCount, shop } = storeData;
+  // Same name the page renders, so the tab title and the heading agree.
+  const displayName = getStoreName(shop, profile);
   const title = t('titleTemplate', { name: displayName });
-  const description = profile.description
-    ? `${profile.description.substring(0, 150)}${profile.description.length > 150 ? '...' : ''}`
+  const about = shop?.description || profile.description;
+  const description = about
+    ? `${about.substring(0, 150)}${about.length > 150 ? '...' : ''}`
     : t('descriptionFallback', { count: listingsCount, name: displayName });
 
   const canonicalUrl = `https://openmkt.app/store/${handle}`;
@@ -70,15 +73,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 // JSON-LD structured data for seller profile
-function generateJsonLd(profile: NonNullable<Awaited<ReturnType<typeof fetchStoreByHandle>>>['profile'], listingsCount: number) {
+function generateJsonLd(
+  profile: NonNullable<Awaited<ReturnType<typeof fetchStoreByHandle>>>['profile'],
+  listingsCount: number,
+  shop: NonNullable<Awaited<ReturnType<typeof fetchStoreByHandle>>>['shop'],
+) {
   return {
     '@context': 'https://schema.org',
     '@type': 'ProfilePage',
     mainEntity: {
       '@type': 'Person',
-      name: profile.displayName || profile.handle,
+      name: getStoreName(shop, profile),
       alternateName: `@${profile.handle}`,
-      description: profile.description,
+      description: shop?.description || profile.description,
       image: profile.avatar,
       url: `https://openmkt.app/store/${profile.handle}`,
       sameAs: [`https://bsky.app/profile/${profile.handle}`],
@@ -115,7 +122,7 @@ export default async function StorePage({ params }: Props) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(generateJsonLd(storeData.profile, storeData.listingsCount)),
+            __html: JSON.stringify(generateJsonLd(storeData.profile, storeData.listingsCount, storeData.shop)),
           }}
         />
       )}

@@ -86,6 +86,14 @@ export default function NavbarUserMenu({ user, onLogout }: NavbarUserMenuProps) 
                             {t('myStore')}
                         </Link>
                         <Link
+                            href="/my-store/settings"
+                            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-color transition-colors"
+                            onClick={() => setIsOpen(false)}
+                        >
+                            <Settings size={16} />
+                            {t('editStore')}
+                        </Link>
+                        <Link
                             href="/my-listings"
                             className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-color transition-colors"
                             onClick={() => setIsOpen(false)}
