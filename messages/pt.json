@@ -11,6 +11,7 @@
     "billingPeriod": {
       "day": "/dia",
       "week": "/semana",
+      "fortnight": "/2 semanas",
       "month": "/mês",
       "quarter": "/trimestre",
       "year": "/ano"
@@ -474,6 +475,7 @@
     "billingOneOff": "Pagamento único",
     "billingDay": "Todo dia",
     "billingWeek": "Toda semana",
+    "billingFortnight": "A cada duas semanas",
     "billingMonth": "Todo mês",
     "billingQuarter": "A cada três meses",
     "billingYear": "Todo ano",
@@ -555,11 +557,11 @@
     "newProduct": "Novo produto…",
     "currentProduct": "Produto atual",
     "labelProductName": "Nome do produto",
-    "placeholderProductName": "ex.: Migro",
+    "placeholderProductName": "ex.: Camiseta",
     "labelAxisName": "Como as opções se chamam",
-    "variantAxisDefault": "Nível",
+    "variantAxisDefault": "Cor",
     "labelOptionValue": "{axis} deste anúncio",
-    "placeholderOptionValue": "ex.: Professional",
+    "placeholderOptionValue": "ex.: Azul-marinho",
     "hintOptionValue": "Os compradores trocam de opção por este nome.",
     "legalWarning": "Seu anúncio será visível para toda a comunidade do AT Protocol. Observe que não permitimos anúncios de animais vivos, substâncias controladas, armas, itens falsificados ou qualquer coisa que viole os direitos de propriedade intelectual. Mantenha-o legal e amigável para a comunidade!",
     "errors": {

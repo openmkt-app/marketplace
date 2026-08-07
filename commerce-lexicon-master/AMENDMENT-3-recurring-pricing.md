@@ -44,7 +44,7 @@ One field on `defs#pricing`:
 {
   "billingPeriod": {
     "type": "string",
-    "knownValues": ["day", "week", "month", "quarter", "year"],
+    "knownValues": ["day", "week", "fortnight", "month", "quarter", "year"],
     "description": "How often the amounts recur. Absent means a one-off purchase."
   }
 }
@@ -59,9 +59,11 @@ It applies to `regularPrice` and `salePrice` together, for the same reason `curr
 Every payment processor models this as an interval plus a count, which would mean adding `billingInterval: 2` for "every two months". We propose not to, for now:
 
 - The count is 1 in the overwhelming majority of real prices. The common set is monthly and annual, then weekly and quarterly.
-- `quarter` as a named value covers the one multi-month schedule that is actually a convention, and it renders as a word rather than as arithmetic.
+- `fortnight` and `quarter` as named values cover the two multi-unit schedules that are actually conventions — payroll-aligned billing and quarterly plans — and both render as a phrase rather than as arithmetic.
 - A second field doubles the ways two readers can disagree — `{month, 12}` and `{year, 1}` are the same price written two ways, and the first client to sort on it has to normalise before it can compare.
 - If "every 2 years" turns up in the wild, adding an optional integer later is additive and breaks nothing.
+
+`fortnight` rather than `biweekly`, which in English means both "every two weeks" and "twice a week" and so is the one word we cannot use for a field two independent apps must read identically.
 
 This is a deliberate trade of expressiveness for a schema that two independent apps will read the same way. Worth arguing about; easy to reverse.
 

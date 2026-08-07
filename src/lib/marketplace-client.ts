@@ -72,7 +72,7 @@ export type MarketplaceListing = {
    * How often `price` recurs. Absent means a one-off purchase, which is what
    * every listing was before subscriptions existed in the schema.
    */
-  billingPeriod?: 'day' | 'week' | 'month' | 'quarter' | 'year';
+  billingPeriod?: 'day' | 'week' | 'fortnight' | 'month' | 'quarter' | 'year';
   /** Undefined means the seller never said whether tax is included. */
   taxInclusive?: boolean;
   /** The seller will consider offers; any price shown is a guide. */

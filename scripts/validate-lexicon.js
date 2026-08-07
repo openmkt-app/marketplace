@@ -132,7 +132,7 @@ try {
 
   const groupCases = [
     ['software tiers', {
-      title: 'Migro',
+      title: 'Aurora Editor',
       optionAxes: [{ name: 'Tier', values: ['Professional', 'Business', 'Agency', 'Enterprise'] }],
       defaultVariant: [{ axis: 'Tier', value: 'Business' }],
       category: 'digital',
@@ -207,7 +207,7 @@ try {
     // A software tier: recurring price, an introductory rate, and a feature
     // list written as specifications with no value.
     ['annual software licence', {
-      title: 'Migro Professional',
+      title: 'Aurora Editor Professional',
       type: 'digital',
       description: 'Five site licences, renewed yearly.',
       price: '99.00',

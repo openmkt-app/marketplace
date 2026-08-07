@@ -11,6 +11,7 @@
     "billingPeriod": {
       "day": "/día",
       "week": "/semana",
+      "fortnight": "/2 semanas",
       "month": "/mes",
       "quarter": "/trimestre",
       "year": "/año"
@@ -474,6 +475,7 @@
     "billingOneOff": "Pago único",
     "billingDay": "Cada día",
     "billingWeek": "Cada semana",
+    "billingFortnight": "Cada dos semanas",
     "billingMonth": "Cada mes",
     "billingQuarter": "Cada tres meses",
     "billingYear": "Cada año",
@@ -556,11 +558,11 @@
     "newProduct": "Nuevo producto…",
     "currentProduct": "Producto actual",
     "labelProductName": "Nombre del producto",
-    "placeholderProductName": "p. ej. Migro",
+    "placeholderProductName": "p. ej. Camiseta",
     "labelAxisName": "Cómo se llaman las opciones",
-    "variantAxisDefault": "Nivel",
+    "variantAxisDefault": "Color",
     "labelOptionValue": "{axis} de este anuncio",
-    "placeholderOptionValue": "p. ej. Professional",
+    "placeholderOptionValue": "p. ej. Azul marino",
     "hintOptionValue": "Los compradores cambian de opción por este nombre.",
     "errors": {
       "freeAndOffers": "Un artículo gratis no puede aceptar ofertas. Pon un precio, o déjalo vacío y mantén las ofertas activadas.",

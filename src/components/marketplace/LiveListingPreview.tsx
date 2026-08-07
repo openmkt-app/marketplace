@@ -1,35 +1,65 @@
 import React from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import Image from 'next/image';
-import { MapPin } from 'lucide-react';
+import { Globe, MapPin } from 'lucide-react';
 import { formatConditionForDisplay } from '@/lib/condition-utils';
 import { getCategoryName } from '@/lib/category-utils';
 import { formatPrice } from '@/lib/price-utils';
 import { COMMISSION_CATEGORY_ID } from '@/lib/artist-store-utils';
+import type { BillingPeriod, ListingType } from '@/lib/commerce/types';
 
 interface LiveListingPreviewProps {
     title: string;
     price: string;
     currency?: string;
+    /** Blank when the seller has not set one. */
+    salePrice?: string;
+    saleStartsAt?: string;
+    saleEndsAt?: string;
+    billingPeriod?: '' | BillingPeriod;
     description: string;
     category: string;
     condition: string;
+    /** Condition only exists for something physical. */
+    listingType?: ListingType;
     slotsAvailable?: string;
     turnaroundTime?: string;
     location: {
         locality: string;
         state: string;
+        isOnlineStore?: boolean;
     };
     imageUrls: string[];
     isNsfw?: boolean;
 }
 
+/**
+ * Is the sale the seller has typed in actually running right now?
+ *
+ * The card only strikes out a price while the window is open, so the preview
+ * has to answer the same question or it would promise a discount the buyer
+ * will not see. The form's dates are plain YYYY-MM-DD, matching the boundaries
+ * the write path uses: the start is midnight UTC, the end is end-of-day UTC.
+ */
+function saleIsRunning(salePrice: string, startsAt?: string, endsAt?: string): boolean {
+    if (!salePrice.trim()) return false;
+    const now = Date.now();
+    if (startsAt && Date.parse(`${startsAt}T00:00:00Z`) > now) return false;
+    if (endsAt && Date.parse(`${endsAt}T23:59:59Z`) <= now) return false;
+    return true;
+}
+
 const LiveListingPreview = ({
     title,
     price,
+    salePrice,
+    saleStartsAt,
+    saleEndsAt,
+    billingPeriod,
     description,
     category,
     condition,
+    listingType,
     slotsAvailable,
     turnaroundTime,
     location,
@@ -44,8 +74,15 @@ const LiveListingPreview = ({
     const locale = useLocale();
 
     const isCommission = category === COMMISSION_CATEGORY_ID;
+    // Only something physical has a condition. A download is neither new nor
+    // used, and a commission has not been made yet.
+    const isPhysical = listingType === undefined || listingType === 'goods';
 
-    const displayPrice = formatPrice(price, currency, locale, tCommon('free'));
+    // What the buyer would pay today. The sale replaces the price rather than
+    // sitting next to it, which is what the real card does.
+    const onSale = saleIsRunning(salePrice ?? '', saleStartsAt, saleEndsAt);
+    const displayPrice = formatPrice(onSale ? salePrice! : price, currency, locale, tCommon('free'));
+    const struckPrice = onSale ? formatPrice(price, currency, locale, tCommon('free')) : null;
 
     // Format date (always today for preview)
     const today = new Date().toLocaleDateString(locale);
@@ -95,11 +132,11 @@ const LiveListingPreview = ({
                                                 ? t('waitlist')
                                                 : t('slotsOpen', { count: parseInt(slotsAvailable) })}
                                     </span>
-                                ) : (
+                                ) : isPhysical ? (
                                     <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-white/95 backdrop-blur-sm text-slate-800 shadow-sm">
                                         {condition ? tConds(condition) : t('condition')}
                                     </span>
-                                )}
+                                ) : null}
                             </div>
 
                             {/* NSFW Preview Overlay */}
@@ -127,9 +164,19 @@ const LiveListingPreview = ({
                                     {isCommission && (
                                         <span className="text-[10px] text-gray-400 block">{t('startingAt')}</span>
                                     )}
-                                    <span className="text-2xl font-bold text-gray-900 whitespace-nowrap">
+                                    <span className={`text-2xl font-bold whitespace-nowrap ${onSale ? 'text-emerald-700' : 'text-gray-900'}`}>
                                         {displayPrice}
+                                        {billingPeriod && (
+                                            <span className="text-sm font-semibold text-gray-500">
+                                                {tCommon(`billingPeriod.${billingPeriod}`)}
+                                            </span>
+                                        )}
                                     </span>
+                                    {struckPrice && (
+                                        <span className="block text-sm font-medium text-gray-400 line-through">
+                                            {struckPrice}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
@@ -144,6 +191,14 @@ const LiveListingPreview = ({
                                         <>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 flex-shrink-0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                                             <span className="truncate">{turnaroundTime}</span>
+                                        </>
+                                    ) : location.isOnlineStore ? (
+                                        // The seller said online, so the saved
+                                        // town is not what buyers will see —
+                                        // showing it here contradicts the form.
+                                        <>
+                                            <Globe size={14} className="text-blue-400 flex-shrink-0" />
+                                            <span className="truncate">{tCommon('onlineStore')}</span>
                                         </>
                                     ) : (
                                         <>

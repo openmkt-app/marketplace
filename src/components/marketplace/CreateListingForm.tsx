@@ -1827,12 +1827,15 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                           onChange={(e) => setBillingPeriod(e.target.value as '' | BillingPeriod)}
                           className="w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
                         >
+                          {/* Shortest first. A list that runs week, month,
+                              quarter, year, day reads as an accident. */}
                           <option value="">{tCreate('billingOneOff')}</option>
+                          <option value="day">{tCreate('billingDay')}</option>
                           <option value="week">{tCreate('billingWeek')}</option>
+                          <option value="fortnight">{tCreate('billingFortnight')}</option>
                           <option value="month">{tCreate('billingMonth')}</option>
                           <option value="quarter">{tCreate('billingQuarter')}</option>
                           <option value="year">{tCreate('billingYear')}</option>
-                          <option value="day">{tCreate('billingDay')}</option>
                         </select>
                         {billingPeriod && (
                           <p className="mt-1 text-xs text-text-secondary">{tCreate('hintBillingPeriod')}</p>
@@ -2629,13 +2632,19 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
             title={title}
             price={priceInput}
             currency={currency}
+            salePrice={showSaleFields ? salePriceInput : ''}
+            saleStartsAt={saleStartsAt}
+            saleEndsAt={saleEndsAt}
+            billingPeriod={billingPeriod}
             description={description}
             category={selectedCategory}
             condition={condition}
+            listingType={listingType}
             slotsAvailable={slotsAvailable}
             location={{
               locality: locationLocality,
-              state: locationState
+              state: locationState,
+              isOnlineStore
             }}
             imageUrls={previewUrls}
             isNsfw={isNsfw}

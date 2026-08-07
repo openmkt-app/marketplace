@@ -11,6 +11,7 @@
     "billingPeriod": {
       "day": "/day",
       "week": "/week",
+      "fortnight": "/2 weeks",
       "month": "/month",
       "quarter": "/quarter",
       "year": "/year"
@@ -474,6 +475,7 @@
     "billingOneOff": "One-off payment",
     "billingDay": "Every day",
     "billingWeek": "Every week",
+    "billingFortnight": "Every two weeks",
     "billingMonth": "Every month",
     "billingQuarter": "Every three months",
     "billingYear": "Every year",
@@ -556,11 +558,11 @@
     "newProduct": "New product…",
     "currentProduct": "Current product",
     "labelProductName": "Product name",
-    "placeholderProductName": "e.g. Migro",
+    "placeholderProductName": "e.g. T-shirt",
     "labelAxisName": "What the options are called",
-    "variantAxisDefault": "Tier",
+    "variantAxisDefault": "Color",
     "labelOptionValue": "This listing's {axis}",
-    "placeholderOptionValue": "e.g. Professional",
+    "placeholderOptionValue": "e.g. Navy",
     "hintOptionValue": "Buyers switch between options by this name.",
     "errors": {
       "freeAndOffers": "A free item can't also take offers. Set a price, or leave it blank and keep offers on.",
