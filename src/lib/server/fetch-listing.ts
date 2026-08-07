@@ -10,7 +10,15 @@ import { toLegacyListing } from '../commerce/legacy';
 export type ListingData = {
   title: string;
   description: string;
+  /** What the buyer pays today: the sale price while a sale is running. */
   price: string;
+  /** The struck-through price. Only set while a sale is actually running. */
+  originalPrice?: string;
+  isOnSale?: boolean;
+  /** Undefined means the seller never said whether tax is included. */
+  taxInclusive?: boolean;
+  type?: 'goods' | 'service' | 'digital';
+  metadata?: Record<string, any>;
   currency?: string;
   labels?: any;
   images?: Array<{
@@ -131,18 +139,17 @@ export async function fetchListingById(id: string): Promise<ListingData | 'remov
     const authorDisplayName = profile?.displayName;
     const authorAvatarUrl = profile?.avatarCid;
 
+    // Spread rather than enumerated. This used to list every field by hand,
+    // which meant each new one added to the commerce layer silently failed to
+    // reach the detail page — sale prices and taxInclusive were both written to
+    // records and then dropped here. The identity fields are applied on top
+    // because they come from the request, not from the record.
+    //
+    // The JSON round trip is what makes the result safe to hand across the
+    // server/client boundary; toLegacyListing produces plain data, and this
+    // keeps it that way if it ever stops doing so.
     return {
-      title: value.title || 'Untitled Listing',
-      description: value.description || '',
-      price: value.price || '',
-      currency: value.currency,
-      labels: value.labels ? JSON.parse(JSON.stringify(value.labels)) : undefined,
-      images: value.images ? JSON.parse(JSON.stringify(value.images)) : undefined,
-      location: value.location || { state: '', county: '', locality: '' },
-      category: value.category || '',
-      condition: value.condition || '',
-      createdAt: value.createdAt || new Date().toISOString(),
-      externalUrl: value.externalUrl,
+      ...JSON.parse(JSON.stringify(value)),
       uri: record.data.uri,
       cid: record.data.cid,
       authorDid: did,
