@@ -25,6 +25,7 @@ export type LegacyListingInput = {
   saleStartsAt?: string;
   saleEndsAt?: string;
   taxInclusive?: boolean;
+  acceptingOffers?: boolean;
   currency?: string;
   sku?: string;
   gtin?: string;
@@ -142,6 +143,7 @@ export function toListingInput(input: LegacyListingInput): ListingInput {
       saleStartsAt: input.saleStartsAt,
       saleEndsAt: input.saleEndsAt,
     },
+    acceptingOffers: input.acceptingOffers,
     category,
     subcategory: input.metadata?.subcategory,
     condition: input.condition || undefined,

@@ -161,9 +161,17 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, prior
           {/* On sale, `price` is already the sale price and originalPrice is
               what it was. Both come from the commerce layer, so the card never
               works out whether a sale window is running. */}
+          {/* A missing price and a price of zero format identically once they
+              are strings, and they mean opposite things. noPrice is checked
+              first so "make an offer" is never rendered as "Free". */}
           <span className={listing.isOnSale ? 'text-emerald-700' : undefined}>
-            {formatPrice(listing.price, listing.currency, locale, tCommon('free'))}
+            {listing.noPrice
+              ? t('makeAnOffer')
+              : formatPrice(listing.price, listing.currency, locale, tCommon('free'))}
           </span>
+          {listing.acceptingOffers && !listing.noPrice && (
+            <span className="text-xs font-medium text-slate-500">{t('orOffer')}</span>
+          )}
           {listing.isOnSale && listing.originalPrice && (
             <span className="text-sm font-medium text-slate-400 line-through">
               {formatPrice(listing.originalPrice, listing.currency, locale, tCommon('free'))}

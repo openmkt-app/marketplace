@@ -5,7 +5,10 @@
     "price": {
       "type": "object",
       "description": "A standalone monetary amount. For listing prices use #pricing instead.",
-      "required": ["amount", "currency"],
+      "required": [
+        "amount",
+        "currency"
+      ],
       "properties": {
         "amount": {
           "type": "integer",
@@ -22,11 +25,13 @@
     "pricing": {
       "type": "object",
       "description": "Full price state for a listing. A single currency covers both amounts so a regular and sale price can never disagree on currency.",
-      "required": ["regularPrice", "currency"],
+      "required": [
+        "currency"
+      ],
       "properties": {
         "regularPrice": {
           "type": "integer",
-          "description": "Normal price in minor currency units. See #price for the minor-unit rule. Zero indicates free."
+          "description": "Amount in minor units. Absent means the seller has named no price — show 'make an offer', not 'free'. Zero means genuinely free."
         },
         "salePrice": {
           "type": "integer",
@@ -57,7 +62,10 @@
     "groupedItem": {
       "type": "object",
       "description": "One item included in a grouped listing. Carries a denormalized title so the parent renders without fetching every child, same principle as the review variant snapshot.",
-      "required": ["item", "quantity"],
+      "required": [
+        "item",
+        "quantity"
+      ],
       "properties": {
         "item": {
           "type": "string",
@@ -79,7 +87,10 @@
     "specification": {
       "type": "object",
       "description": "A product property that does not vary between variants (e.g. Material, Model). Distinct from #optionAxis, which drives variant selection.",
-      "required": ["name", "value"],
+      "required": [
+        "name",
+        "value"
+      ],
       "properties": {
         "name": {
           "type": "string",
@@ -95,9 +106,18 @@
       "type": "object",
       "description": "Package dimensions in millimetres. Unit is fixed by the Lexicon rather than carried per-record.",
       "properties": {
-        "length": { "type": "integer", "minimum": 0 },
-        "width": { "type": "integer", "minimum": 0 },
-        "height": { "type": "integer", "minimum": 0 }
+        "length": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "location": {
@@ -132,7 +152,9 @@
     },
     "variantProperty": {
       "type": "object",
-      "required": ["axis"],
+      "required": [
+        "axis"
+      ],
       "properties": {
         "axis": {
           "type": "string",
@@ -149,12 +171,20 @@
     "taxonomyRef": {
       "type": "object",
       "description": "Pointer to a category in an externally maintained taxonomy, for depth beyond the coarse categorySlug. Keeping the deep tree outside the Lexicon means adding a category is not a schema change requiring agreement across apps.",
-      "required": ["scheme", "id"],
+      "required": [
+        "scheme",
+        "id"
+      ],
       "properties": {
         "scheme": {
           "type": "string",
           "maxLength": 100,
-          "knownValues": ["google", "gpc", "ebay", "etsy"],
+          "knownValues": [
+            "google",
+            "gpc",
+            "ebay",
+            "etsy"
+          ],
           "description": "Which taxonomy this id belongs to. Open value set; 'google' is the Google Product Taxonomy used across the product-feed industry."
         },
         "id": {
@@ -177,16 +207,36 @@
     "categorySlug": {
       "type": "string",
       "knownValues": [
-        "apparel", "auto", "baby", "books", "business", "collectibles",
-        "electronics", "entertainment", "furniture", "garden", "health",
-        "hobbies", "home_goods", "home_improvement", "kids", "musical",
-        "office", "pets", "sporting", "video_games", "other"
+        "apparel",
+        "auto",
+        "baby",
+        "books",
+        "business",
+        "collectibles",
+        "electronics",
+        "entertainment",
+        "furniture",
+        "garden",
+        "health",
+        "hobbies",
+        "home_goods",
+        "home_improvement",
+        "kids",
+        "musical",
+        "office",
+        "pets",
+        "sporting",
+        "video_games",
+        "other"
       ],
       "description": "Coarse top-level category. Deliberately small: every added slug is a change independent apps must agree on, so depth belongs in #taxonomyRef rather than here. Open/advisory knownValues — apps maintain canonical registries. Single source of truth for listing and productGroup."
     },
     "optionAxis": {
       "type": "object",
-      "required": ["name", "values"],
+      "required": [
+        "name",
+        "values"
+      ],
       "properties": {
         "name": {
           "type": "string",
@@ -195,7 +245,10 @@
         },
         "values": {
           "type": "array",
-          "items": { "type": "string", "maxLength": 200 },
+          "items": {
+            "type": "string",
+            "maxLength": 200
+          },
           "maxLength": 100,
           "description": "Available values for this axis"
         }

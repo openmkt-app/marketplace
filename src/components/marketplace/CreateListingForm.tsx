@@ -108,6 +108,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   const [saleStartsAt, setSaleStartsAt] = useState('');
   const [saleEndsAt, setSaleEndsAt] = useState('');
   const [taxInclusive, setTaxInclusive] = useState<boolean | undefined>(undefined);
+  const [acceptingOffers, setAcceptingOffers] = useState(false);
   const [showSaleFields, setShowSaleFields] = useState(false);
 
   // Catalogue detail. Folded away by default: someone selling one used chair
@@ -307,6 +308,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       setSaleStartsAt(initialData.saleStartsAt ? initialData.saleStartsAt.slice(0, 10) : '');
       setSaleEndsAt(initialData.saleEndsAt ? initialData.saleEndsAt.slice(0, 10) : '');
       setTaxInclusive(initialData.taxInclusive);
+      setAcceptingOffers(!!initialData.acceptingOffers);
 
       setSku(initialData.sku || '');
       setGtin(initialData.gtin || '');
@@ -1060,7 +1062,9 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       }
 
       // Validate price input before formatting
-      if (!priceInput.trim()) {
+      // A seller taking offers may have no number in mind — that is the whole
+      // point of the flag, and requiring one is what makes people type 0.
+      if (!acceptingOffers && !priceInput.trim()) {
         setError(tCreate('errors.priceRequired'));
         setIsSubmitting(false);
         return;
@@ -1069,6 +1073,16 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
       // Format the price to ensure consistent decimal places
       const formattedPrice = formatPrice(priceInput);
       const priceValue = parseFloat(formattedPrice);
+
+      // Free and "make me an offer" are different claims, and the lie needs
+      // both at once: a price of zero to win the cheapest-first sort, and the
+      // intention to negotiate. Sellers who want offers now have an honest
+      // way to say so, so this combination is refused rather than tolerated.
+      if (acceptingOffers && priceValue === 0 && priceInput.trim() !== '') {
+        setError(tCreate('errors.freeAndOffers'));
+        setIsSubmitting(false);
+        return;
+      }
 
       // Update the price input to show the formatted price
       setPriceInput(formattedPrice);
@@ -1098,6 +1112,15 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
         }
         // Use the processed URL with affiliate tracking
         processedExternalUrl = urlResult.processedUrl;
+      }
+
+      // Something free cannot also be bought somewhere else. Checked here
+      // rather than with the other price rules because the URL is not
+      // processed until this point.
+      if (priceValue === 0 && priceInput.trim() !== '' && processedExternalUrl) {
+        setError(tCreate('errors.freeWithExternalUrl'));
+        setIsSubmitting(false);
+        return;
       }
 
       // Create custom metadata for inclusion in description
@@ -1145,6 +1168,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
           saleEndsAt: saleEndsAt ? new Date(`${saleEndsAt}T23:59:59Z`).toISOString() : undefined,
         }),
         ...(taxInclusive !== undefined && { taxInclusive }),
+        ...(acceptingOffers && { acceptingOffers: true }),
 
         // Blank fields are left out entirely rather than sent as empty
         // strings, so nothing writes a field the seller did not fill in.
@@ -1580,13 +1604,40 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                         type="text"
                         id="price"
                         name="price"
-                        required
-                        placeholder="0.00"
+                        required={!acceptingOffers}
+                        placeholder={acceptingOffers ? tCreate('placeholderPriceOffers') : '0.00'}
                         value={priceInput}
                         onChange={handlePriceChange}
                         className="flex-1 w-full pl-3 pr-3 py-2 border border-neutral-light rounded-r-md focus:outline-none focus:ring-2 focus:ring-primary-light"
                       />
                     </div>
+
+                    {/* The honest answer to "I do not know what it is worth".
+                        Without it, sellers put 0 and explain in the
+                        description — which sorts first and ruins free
+                        filters for everyone. */}
+                    <label className="flex items-start gap-2 mt-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={acceptingOffers}
+                        onChange={e => setAcceptingOffers(e.target.checked)}
+                        className="h-4 w-4 mt-0.5 rounded border-gray-300 text-primary-color"
+                      />
+                      <span>
+                        <span className="text-sm font-medium text-text-secondary">{tCreate('labelAcceptingOffers')}</span>
+                        <span className="block text-xs text-text-secondary">
+                          {acceptingOffers ? tCreate('hintAcceptingOffersOn') : tCreate('hintAcceptingOffers')}
+                        </span>
+                      </span>
+                    </label>
+
+                    {/* Said plainly at the moment it applies, so nobody meets
+                        the rule for the first time as a rejection. */}
+                    {isPriceZero && priceInput.trim() !== '' && (
+                      <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+                        {tCreate('freeMeansFree')}
+                      </p>
+                    )}
 
                     {/* Sales are the exception, so the fields stay folded away
                         until asked for — an always-visible sale price invites

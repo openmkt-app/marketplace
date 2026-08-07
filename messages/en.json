@@ -414,6 +414,11 @@
     "noListingsBody": "This seller hasn't listed any items for sale yet. Check back later!"
   },
   "createListing": {
+    "labelAcceptingOffers": "I'll consider offers",
+    "hintAcceptingOffers": "Tick this if you're not sure what it's worth. You can leave the price blank.",
+    "hintAcceptingOffersOn": "Leave the price blank if you have no idea, or put a rough figure as a guide.",
+    "placeholderPriceOffers": "Leave blank for offers only",
+    "freeMeansFree": "Free means free — someone can just come and take it. If you want offers, tick “I'll consider offers” and set a price or leave it blank.",
     "moreDetailsHeader": "More details",
     "moreDetailsDesc": "All optional. Helps buyers find and compare your listing.",
     "labelBrand": "Brand",
@@ -529,6 +534,8 @@
     "botFollowBody": "To receive inquiries from interested buyers, you need to follow our Introduction Bot. Listing creation is disabled until you follow.",
     "botFollowButton": "Follow Marketplace Bot",
     "errors": {
+      "freeAndOffers": "A free item can't also take offers. Set a price, or leave it blank and keep offers on.",
+      "freeWithExternalUrl": "A free item can't have a buy-it-elsewhere link. Remove the link, or set a price.",
       "salePriceTooHigh": "The sale price has to be lower than the normal price.",
       "saleDatesBackwards": "The sale cannot end before it starts.",
       "followBot": "Failed to follow the bot. Please try again.",
@@ -656,6 +663,8 @@
     "forParts": "For Parts / Not Working"
   },
   "listingDetail": {
+    "makeAnOffer": "Make an offer",
+    "orOffer": "or offer",
     "brand": "Brand",
     "gtin": "Barcode",
     "weight": "Weight",
@@ -763,6 +772,8 @@
     }
   },
   "listingCard": {
+    "makeAnOffer": "Make an offer",
+    "orOffer": "or offer",
     "onlineStore": "Online Store",
     "waitlist": "Waitlist",
     "closed": "Closed",

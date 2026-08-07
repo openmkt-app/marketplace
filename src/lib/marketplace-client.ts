@@ -68,6 +68,10 @@ export type MarketplaceListing = {
   saleEndsAt?: string;
   /** Undefined means the seller never said whether tax is included. */
   taxInclusive?: boolean;
+  /** The seller will consider offers; any price shown is a guide. */
+  acceptingOffers?: boolean;
+  /** True when no price was named at all — distinct from a price of zero. */
+  noPrice?: boolean;
 
   // Catalogue detail. All optional, all absent on a v1 record.
   sku?: string;

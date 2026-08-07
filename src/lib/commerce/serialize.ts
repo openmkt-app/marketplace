@@ -62,6 +62,8 @@ export type BuildOptions = {
  */
 export function buildListingRecord(input: ListingInput, options: BuildOptions = {}): Record<string, any> {
   const pricing = compact({
+    // null is meaningful here — "no asking price" — but compact() drops it, and
+    // an absent regularPrice is exactly how the lexicon says that.
     regularPrice: input.pricing?.regularPrice,
     salePrice: input.pricing?.salePrice,
     currency: input.pricing?.currency || DEFAULT_CURRENCY,
@@ -78,6 +80,7 @@ export function buildListingRecord(input: ListingInput, options: BuildOptions = 
     description: input.description,
     shortDescription: input.shortDescription,
     pricing,
+    acceptingOffers: input.acceptingOffers,
     category: input.category,
     subcategory: input.subcategory,
     taxonomy: input.taxonomy ? compact(input.taxonomy) : undefined,

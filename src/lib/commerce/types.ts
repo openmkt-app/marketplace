@@ -19,7 +19,10 @@ export type TaxStatus = 'taxable' | 'shipping' | 'none';
 export type CommissionStatus = 'open' | 'waitlist' | 'closed';
 
 export type Pricing = {
-  /** Minor currency units. Null when the source had no parseable price. */
+  /**
+   * Minor currency units. Null means the seller named no price — show "make an
+   * offer", not "free". Zero means genuinely free, which is a different claim.
+   */
   regularPrice: number | null;
   salePrice?: number | null;
   currency: string;
@@ -101,6 +104,14 @@ export type Listing = {
   description: string;
   shortDescription?: string;
   pricing: Pricing;
+  /**
+   * The seller will consider offers. A price alongside it is a guide.
+   *
+   * Exists so "I do not know what this is worth" has an honest home. Without
+   * it, sellers write 0 and explain themselves in the description, which sorts
+   * first and makes free filters useless.
+   */
+  acceptingOffers?: boolean;
   category: string;
   subcategory?: string;
   taxonomy?: TaxonomyRef;

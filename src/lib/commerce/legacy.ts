@@ -41,6 +41,10 @@ export type LegacyListing = {
   saleEndsAt?: string;
   /** Undefined means the seller never said. Do not render a guess. */
   taxInclusive?: boolean;
+  /** The seller will consider offers; any price shown is a guide. */
+  acceptingOffers?: boolean;
+  /** True when no price was named at all — distinct from a price of zero. */
+  noPrice?: boolean;
 
   // Catalogue detail. All optional, all absent on a v1 record.
   sku?: string;
@@ -161,6 +165,11 @@ export function toLegacyListing(listing: Listing): LegacyListing {
     shippingWeight: listing.goodsDetails?.shippingWeight,
     dimensions: listing.goodsDetails?.dimensions,
     taxInclusive: listing.pricing.taxInclusive,
+    acceptingOffers: listing.acceptingOffers,
+    // A missing price and a price of zero look identical once formatted to a
+    // string, and they mean opposite things: "make me an offer" versus "take
+    // it". Callers that render money need to be able to tell them apart.
+    noPrice: listing.pricing.regularPrice === null || listing.pricing.regularPrice === undefined,
     currency,
     category: listing.category,
     condition: listing.condition ?? '',

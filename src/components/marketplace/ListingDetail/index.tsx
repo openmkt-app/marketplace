@@ -421,8 +421,16 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                   ? 'text-emerald-600'
                   : listing.category === COMMISSION_CATEGORY_ID ? 'text-rose-600' : 'text-blue-600'
               }`}>
-                {formatPrice(listing.price, listing.currency, locale, tCommon('free'))}
+                {/* Never render a missing price as "Free" — see ListingCard. */}
+                {listing.noPrice
+                  ? t('makeAnOffer')
+                  : formatPrice(listing.price, listing.currency, locale, tCommon('free'))}
               </p>
+              {listing.acceptingOffers && !listing.noPrice && (
+                <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold">
+                  {t('orOffer')}
+                </span>
+              )}
               {listing.isOnSale && listing.originalPrice && (
                 <>
                   <p className="text-lg text-gray-400 line-through">

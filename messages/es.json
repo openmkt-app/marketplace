@@ -414,6 +414,11 @@
     "noListingsBody": "Este vendedor aún no ha publicado ningún artículo a la venta. ¡Vuelve más tarde!"
   },
   "createListing": {
+    "labelAcceptingOffers": "Acepto ofertas",
+    "hintAcceptingOffers": "Marca esto si no sabes cuánto vale. Puedes dejar el precio vacío.",
+    "hintAcceptingOffersOn": "Deja el precio vacío si no tienes ni idea, o pon una cifra aproximada como guía.",
+    "placeholderPriceOffers": "Vacío para solo ofertas",
+    "freeMeansFree": "Gratis significa gratis: alguien puede venir y llevárselo. Si quieres ofertas, marca «Acepto ofertas» y pon un precio o déjalo vacío.",
     "moreDetailsHeader": "Más detalles",
     "moreDetailsDesc": "Todo opcional. Ayuda a que encuentren y comparen tu anuncio.",
     "labelBrand": "Marca",
@@ -529,6 +534,8 @@
     "botFollowBody": "Para recibir consultas de compradores interesados, debes seguir a nuestro Bot de Introducción. La creación de anuncios está deshabilitada hasta que lo sigas.",
     "botFollowButton": "Seguir al Bot del Mercado",
     "errors": {
+      "freeAndOffers": "Un artículo gratis no puede aceptar ofertas. Pon un precio, o déjalo vacío y mantén las ofertas activadas.",
+      "freeWithExternalUrl": "Un artículo gratis no puede tener un enlace de compra externo. Quita el enlace o pon un precio.",
       "salePriceTooHigh": "El precio de oferta tiene que ser menor que el precio normal.",
       "saleDatesBackwards": "La oferta no puede terminar antes de empezar.",
       "followBot": "Error al seguir al bot. Por favor, inténtalo de nuevo.",
@@ -656,6 +663,8 @@
     "forParts": "Para Repuestos / No Funciona"
   },
   "listingDetail": {
+    "makeAnOffer": "Haz una oferta",
+    "orOffer": "o haz una oferta",
     "brand": "Marca",
     "gtin": "Código de barras",
     "weight": "Peso",
@@ -763,6 +772,8 @@
     }
   },
   "listingCard": {
+    "makeAnOffer": "Haz una oferta",
+    "orOffer": "o haz una oferta",
     "onlineStore": "Tienda en línea",
     "waitlist": "Lista de espera",
     "closed": "Cerrado",

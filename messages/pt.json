@@ -414,6 +414,11 @@
     "noListingsBody": "Este vendedor ainda anunciou nenhum item à venda. Volte mais tarde!"
   },
   "createListing": {
+    "labelAcceptingOffers": "Aceito ofertas",
+    "hintAcceptingOffers": "Marque se você não sabe quanto vale. Pode deixar o preço vazio.",
+    "hintAcceptingOffersOn": "Deixe o preço vazio se não faz ideia, ou coloque um valor aproximado como referência.",
+    "placeholderPriceOffers": "Vazio para só ofertas",
+    "freeMeansFree": "Grátis significa grátis: alguém pode simplesmente vir buscar. Se quer ofertas, marque «Aceito ofertas» e coloque um preço ou deixe vazio.",
     "moreDetailsHeader": "Mais detalhes",
     "moreDetailsDesc": "Tudo opcional. Ajuda as pessoas a achar e comparar seu anúncio.",
     "labelBrand": "Marca",
@@ -529,6 +534,8 @@
     "botFollowButton": "Seguir Bot do Mercado",
     "legalWarning": "Seu anúncio será visível para toda a comunidade do AT Protocol. Observe que não permitimos anúncios de animais vivos, substâncias controladas, armas, itens falsificados ou qualquer coisa que viole os direitos de propriedade intelectual. Mantenha-o legal e amigável para a comunidade!",
     "errors": {
+      "freeAndOffers": "Um item grátis não pode aceitar ofertas. Coloque um preço, ou deixe vazio e mantenha as ofertas ativadas.",
+      "freeWithExternalUrl": "Um item grátis não pode ter link de compra externo. Remova o link ou coloque um preço.",
       "salePriceTooHigh": "O preço promocional precisa ser menor que o preço normal.",
       "saleDatesBackwards": "A promoção não pode terminar antes de começar.",
       "followBot": "Falha ao seguir o bot. Por favor, tente novamente.",
@@ -656,6 +663,8 @@
     "forParts": "Para Peças / Não Funciona"
   },
   "listingDetail": {
+    "makeAnOffer": "Faça uma oferta",
+    "orOffer": "ou faça uma oferta",
     "brand": "Marca",
     "gtin": "Código de barras",
     "weight": "Peso",
@@ -763,6 +772,8 @@
     }
   },
   "listingCard": {
+    "makeAnOffer": "Faça uma oferta",
+    "orOffer": "ou faça uma oferta",
     "onlineStore": "Loja Online",
     "waitlist": "Lista de espera",
     "closed": "Fechado",

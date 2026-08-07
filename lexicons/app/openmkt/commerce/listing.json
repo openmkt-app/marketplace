@@ -7,11 +7,22 @@
       "key": "tid",
       "record": {
         "type": "object",
-        "required": ["type", "title", "pricing", "category", "shopRef", "createdAt"],
+        "required": [
+          "type",
+          "title",
+          "pricing",
+          "category",
+          "shopRef",
+          "createdAt"
+        ],
         "properties": {
           "type": {
             "type": "string",
-            "knownValues": ["goods", "service", "digital"],
+            "knownValues": [
+              "goods",
+              "service",
+              "digital"
+            ],
             "description": "Listing type discriminator"
           },
           "title": {
@@ -32,9 +43,19 @@
             "type": "ref",
             "ref": "app.openmkt.commerce.defs#pricing"
           },
+          "acceptingOffers": {
+            "type": "boolean",
+            "description": "The seller will consider offers. The price, if present, is a guide rather than a fixed ask."
+          },
           "availability": {
             "type": "string",
-            "knownValues": ["in_stock", "out_of_stock", "backorder", "pre_order", "discontinued"],
+            "knownValues": [
+              "in_stock",
+              "out_of_stock",
+              "backorder",
+              "pre_order",
+              "discontinued"
+            ],
             "description": "Availability status; can be computed from quantity or set independently. 'backorder' is out of stock but still orderable; 'pre_order' is not yet released."
           },
           "manageStock": {
@@ -57,7 +78,15 @@
           },
           "condition": {
             "type": "string",
-            "knownValues": ["new", "openBox", "likeNew", "good", "fair", "forParts", "notApplicable"]
+            "knownValues": [
+              "new",
+              "openBox",
+              "likeNew",
+              "good",
+              "fair",
+              "forParts",
+              "notApplicable"
+            ]
           },
           "category": {
             "type": "ref",
@@ -75,7 +104,10 @@
           },
           "tags": {
             "type": "array",
-            "items": { "type": "string", "maxLength": 100 },
+            "items": {
+              "type": "string",
+              "maxLength": 100
+            },
             "maxLength": 20,
             "description": "Free-text discovery tags. Relieves pressure on the fixed category vocabulary — a seller whose niche has no slug tags it instead."
           },
@@ -106,7 +138,9 @@
             "type": "array",
             "items": {
               "type": "blob",
-              "accept": ["image/*"],
+              "accept": [
+                "image/*"
+              ],
               "maxSize": 1000000
             },
             "maxLength": 10
@@ -141,7 +175,11 @@
           },
           "details": {
             "type": "union",
-            "refs": ["#goodsDetails", "#serviceDetails", "#digitalDetails"],
+            "refs": [
+              "#goodsDetails",
+              "#serviceDetails",
+              "#digitalDetails"
+            ],
             "description": "Type-specific fields matching the type discriminator"
           },
           "externalUrl": {
@@ -163,13 +201,21 @@
           },
           "taxStatus": {
             "type": "string",
-            "knownValues": ["taxable", "shipping", "none"],
+            "knownValues": [
+              "taxable",
+              "shipping",
+              "none"
+            ],
             "description": "Whether this item is taxed. Classification only — rate tables and tax calculation are out of scope."
           },
           "taxCategory": {
             "type": "string",
             "maxLength": 100,
-            "knownValues": ["standard", "reduced", "zero"],
+            "knownValues": [
+              "standard",
+              "reduced",
+              "zero"
+            ],
             "description": "Tax classification the seller's own rate table keys on. Open value set."
           },
           "hideFromFriends": {
@@ -178,7 +224,12 @@
           },
           "catalogVisibility": {
             "type": "string",
-            "knownValues": ["visible", "catalog", "search", "hidden"],
+            "knownValues": [
+              "visible",
+              "catalog",
+              "search",
+              "hidden"
+            ],
             "description": "Where this listing surfaces. Distinct from hideFromFriends, which is social privacy: 'hidden' still resolves by direct link but is kept out of browse and search."
           },
           "reviewsAllowed": {
@@ -187,7 +238,9 @@
           },
           "labels": {
             "type": "union",
-            "refs": ["com.atproto.label.defs#selfLabels"]
+            "refs": [
+              "com.atproto.label.defs#selfLabels"
+            ]
           },
           "createdAt": {
             "type": "string",
@@ -246,7 +299,10 @@
       "properties": {
         "fileFormats": {
           "type": "array",
-          "items": { "type": "string", "maxLength": 50 },
+          "items": {
+            "type": "string",
+            "maxLength": 50
+          },
           "maxLength": 20,
           "description": "File formats included (e.g. PNG, SVG, AI). An asset pack is usually several."
         },

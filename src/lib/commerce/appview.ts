@@ -84,6 +84,7 @@ function toListing(rec: AppViewRecord): Listing | null {
     title: rec.title || 'Untitled Listing',
     description: rec.description || '',
     shortDescription: rec.shortDescription,
+    acceptingOffers: rec.acceptingOffers,
     pricing: {
       regularPrice: pricing.regularPrice ?? null,
       salePrice: pricing.salePrice,

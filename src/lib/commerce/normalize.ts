@@ -200,6 +200,7 @@ function normalizeV2(record: RawRecord, id: Identity): Listing {
     title: record.title || 'Untitled Listing',
     description: record.description || '',
     shortDescription: record.shortDescription,
+    acceptingOffers: record.acceptingOffers,
     pricing: {
       regularPrice: record.pricing?.regularPrice ?? null,
       salePrice: record.pricing?.salePrice,
