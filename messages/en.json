@@ -383,6 +383,7 @@
     "successBody": "Others can discover and engage with your listing right away."
   },
   "store": {
+    "bannerAlt": "{name}'s store banner",
     "metadata": {
       "notAvailableTitle": "Store Not Available | Open Market",
       "notAvailableDescription": "This store is not available on Open Market.",
@@ -575,6 +576,8 @@
     }
   },
   "categories": {
+    "categoriesHeader": "Categories",
+    "subcategoriesHeader": "Subcategories",
     "antiques": "Antiques & Collectibles",
     "apparel": "Apparel",
     "auto": "Auto Parts & Accessories",
@@ -604,6 +607,7 @@
     "other": "Other Items"
   },
   "conditions": {
+    "conditionHeader": "Condition",
     "new": "New",
     "openBox": "Open Box",
     "likeNew": "Like New",

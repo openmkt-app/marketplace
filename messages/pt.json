@@ -383,6 +383,7 @@
     "successBody": "Outras pessoas podem descobrir e interagir com seu anúncio imediatamente."
   },
   "store": {
+    "bannerAlt": "Capa da loja de {name}",
     "metadata": {
       "notAvailableTitle": "Loja indisponível | Open Market",
       "notAvailableDescription": "Esta loja não está disponível no Open Market.",
@@ -575,6 +576,8 @@
     }
   },
   "categories": {
+    "categoriesHeader": "Categorias",
+    "subcategoriesHeader": "Subcategorias",
     "antiques": "Antiguidades e Colecionáveis",
     "apparel": "Roupas e Acessórios",
     "auto": "Peças e Acessórios para Carros",
@@ -604,6 +607,7 @@
     "other": "Outros"
   },
   "conditions": {
+    "conditionHeader": "Condição",
     "new": "Novo",
     "openBox": "Caixa Aberta",
     "likeNew": "Como Novo",
