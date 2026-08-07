@@ -16,9 +16,12 @@ import { trackCreateListing } from '@/lib/analytics';
 import { processExternalLink, getPlatformDisplayName } from '@/lib/external-link-utils';
 import { Wand2, Loader2, Sparkles, Package, Palette, Download, ChevronUp, ChevronDown } from 'lucide-react';
 import type { BillingPeriod, ListingType, ProductGroup } from '@/lib/commerce/types';
+import { useListingFormState, NEW_GROUP, FIELD_CLASS, type SavedLocation } from './listing-form/state';
+import { ListingFormProvider } from './listing-form/context';
+import VariantSection from './listing-form/sections/VariantSection';
+import CatalogueSection from './listing-form/sections/CatalogueSection';
+import VisibilitySection from './listing-form/sections/VisibilitySection';
 
-/** Sentinel for "make a new product" in the group picker. Not an AT URI. */
-const NEW_GROUP = '__new__';
 import { useSearchParams } from 'next/navigation';
 import { CURRENCIES } from '@/lib/price-utils';
 
@@ -46,30 +49,12 @@ function cleanSpecs(rows: Array<{ name: string; value: string }>) {
     .map(r => (r.value ? r : { name: r.name }));
 }
 
-/** Move one row up or down, returning a new array. Out-of-range is a no-op. */
-function moveRow<T>(rows: T[], from: number, delta: number): T[] {
-  const to = from + delta;
-  if (to < 0 || to >= rows.length) return rows;
-  const next = [...rows];
-  [next[from], next[to]] = [next[to], next[from]];
-  return next;
-}
-
 function numberOrUndefined(raw: string): number | undefined {
   if (raw.trim() === '') return undefined;
   const n = Number(raw);
   return Number.isFinite(n) && n >= 0 ? n : undefined;
 }
 
-// Define the SavedLocation type
-interface SavedLocation {
-  name: string;
-  state: string;
-  county: string;
-  locality: string;
-  zipPrefix?: string;
-  isOnlineStore?: boolean;
-}
 
 interface CreateListingFormProps {
   client: MarketplaceClient;
@@ -85,137 +70,46 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
   const tConds = useTranslations('conditions');
   const searchParams = useSearchParams();
   const { logout } = useAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // Set when the PDS refuses a write because the session predates the commerce
-  // collection being added to the OAuth scopes. Signing in again fixes it.
-  const [needsReauth, setNeedsReauth] = useState(false);
-  // The banners sit at the top of a very long form. Submitting from the bottom
-  // showed the message off screen, which reads as nothing having happened.
-  const messageRef = useRef<HTMLDivElement>(null);
-  const [images, setImages] = useState<(File | ListingImage)[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [hideFromFriends, setHideFromFriends] = useState(false);
-  const [isNsfw, setIsNsfw] = useState(false);
-  const [postToBluesky, setPostToBluesky] = useState(true);
-
-  // Bot Following State
-  const [isFollowingBotState, setIsFollowingBotState] = useState(false);
-  const [isCheckingFollow, setIsCheckingFollow] = useState(true);
-
-  // Add state for category and subcategory
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
-  const [subcategories, setSubcategories] = useState<SubcategoryOption[]>([]);
-
-  // Get saved locations for quick selection
-  const [savedLocations, setSavedLocations] = useLocalStorage<SavedLocation[]>('saved-locations', []);
-  const [selectedLocation, setSelectedLocation] = useState<SavedLocation | null>(null);
-
-  // Add state for accordion
-  const [isLocationExpanded, setIsLocationExpanded] = useState(false);
-
-  // Add state for geolocation
-  const [isGeolocating, setIsGeolocating] = useState(false);
-  const [geoSuccess, setGeoSuccess] = useState<boolean | null>(null);
-
-  // Add state for location saved notification
-  const [locationSaved, setLocationSaved] = useState(false);
-
-  // Add state for price input
-  const [priceInput, setPriceInput] = useState('');
-  const [salePriceInput, setSalePriceInput] = useState('');
-  const [saleStartsAt, setSaleStartsAt] = useState('');
-  const [saleEndsAt, setSaleEndsAt] = useState('');
-  const [taxInclusive, setTaxInclusive] = useState<boolean | undefined>(undefined);
-  const [acceptingOffers, setAcceptingOffers] = useState(false);
-  // Empty means a one-off price, which is what every listing was until now.
-  const [billingPeriod, setBillingPeriod] = useState<'' | BillingPeriod>('');
-
-  // Variants. A listing is one option of a product — a tier, a size, a colour —
-  // and the product itself is a separate record every option points at.
-  //
-  // `groupUri` is the chosen existing product, or NEW_GROUP to make one. The
-  // group's own fields are only asked for in the NEW_GROUP case; joining an
-  // existing product inherits its axis name.
-  const [isVariant, setIsVariant] = useState(false);
-  const [groups, setGroups] = useState<ProductGroup[]>([]);
-  const [groupUri, setGroupUri] = useState<string>(NEW_GROUP);
-  const [groupTitle, setGroupTitle] = useState('');
-  const [axisName, setAxisName] = useState('');
-  const [optionValue, setOptionValue] = useState('');
-  const groupsLoaded = useRef(false);
-  /** The last title this form suggested, so a seller's own wording survives. */
-  const suggestedTitle = useRef('');
-  const [showSaleFields, setShowSaleFields] = useState(false);
-
-  // Catalogue detail. Folded away by default: someone selling one used chair
-  // needs none of it, and a form that opens with twelve empty boxes reads as
-  // twelve things you are expected to fill in.
-  const [showMoreDetails, setShowMoreDetails] = useState(false);
-  const [sku, setSku] = useState('');
-  const [gtin, setGtin] = useState('');
-  const [brand, setBrand] = useState('');
-  const [tagsInput, setTagsInput] = useState('');
-  const [specs, setSpecs] = useState<Array<{ name: string; value: string }>>([]);
-  const [manageStock, setManageStock] = useState(false);
-  const [quantity, setQuantity] = useState('');
-  const [lowStockThreshold, setLowStockThreshold] = useState('');
-  const [soldIndividually, setSoldIndividually] = useState(false);
-  const [shippingWeight, setShippingWeight] = useState('');
-  const [dimL, setDimL] = useState('');
-  const [dimW, setDimW] = useState('');
-  const [dimH, setDimH] = useState('');
-  const [currency, setCurrency] = useState('USD');
-
-  // Add state for controlled inputs (Title, Description, Condition)
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [condition, setCondition] = useState('');
-
-  // Add state for controlled location inputs
-  const [locationState, setLocationState] = useState('');
-  const [locationCounty, setLocationCounty] = useState('');
-  const [locationLocality, setLocationLocality] = useState('');
-  const [locationZip, setLocationZip] = useState('');
-
-  // Add state for Free category confirmation dialog
-
-  // Commission-specific state
-  const [slotsAvailable, setSlotsAvailable] = useState<string>('');
-  const [turnaroundTime, setTurnaroundTime] = useState<string>('');
-  // The listing's own type, not a guess from its category. Gallery/Mall
-  // routing and the commission fields key on this, so a seller can offer a
-  // service without being forced into one particular category.
-  const [listingType, setListingType] = useState<ListingType>('goods');
-  // Whether the seller is taking commissions. Stored as the lexicon's
-  // `availability`, which is why "closed" finally has somewhere to live.
-  const [commissionOpen, setCommissionOpen] = useState<'open' | 'closed'>('open');
-  const isService = listingType === 'service';
-  const isDigital = listingType === 'digital';
-  // Weight, size and condition describe something you can hold. Neither a
-  // commission nor a download has any of them.
-  const isPhysical = listingType === 'goods';
-  const detailField = 'w-full px-3 py-2 border border-neutral-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light';
-
-  // Add state for external URL
-  const [externalUrl, setExternalUrl] = useState('');
-  const [externalUrlError, setExternalUrlError] = useState<string | null>(null);
-  const [detectedPlatform, setDetectedPlatform] = useState<string | null>(null);
-
-  // Add state for online store mode (hides location, shows "Online Store")
-  const [isOnlineStore, setIsOnlineStore] = useState(false);
-
-  // Magic Link State
-  const [magicLinkUrl, setMagicLinkUrl] = useState('');
-  const [isMagicLoading, setIsMagicLoading] = useState(false);
-  const [magicError, setMagicError] = useState<string | null>(null);
-  const [magicNote, setMagicNote] = useState<string | null>(null);
-  const [etsyListingId, setEtsyListingId] = useState<string | null>(null);
-  const [isCsvLoading, setIsCsvLoading] = useState(false);
-  const [csvError, setCsvError] = useState<string | null>(null);
-  const etsyCsvInputRef = useRef<HTMLInputElement>(null);
+  // Every piece of state lives in one hook now, so a section component can read
+  // what it needs instead of closing over this function body. Destructured here
+  // so the rest of the form reads exactly as it did before the lift.
+  const form = useListingFormState();
+  const {
+    isSubmitting, setIsSubmitting, error, setError, needsReauth, setNeedsReauth, messageRef,
+    images, setImages, previewUrls, setPreviewUrls, fileInputRef,
+    hideFromFriends, setHideFromFriends, isNsfw, setIsNsfw, postToBluesky, setPostToBluesky,
+    isFollowingBotState, setIsFollowingBotState, isCheckingFollow, setIsCheckingFollow,
+    selectedCategory, setSelectedCategory, selectedSubcategory, setSelectedSubcategory,
+    subcategories, setSubcategories,
+    savedLocations, setSavedLocations, selectedLocation, setSelectedLocation,
+    isLocationExpanded, setIsLocationExpanded, isGeolocating, setIsGeolocating,
+    geoSuccess, setGeoSuccess, locationSaved, setLocationSaved,
+    locationState, setLocationState, locationCounty, setLocationCounty,
+    locationLocality, setLocationLocality, locationZip, setLocationZip,
+    isOnlineStore, setIsOnlineStore,
+    currency, setCurrency, priceInput, setPriceInput, salePriceInput, setSalePriceInput,
+    saleStartsAt, setSaleStartsAt, saleEndsAt, setSaleEndsAt, showSaleFields, setShowSaleFields,
+    taxInclusive, setTaxInclusive, acceptingOffers, setAcceptingOffers,
+    billingPeriod, setBillingPeriod,
+    isVariant, setIsVariant, groups, setGroups, groupUri, setGroupUri,
+    groupTitle, setGroupTitle, axisName, setAxisName, optionValue, setOptionValue,
+    groupsLoaded, suggestedTitle,
+    showMoreDetails, setShowMoreDetails, sku, setSku, gtin, setGtin, brand, setBrand,
+    tagsInput, setTagsInput, specs, setSpecs, manageStock, setManageStock,
+    quantity, setQuantity, lowStockThreshold, setLowStockThreshold,
+    soldIndividually, setSoldIndividually, shippingWeight, setShippingWeight,
+    dimL, setDimL, dimW, setDimW, dimH, setDimH,
+    title, setTitle, description, setDescription, condition, setCondition,
+    slotsAvailable, setSlotsAvailable, turnaroundTime, setTurnaroundTime,
+    commissionOpen, setCommissionOpen, listingType, setListingType,
+    externalUrl, setExternalUrl, externalUrlError, setExternalUrlError,
+    detectedPlatform, setDetectedPlatform,
+    magicLinkUrl, setMagicLinkUrl, isMagicLoading, setIsMagicLoading,
+    magicError, setMagicError, magicNote, setMagicNote, etsyListingId, setEtsyListingId,
+    isCsvLoading, setIsCsvLoading, csvError, setCsvError, etsyCsvInputRef,
+    isService, isDigital, isPhysical,
+  } = form;
+  const detailField = FIELD_CLASS;
 
   // Set up an effect to auto-dismiss error messages after a timeout
   useEffect(() => {
@@ -1485,6 +1379,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
 
   return (
+    <ListingFormProvider value={form}>
     <div className="max-w-7xl mx-auto p-4 sm:px-6 lg:px-8">
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Main Form Column */}
@@ -1635,103 +1530,7 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                 </div>
               </div>
 
-              {/* Options and variants.
-                  Sits here, above everything else, because choosing an existing
-                  product fills in what the options share — asking for it after
-                  the seller has typed the description means typing it twice.
-                  Folded away by default: most listings are one thing. */}
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-neutral-light">
-                <label className="flex items-start gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isVariant}
-                    onChange={e => setIsVariant(e.target.checked)}
-                    className="h-4 w-4 mt-0.5 rounded border-gray-300 text-primary-color"
-                  />
-                  <span>
-                    <span className="text-sm font-medium text-text-primary">{tCreate('labelIsVariant')}</span>
-                    <span className="block text-xs text-text-secondary">{tCreate('hintIsVariant')}</span>
-                  </span>
-                </label>
-
-                {isVariant && (
-                  <div className="mt-4 space-y-3 pl-6">
-                    <div>
-                      <label htmlFor="groupUri" className="block text-sm font-medium text-text-secondary mb-1">
-                        {tCreate('labelProduct')}
-                      </label>
-                      <select
-                        id="groupUri"
-                        value={groupUri}
-                        onChange={e => setGroupUri(e.target.value)}
-                        className={detailField}
-                      >
-                        <option value={NEW_GROUP}>{tCreate('newProduct')}</option>
-                        {groups.map(group => (
-                          <option key={group.uri} value={group.uri}>{group.title}</option>
-                        ))}
-                        {/* The product this listing already belongs to, when
-                            the list has not arrived yet or did not load. Without
-                            it the select would silently show a different
-                            product than the one about to be saved. */}
-                        {groupUri !== NEW_GROUP && !groups.some(g => g.uri === groupUri) && (
-                          <option value={groupUri}>{tCreate('currentProduct')}</option>
-                        )}
-                      </select>
-                    </div>
-
-                    {/* Only for a new product. Joining an existing one adopts
-                        its name and what its options are called — letting a
-                        second listing rename either would split the product. */}
-                    {groupUri === NEW_GROUP && (
-                      <div className="grid sm:grid-cols-2 gap-3">
-                        <div>
-                          <label htmlFor="groupTitle" className="block text-sm font-medium text-text-secondary mb-1">
-                            {tCreate('labelProductName')} <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            id="groupTitle"
-                            type="text"
-                            value={groupTitle}
-                            onChange={e => setGroupTitle(e.target.value)}
-                            placeholder={tCreate('placeholderProductName')}
-                            className={detailField}
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="axisName" className="block text-sm font-medium text-text-secondary mb-1">
-                            {tCreate('labelAxisName')}
-                          </label>
-                          <input
-                            id="axisName"
-                            type="text"
-                            value={axisName}
-                            onChange={e => setAxisName(e.target.value)}
-                            placeholder={tCreate('variantAxisDefault')}
-                            className={detailField}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <div>
-                      <label htmlFor="optionValue" className="block text-sm font-medium text-text-secondary mb-1">
-                        {tCreate('labelOptionValue', { axis: axisName.trim() || tCreate('variantAxisDefault') })}{' '}
-                        <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        id="optionValue"
-                        type="text"
-                        value={optionValue}
-                        onChange={e => setOptionValue(e.target.value)}
-                        placeholder={tCreate('placeholderOptionValue')}
-                        className={detailField}
-                      />
-                      <p className="mt-1 text-xs text-text-secondary">{tCreate('hintOptionValue')}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <VariantSection />
 
               {/* Magic Link Section */}
               <div className="bg-gradient-to-r from-amber-100 to-yellow-100 border-2 border-amber-300 rounded-2xl p-6">
@@ -2471,181 +2270,9 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
                 )}
               </div>
 
-              {/* Catalogue detail — folded away by default. */}
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-neutral-light">
-                <button
-                  type="button"
-                  onClick={() => setShowMoreDetails(v => !v)}
-                  className="flex items-center justify-between w-full text-left"
-                >
-                  <div>
-                    <h2 className="text-xl font-semibold text-text-primary">{tCreate('moreDetailsHeader')}</h2>
-                    <p className="text-sm text-text-secondary">{tCreate('moreDetailsDesc')}</p>
-                  </div>
-                  <span className="text-text-secondary text-sm">{showMoreDetails ? '−' : '+'}</span>
-                </button>
+              <CatalogueSection />
 
-                {showMoreDetails && (
-                  <div className="mt-5 space-y-5">
-                    <div className="grid sm:grid-cols-3 gap-3">
-                      <div>
-                        <label htmlFor="brand" className="block text-sm font-medium text-text-secondary mb-1">{tCreate('labelBrand')}</label>
-                        <input id="brand" value={brand} onChange={e => setBrand(e.target.value)} className={detailField} />
-                      </div>
-                      <div>
-                        <label htmlFor="sku" className="block text-sm font-medium text-text-secondary mb-1">{tCreate('labelSku')}</label>
-                        <input id="sku" value={sku} onChange={e => setSku(e.target.value)} className={detailField} />
-                      </div>
-                      <div>
-                        <label htmlFor="gtin" className="block text-sm font-medium text-text-secondary mb-1">{tCreate('labelGtin')}</label>
-                        <input id="gtin" value={gtin} onChange={e => setGtin(e.target.value)} className={detailField} placeholder="01234567890128" />
-                      </div>
-                    </div>
-                    <p className="text-xs text-text-secondary -mt-3">{tCreate('hintGtin')}</p>
-
-                    <div>
-                      <label htmlFor="tags" className="block text-sm font-medium text-text-secondary mb-1">{tCreate('labelTags')}</label>
-                      <input id="tags" value={tagsInput} onChange={e => setTagsInput(e.target.value)} className={detailField} placeholder={tCreate('placeholderTags')} />
-                      <p className="text-xs text-text-secondary mt-1">{tCreate('hintTags')}</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-text-secondary mb-1">{tCreate('labelSpecs')}</label>
-                      <div className="space-y-2">
-                        {/* Order is meaningful — a feature list is read top to
-                            bottom — and it is not the order things occur to
-                            you. Buttons rather than drag: they work on a phone,
-                            with a keyboard, and with a screen reader. */}
-                        {specs.map((row, i) => (
-                          <div key={i} className="flex gap-2">
-                            <input
-                              value={row.name}
-                              onChange={e => setSpecs(specs.map((r, j) => j === i ? { ...r, name: e.target.value } : r))}
-                              placeholder={tCreate('placeholderSpecName')}
-                              className={`${detailField} flex-1`}
-                            />
-                            <input
-                              value={row.value}
-                              onChange={e => setSpecs(specs.map((r, j) => j === i ? { ...r, value: e.target.value } : r))}
-                              placeholder={tCreate('placeholderSpecValue')}
-                              className={`${detailField} flex-1`}
-                            />
-                            <div className="flex flex-shrink-0">
-                              <button type="button" onClick={() => setSpecs(moveRow(specs, i, -1))} disabled={i === 0}
-                                className="px-1.5 text-text-secondary hover:text-primary-color disabled:opacity-25 disabled:hover:text-text-secondary"
-                                aria-label={tCreate('moveSpecUp')}>
-                                <ChevronUp size={16} />
-                              </button>
-                              <button type="button" onClick={() => setSpecs(moveRow(specs, i, 1))} disabled={i === specs.length - 1}
-                                className="px-1.5 text-text-secondary hover:text-primary-color disabled:opacity-25 disabled:hover:text-text-secondary"
-                                aria-label={tCreate('moveSpecDown')}>
-                                <ChevronDown size={16} />
-                              </button>
-                              <button type="button" onClick={() => setSpecs(specs.filter((_, j) => j !== i))}
-                                className="px-2 text-text-secondary hover:text-red-600" aria-label={tCreate('removeSpec')}>×</button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <button type="button" onClick={() => setSpecs([...specs, { name: '', value: '' }])}
-                        className="mt-2 text-sm text-primary-color hover:underline">{tCreate('addSpec')}</button>
-                    </div>
-
-                    <div className="pt-4 border-t border-neutral-light">
-                      <label className="flex items-center gap-2 text-sm font-medium text-text-secondary">
-                        <input type="checkbox" checked={manageStock} onChange={e => setManageStock(e.target.checked)}
-                          className="h-4 w-4 rounded border-gray-300 text-primary-color" />
-                        {tCreate('labelManageStock')}
-                      </label>
-                      {manageStock && (
-                        <div className="grid sm:grid-cols-2 gap-3 mt-3">
-                          <div>
-                            <label htmlFor="quantity" className="block text-sm font-medium text-text-secondary mb-1">{tCreate('labelQuantity')}</label>
-                            <input id="quantity" type="number" min="0" value={quantity} onChange={e => setQuantity(e.target.value)} className={detailField} />
-                          </div>
-                          <div>
-                            <label htmlFor="lowStock" className="block text-sm font-medium text-text-secondary mb-1">{tCreate('labelLowStock')}</label>
-                            <input id="lowStock" type="number" min="0" value={lowStockThreshold} onChange={e => setLowStockThreshold(e.target.value)} className={detailField} />
-                          </div>
-                        </div>
-                      )}
-                      <label className="flex items-center gap-2 text-sm font-medium text-text-secondary mt-3">
-                        <input type="checkbox" checked={soldIndividually} onChange={e => setSoldIndividually(e.target.checked)}
-                          className="h-4 w-4 rounded border-gray-300 text-primary-color" />
-                        {tCreate('labelSoldIndividually')}
-                      </label>
-                    </div>
-
-                    {/* Weight and size describe a physical thing, so neither a
-                        service nor a download is asked for them. */}
-                    {isPhysical && (
-                      <div className="pt-4 border-t border-neutral-light">
-                        <p className="text-sm font-medium text-text-secondary mb-2">{tCreate('shippingDetailsHeader')}</p>
-                        <div className="grid sm:grid-cols-4 gap-3">
-                          <div>
-                            <label htmlFor="weight" className="block text-xs text-text-secondary mb-1">{tCreate('labelWeight')}</label>
-                            <input id="weight" type="number" min="0" step="any" value={shippingWeight} onChange={e => setShippingWeight(e.target.value)} className={detailField} />
-                          </div>
-                          <div>
-                            <label htmlFor="dimL" className="block text-xs text-text-secondary mb-1">{tCreate('labelLength')}</label>
-                            <input id="dimL" type="number" min="0" step="any" value={dimL} onChange={e => setDimL(e.target.value)} className={detailField} />
-                          </div>
-                          <div>
-                            <label htmlFor="dimW" className="block text-xs text-text-secondary mb-1">{tCreate('labelWidth')}</label>
-                            <input id="dimW" type="number" min="0" step="any" value={dimW} onChange={e => setDimW(e.target.value)} className={detailField} />
-                          </div>
-                          <div>
-                            <label htmlFor="dimH" className="block text-xs text-text-secondary mb-1">{tCreate('labelHeight')}</label>
-                            <input id="dimH" type="number" min="0" step="any" value={dimH} onChange={e => setDimH(e.target.value)} className={detailField} />
-                          </div>
-                        </div>
-                        <p className="text-xs text-text-secondary mt-1">{tCreate('hintShippingUnits')}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Privacy Options */}
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-neutral-light">
-                <h2 className="text-xl font-semibold mb-4 text-text-primary">{tCreate('visibilityHeader')}</h2>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="font-medium text-text-secondary">{tCreate('hideFromFriends')}</span>
-                    <p className="text-sm text-text-secondary">{tCreate('hideFromFriendsDesc')}</p>
-                  </div>
-                  <label className="inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={hideFromFriends}
-                      onChange={() => setHideFromFriends(!hideFromFriends)}
-                    />
-                    <div className="relative w-11 h-6 bg-neutral-light peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-color"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-100">
-                  <div>
-                    <span className="font-medium text-text-secondary items-center flex gap-2">
-                      {tCreate('markNsfw')}
-                    </span>
-                    <p className="text-sm text-text-secondary max-w-[85%]">
-                      {tCreate('markNsfwDesc')}
-                    </p>
-                  </div>
-                  <label className="inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={isNsfw}
-                      onChange={() => setIsNsfw(!isNsfw)}
-                    />
-                    <div className="relative w-11 h-6 bg-neutral-light peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
-                  </label>
-                </div>
-              </div>
+              <VisibilitySection />
 
               {/* Post to Bluesky Checkbox (Create Mode Only) */}
               {mode === 'create' && (
@@ -2719,5 +2346,6 @@ export default function CreateListingForm({ client, onSuccess, initialData, mode
 
 
     </div>
+    </ListingFormProvider>
   );
 }
