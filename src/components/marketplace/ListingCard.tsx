@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
-import { MapPin, ShoppingCart, Globe, Download } from 'lucide-react';
+import { MapPin, ShoppingCart, Globe, Download, ExternalLink } from 'lucide-react';
 import ListingImageDisplay from './ListingImageDisplay';
 import ListingImageDebug from './ListingImageDebug';
 import type { MarketplaceListing } from '@/lib/marketplace-client';
@@ -128,8 +128,9 @@ const ListingCard = React.memo(({ listing, showDebug = false, flaggedUris, prior
           <div className="absolute top-3 right-3 z-20 pointer-events-none">
             {isFreeDownload ? (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500 text-white shadow-sm">
-                <Download size={12} />
-                {t('freeDownload')}
+                {/* A service is not downloaded, so the word follows the type. */}
+                {listing.type === 'digital' ? <Download size={12} /> : <ExternalLink size={12} />}
+                {listing.type === 'digital' ? t('freeDownload') : t('getItFree')}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-400 text-slate-800 shadow-sm">

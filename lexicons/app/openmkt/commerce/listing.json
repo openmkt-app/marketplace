@@ -186,7 +186,7 @@
             "type": "string",
             "format": "uri",
             "maxLength": 2000,
-            "description": "External URL for purchasing (e.g. Amazon, eBay link)"
+            "description": "External URL to reach the product — a shop listing, a download page, a booking page. Named for what it does rather than for buying, because a free download or a free consultation reaches its buyer the same way a paid one does."
           },
           "checkoutUrl": {
             "type": "string",

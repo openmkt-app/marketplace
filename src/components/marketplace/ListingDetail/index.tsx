@@ -672,7 +672,7 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                       : 'bg-yellow-400 hover:bg-yellow-300 text-slate-900'
                   }`}
                 >
-                  {isFreeDownload ? <Download size={24} /> : <ExternalLink size={24} />}
+                  {isFreeDownload && listing.type === 'digital' ? <Download size={24} /> : <ExternalLink size={24} />}
                   {isFreeDownload
                     ? t('getItFree')
                     : t('buyOn', { platform: getPlatformDisplayName(listing.externalUrl) || 'Website' })}

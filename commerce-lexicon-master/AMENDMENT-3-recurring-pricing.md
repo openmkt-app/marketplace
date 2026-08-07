@@ -84,6 +84,18 @@ Proposed: `required: ["name"]`. A specification with a value is a property; one 
 
 Existing records are unaffected.
 
+## Second companion change: what `externalUrl` is for
+
+`listing.externalUrl` is described as "External URL for purchasing (e.g. Amazon, eBay link)".
+
+That wording rules out the two cases where the link matters most. A free download — a font, a demo, an open-source tool — reaches its buyer only through a URL. So does a free consultation with a booking page. Neither is a purchase, and a reader that trusts the description will label both "Buy on Gumroad" underneath a price of zero.
+
+Nothing structural changes. Proposed wording:
+
+> External URL to reach the product — a shop listing, a download page, a booking page.
+
+Named for what the link does rather than for buying. `checkoutUrl` already exists for the narrower case of going straight to a till, so `externalUrl` was never the purchase field anyway.
+
 ## Note on where this came from
 
 A seller wanted to list software licence tiers — the ordinary four-column pricing page every SaaS has. Almost all of it was already expressible: the struck-through introductory price is `salePrice`, "Custom, contact sales" is `acceptingOffers` with no price (Amendment 2), the licence count is a `specification`, and the tiers themselves are what `productGroup` and its option axes are for.
