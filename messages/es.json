@@ -1154,6 +1154,7 @@
     "title": "Ajustes de la tienda",
     "subtitle": "Esto es lo que ven los compradores en la página de tu tienda.",
     "labelName": "Nombre de la tienda",
+    "hintName": "Déjalo vacío para usar tu nombre de Bluesky.",
     "labelDescription": "Sobre tu tienda",
     "hintDescription": "Se muestra en tu tienda en lugar de tu biografía de Bluesky.",
     "labelWebsite": "Sitio web",

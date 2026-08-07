@@ -1154,6 +1154,7 @@
     "title": "Shop settings",
     "subtitle": "This is what buyers see on your store page.",
     "labelName": "Shop name",
+    "hintName": "Leave empty to use your Bluesky name.",
     "labelDescription": "About your shop",
     "hintDescription": "Shown on your store page instead of your Bluesky bio.",
     "labelWebsite": "Website",

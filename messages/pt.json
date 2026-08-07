@@ -1154,6 +1154,7 @@
     "title": "Configurações da loja",
     "subtitle": "É isto que os compradores veem na página da sua loja.",
     "labelName": "Nome da loja",
+    "hintName": "Deixe vazio para usar seu nome do Bluesky.",
     "labelDescription": "Sobre a sua loja",
     "hintDescription": "Aparece na sua loja no lugar da sua bio do Bluesky.",
     "labelWebsite": "Site",

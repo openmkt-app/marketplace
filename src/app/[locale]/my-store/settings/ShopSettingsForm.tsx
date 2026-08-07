@@ -94,7 +94,10 @@ export default function ShopSettingsForm() {
     client.getShop().then((shop: Shop | null) => {
       if (cancelled) return;
       if (shop) {
-        setName(shop.name || '');
+        // A name equal to the handle is the one the record was created with,
+        // not one the seller chose, so the field reads as empty and the
+        // placeholder shows what the store is actually called today.
+        setName(shop.name && shop.name !== user?.handle ? shop.name : '');
         setDescription(shop.description || '');
         setWebsite(shop.website || '');
         setHandlingTime(shop.handlingTime || '');
@@ -104,10 +107,6 @@ export default function ShopSettingsForm() {
         setShipping(shop.policies?.shipping || '');
         setTerms(shop.policies?.terms || '');
         setPrivacy(shop.policies?.privacy || '');
-      } else {
-        // No record yet. Seed the name the same way the automatic creation
-        // does, so saving does not blank out what their store already shows.
-        setName(user?.handle || '');
       }
       setLoading(false);
     });
@@ -131,6 +130,10 @@ export default function ShopSettingsForm() {
     };
 
     const input: ShopInput = {
+      // The lexicon requires a name, so an empty field writes the handle.
+      // getStoreName treats that as "not chosen" and the store falls back to
+      // the seller's Bluesky display name — clearing the field reverts rather
+      // than erroring.
       name: name.trim() || user?.handle || '',
       description: description.trim() || undefined,
       website: website.trim() || undefined,
@@ -204,7 +207,15 @@ export default function ShopSettingsForm() {
       <section className="bg-white p-6 rounded-lg border border-neutral-light space-y-4">
         <div>
           <label htmlFor="name" className={label}>{t('labelName')}</label>
-          <input id="name" className={field} value={name} onChange={e => setName(e.target.value)} maxLength={200} required />
+          <input
+            id="name"
+            className={field}
+            value={name}
+            onChange={e => setName(e.target.value)}
+            maxLength={200}
+            placeholder={user?.displayName || user?.handle || ''}
+          />
+          <p className={hint}>{t('hintName')}</p>
         </div>
         <div>
           <label htmlFor="description" className={label}>{t('labelDescription')}</label>
