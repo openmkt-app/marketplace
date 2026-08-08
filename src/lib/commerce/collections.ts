@@ -4,7 +4,7 @@
 // reasoned about independently during the migration. Writes go to exactly one
 // collection; reads span both.
 
-import { IS_PRODUCTION, MARKETPLACE_COLLECTION } from '../constants.ts';
+import { IS_PRODUCTION, MARKETPLACE_COLLECTION, PRODUCTION_LEGACY_COLLECTION } from '../constants.ts';
 
 const PRODUCTION_COMMERCE = 'app.openmkt.commerce.listing';
 const PRODUCTION_SHOP = 'app.openmkt.commerce.shop';
@@ -47,8 +47,17 @@ export const LEGACY_COLLECTION = MARKETPLACE_COLLECTION;
  *
  * Read paths must cover all of these; a seller who never edits again keeps a v1
  * record forever, so this is not temporary scaffolding.
+ *
+ * The lists are deliberately asymmetric. Production reads only real records, so
+ * nothing a developer invented can surface on the live site. Everything else
+ * reads real records too, because otherwise a deploy preview cannot open a
+ * single existing listing — every real AT URI names a collection it would not
+ * recognise, and the whole site 404s. That made previews useless for reviewing
+ * anything, which is the reason to have them.
  */
-export const READ_COLLECTIONS: readonly string[] = [COMMERCE_COLLECTION, LEGACY_COLLECTION];
+export const READ_COLLECTIONS: readonly string[] = IS_PRODUCTION
+  ? [PRODUCTION_COMMERCE, LEGACY_COLLECTION]
+  : [DEVELOPMENT_COMMERCE, PRODUCTION_COMMERCE, LEGACY_COLLECTION, PRODUCTION_LEGACY_COLLECTION];
 
 export function isListingCollection(nsid: string | undefined | null): boolean {
   return !!nsid && READ_COLLECTIONS.includes(nsid);

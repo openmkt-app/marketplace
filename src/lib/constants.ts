@@ -36,6 +36,43 @@ export const MARKETPLACE_COLLECTION = IS_PRODUCTION
   ? PRODUCTION_COLLECTION
   : DEVELOPMENT_COLLECTION;
 
+/** The v1 NSID real listings live under, whatever this instance writes to. */
+export const PRODUCTION_LEGACY_COLLECTION = PRODUCTION_COLLECTION;
+
+/**
+ * Whether this instance may say anything to the outside world: post as the
+ * announcement bot, or put an entry in the public feed.
+ *
+ * Split out from IS_PRODUCTION because that flag answers a different question —
+ * *which records am I working with* — and the two came apart badly. Every
+ * Netlify context, deploy previews included, is configured with
+ * NEXT_PUBLIC_MARKETPLACE_ENV=production, so IS_PRODUCTION is true on a PR
+ * preview: opening one and creating a listing would announce it to real
+ * followers. The guard that was supposed to prevent exactly that never fired,
+ * because it was reading the wrong flag.
+ *
+ * CONTEXT is Netlify's own, set per deploy and not something a dashboard edit
+ * can accidentally widen. It is inlined at build time by next.config.js, since
+ * it is a build variable and may not survive into the function runtime.
+ *
+ * Empty means no Netlify at all — a developer running `next dev` — which keeps
+ * today's local behaviour, where .env.local decides.
+ */
+export function mayBroadcast(
+  marketplaceEnv: string | undefined,
+  netlifyContext: string | undefined,
+): boolean {
+  if (marketplaceEnv !== 'production') return false;
+
+  const context = netlifyContext || '';
+  return context === '' || context === 'production';
+}
+
+export const MAY_BROADCAST = mayBroadcast(
+  process.env.NEXT_PUBLIC_MARKETPLACE_ENV,
+  process.env.NEXT_PUBLIC_NETLIFY_CONTEXT,
+);
+
 /**
  * The Open Market account. It is both the announcement bot and the moderation
  * admin, and it follows every seller as the discovery mechanism.
