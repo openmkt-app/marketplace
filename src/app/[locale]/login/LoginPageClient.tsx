@@ -5,6 +5,7 @@ import { useRouter } from '@/i18n/navigation';
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/contexts/AuthContext';
+import HandleAutocomplete from '@/components/auth/HandleAutocomplete';
 
 function AtProtoIcon({ className }: { className?: string }) {
     return (
@@ -91,16 +92,16 @@ export default function LoginPageClient() {
                                 {t('handleLabel')}
                             </label>
                             <div className="mt-1">
-                                <input
+                                <HandleAutocomplete
                                     id="handle"
                                     name="handle"
-                                    type="text"
-                                    autoComplete="username"
                                     required
+                                    disabled={isSubmitting}
                                     value={handle}
-                                    onChange={(e) => setHandle(e.target.value)}
+                                    onChange={setHandle}
                                     className="appearance-none block w-full px-3 py-2 border border-neutral-medium rounded-lg shadow-sm placeholder-text-secondary/50 focus:outline-none focus:ring-primary-color focus:border-primary-color sm:text-sm"
                                     placeholder={t('handlePlaceholder')}
+                                    listLabel={t('suggestionsLabel')}
                                 />
                             </div>
                             <p className="mt-2 text-xs text-text-secondary">

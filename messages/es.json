@@ -126,6 +126,7 @@
     "handleLabel": "Identificador del Protocolo AT",
     "handlePlaceholder": "tu.bsky.social o tu.dominio.com",
     "handleHint": "Te redirigiremos a tu PDS para autorizar el acceso de forma segura.",
+    "suggestionsLabel": "Cuentas coincidentes",
     "submitDefault": "Iniciar sesión con el Protocolo AT",
     "submitting": "Redirigiendo a tu proveedor...",
     "secureTitle": "Seguro por diseño",

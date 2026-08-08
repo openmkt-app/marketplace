@@ -126,6 +126,7 @@
     "handleLabel": "AT Protocol Handle",
     "handlePlaceholder": "you.bsky.social or you.your-domain.com",
     "handleHint": "You'll be redirected to your PDS to securely authorize access.",
+    "suggestionsLabel": "Matching accounts",
     "submitDefault": "Sign in with AT Protocol",
     "submitting": "Redirecting to your provider...",
     "secureTitle": "Secure by design",

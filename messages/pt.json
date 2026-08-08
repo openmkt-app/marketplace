@@ -126,6 +126,7 @@
     "handleLabel": "Identificador do Protocolo AT",
     "handlePlaceholder": "voce.bsky.social ou voce.seu-dominio.com",
     "handleHint": "Você será redirecionado para o seu PDS para autorizar o acesso com segurança.",
+    "suggestionsLabel": "Contas correspondentes",
     "submitDefault": "Entrar com o Protocolo AT",
     "submitting": "Redirecionando para o seu provedor...",
     "secureTitle": "Seguro por design",
