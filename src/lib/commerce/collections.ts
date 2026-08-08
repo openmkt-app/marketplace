@@ -4,7 +4,7 @@
 // reasoned about independently during the migration. Writes go to exactly one
 // collection; reads span both.
 
-import { MARKETPLACE_COLLECTION } from '../constants.ts';
+import { IS_PRODUCTION, MARKETPLACE_COLLECTION } from '../constants.ts';
 
 const PRODUCTION_COMMERCE = 'app.openmkt.commerce.listing';
 const PRODUCTION_SHOP = 'app.openmkt.commerce.shop';
@@ -16,8 +16,6 @@ const PRODUCTION_GROUP = 'app.openmkt.commerce.productGroup';
 const DEVELOPMENT_COMMERCE = 'app.openmkt.test.commerce.listing';
 const DEVELOPMENT_SHOP = 'app.openmkt.test.commerce.shop';
 const DEVELOPMENT_GROUP = 'app.openmkt.test.commerce.productGroup';
-
-const IS_PRODUCTION = process.env.NEXT_PUBLIC_MARKETPLACE_ENV === 'production';
 
 /** The only collection new records are written to. */
 export const COMMERCE_COLLECTION = IS_PRODUCTION ? PRODUCTION_COMMERCE : DEVELOPMENT_COMMERCE;

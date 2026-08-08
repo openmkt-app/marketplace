@@ -1,4 +1,6 @@
 import { BskyAgent, RichText } from '@atproto/api';
+import { IS_PRODUCTION } from './constants';
+import logger from './logger';
 
 const BOT_HANDLE = process.env.BOT_HANDLE;
 const BOT_APP_PASSWORD = process.env.BOT_APP_PASSWORD;
@@ -35,6 +37,17 @@ export async function createBotAnnouncementPost(
   listingData: ListingData,
   listingUri: string
 ): Promise<string | null> {
+  // A development instance writes its listings to a collection nobody reads,
+  // but the announcement went to the real Bluesky regardless — @openmkt.app
+  // telling its followers about a listing that cannot be opened. The guard
+  // belongs here rather than in the route so any future caller inherits it.
+  if (!IS_PRODUCTION) {
+    logger.info('Skipped the bot announcement — not a production instance', {
+      meta: { listingUri, title: listingData.title },
+    });
+    return null;
+  }
+
   try {
     const agent = await getBotAgent();
 

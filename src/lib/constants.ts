@@ -18,12 +18,23 @@
 const PRODUCTION_COLLECTION = 'app.openmkt.marketplace.listing';
 const DEVELOPMENT_COLLECTION = 'app.openmkt.test.marketplace.listing';
 
-// Set NEXT_PUBLIC_MARKETPLACE_ENV to 'production' in production; anything else
-// (or unset) is development.
-export const MARKETPLACE_COLLECTION =
-  process.env.NEXT_PUBLIC_MARKETPLACE_ENV === 'production'
-    ? PRODUCTION_COLLECTION
-    : DEVELOPMENT_COLLECTION;
+/**
+ * Whether this instance is the real Open Market.
+ *
+ * Deliberately not NODE_ENV. That answers "was this built for production",
+ * which is true of a local `next start` and says nothing about whether the
+ * records and posts this instance makes should be seen by the public. This
+ * flag is set by hand, so a developer can point localhost at the live data on
+ * purpose — which is what .env.local does today.
+ *
+ * Anything with a public side effect should check this: writing to a
+ * collection real buyers read, and posting as the announcement bot.
+ */
+export const IS_PRODUCTION = process.env.NEXT_PUBLIC_MARKETPLACE_ENV === 'production';
+
+export const MARKETPLACE_COLLECTION = IS_PRODUCTION
+  ? PRODUCTION_COLLECTION
+  : DEVELOPMENT_COLLECTION;
 
 /**
  * The Open Market account. It is both the announcement bot and the moderation

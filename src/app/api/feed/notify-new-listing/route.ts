@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { addToFeedIndex, removeFromFeedIndex, type FeedEntry } from '@/lib/feed-index';
 import { createBotAnnouncementPost } from '@/lib/bot-client';
 import { invalidateSellersCache, invalidateListingsCache, invalidateAppViewListingsCache } from '@/lib/mall-cache';
+import { IS_PRODUCTION } from '@/lib/constants';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +45,16 @@ export async function POST(req: NextRequest) {
 
   if (!listingUri) {
     return NextResponse.json({ error: 'listingUri required' }, { status: 400 });
+  }
+
+  // Everything below this point is a broadcast: a post from @openmkt.app and an
+  // entry in the public feed. A development instance writes its listings to a
+  // collection nobody reads, so announcing them means telling real followers
+  // about a listing they cannot open. Local caches are still cleared, because
+  // those only affect the page in front of the developer.
+  if (!IS_PRODUCTION) {
+    invalidateAppViewListingsCache();
+    return NextResponse.json({ success: true, announced: false, reason: 'notProduction' });
   }
 
   // Handle listing deletion
