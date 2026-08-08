@@ -1,7 +1,8 @@
 import { BskyAgent, RichText } from '@atproto/api';
-import { IS_PRODUCTION } from './constants';
+import { MAY_BROADCAST } from './constants';
 import { buildAnnouncement, type AnnouncementListing } from './bot-announcement.ts';
 import { fetchListingById } from './server/fetch-listing';
+import { renderListingCard } from './og/listing-card';
 import logger from './logger';
 
 const BOT_HANDLE = process.env.BOT_HANDLE;
@@ -36,6 +37,31 @@ type ListingData = {
   location: { state: string; county: string; locality: string; isOnlineStore?: boolean };
   description?: string;
 };
+
+/**
+ * The branded card: the listing drawn onto a 1200x800 image with its price,
+ * category and a call to action, rather than the bare product photo.
+ *
+ * Rendering happens in-process rather than through the preview route, so the
+ * announcement never depends on the site being able to call itself. Returns
+ * undefined on any failure and the caller falls back to the raw photo — the
+ * renderer needs a WebAssembly module in the deployed bundle, which is exactly
+ * the kind of thing that works locally and not in production.
+ */
+async function uploadBrandedCard(agent: BskyAgent, listingUri: string): Promise<unknown | undefined> {
+  try {
+    const card = await renderListingCard(listingUri);
+    if (card.byteLength === 0 || card.byteLength > MAX_THUMB_BYTES) return undefined;
+
+    const upload = await agent.uploadBlob(card, { encoding: 'image/jpeg' });
+    return upload.data.blob;
+  } catch (err) {
+    logger.warn('Card render failed — falling back to the product photo', {
+      meta: { listingUri, error: (err as Error).message },
+    });
+    return undefined;
+  }
+}
 
 /**
  * Copy the listing's first photo into the bot's own repo.
@@ -153,7 +179,7 @@ export async function createBotAnnouncementPost(
   // but the announcement went to the real Bluesky regardless — @openmkt.app
   // telling its followers about a listing that cannot be opened. The guard
   // belongs here rather than in the route so any future caller inherits it.
-  if (!IS_PRODUCTION) {
+  if (!MAY_BROADCAST) {
     logger.info('Skipped the bot announcement — not a production instance', {
       meta: { listingUri, title: listingData.title },
     });
@@ -173,7 +199,10 @@ export async function createBotAnnouncementPost(
     // the tags are plain text and the post reaches no tag feed at all.
     await rt.detectFacets(agent);
 
-    const thumb = imageUrls ? await uploadCardThumb(agent, imageUrls) : undefined;
+    // The branded card first; the product photo only if drawing one failed.
+    const thumb =
+      (await uploadBrandedCard(agent, listingUri)) ??
+      (imageUrls ? await uploadCardThumb(agent, imageUrls) : undefined);
 
     const result = await agent.post({
       text: rt.text,

@@ -4,15 +4,15 @@
 //
 // The bot posts into the same timelines as the seller's own share, so a bare
 // "New listing: <title>" next to the seller's card made the marketplace look
-// thinner than it is. Everything the listing page already knows — who is
-// selling, the price, whether a sale is running, where it ships from, what it
-// is — belongs in the announcement.
+// thinner than it is. Most of what the listing page knows — who is selling, the
+// price, whether a sale is running, what condition it is in — belongs in the
+// announcement. Where the seller lives does not; see buildAnnouncement.
 //
 // Pure on purpose: no network, no agent, no environment. The post is assembled
 // here and only handed to the AT Protocol client in bot-client.ts, so the
 // wording and the 300-grapheme budget can be tested without a session.
 
-import { formatPrice, formatLocation } from './price-utils.ts';
+import { formatPrice } from './price-utils.ts';
 import { formatConditionForDisplay } from './condition-utils.ts';
 import { buildListingHashtags } from './listing-hashtags.ts';
 
@@ -139,14 +139,6 @@ export function announcementPriceLabel(listing: AnnouncementListing): string {
   return label;
 }
 
-/** "Online" for a storefront, "Austin, TX" for something with an address. */
-export function announcementLocationLabel(listing: AnnouncementListing): string {
-  const location = listing.location;
-  if (!location) return '';
-  if (location.isOnlineStore) return 'Online';
-  return formatLocation(location.locality, location.state);
-}
-
 /**
  * Condition is worth saying about a used bicycle and says nothing about a
  * software licence, which is never anything but new.
@@ -178,9 +170,11 @@ export function buildAnnouncement(listing: AnnouncementListing): Announcement {
   const isFree =
     !listing.noPrice && !listing.acceptingOffers && parseFloat(listing.price || '0') === 0;
 
-  const facts = [priceLabel, announcementConditionLabel(listing), announcementLocationLabel(listing)]
-    .filter(Boolean)
-    .join(' · ');
+  // Deliberately no location. The bot broadcasts to everyone who follows
+  // @openmkt.app, and a seller's town is not something that audience needs from
+  // an announcement — the listing page says where the item is, to whoever
+  // actually opens it. The card image leaves it out for the same reason.
+  const facts = [priceLabel, announcementConditionLabel(listing)].filter(Boolean).join(' · ');
 
   const byLine = listing.sellerHandle ? `by @${listing.sellerHandle}` : '';
 

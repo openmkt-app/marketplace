@@ -9,7 +9,6 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
-  announcementLocationLabel,
   announcementPriceLabel,
   buildAnnouncement,
   type AnnouncementListing,
@@ -67,14 +66,6 @@ test('a non-dollar currency keeps its own symbol', () => {
   assert.match(announcementPriceLabel(listing({ price: '30.00', currency: 'EUR' })), /€30\.00/);
 });
 
-// --- location ---------------------------------------------------------
-
-test('a storefront is Online and an address is a place', () => {
-  assert.equal(announcementLocationLabel(listing({ location: { isOnlineStore: true } })), 'Online');
-  assert.equal(announcementLocationLabel(listing()), 'Austin, TX');
-  assert.equal(announcementLocationLabel(listing({ location: undefined })), '');
-});
-
 // --- the whole post ---------------------------------------------------
 
 test('the post carries the item, the facts, the seller and the tags', () => {
@@ -83,7 +74,6 @@ test('the post carries the item, the facts, the seller and the tags', () => {
   assert.match(text, /New on Open Market: Herman Miller Aeron/);
   assert.match(text, /\$450\.00/);
   assert.match(text, /Good/);
-  assert.match(text, /Austin, TX/);
   assert.match(text, /by @seller\.example\.com/);
   assert.match(text, /#OpenMarket/);
   assert.match(text, /#Furniture/);
@@ -100,9 +90,19 @@ test('a storefront listing is not tagged for sale either', () => {
   const { text } = buildAnnouncement(
     listing({ category: 'digital', location: { isOnlineStore: true } }),
   );
-  assert.match(text, /Online/);
   assert.match(text, /#Software/);
   assert.doesNotMatch(text, /#ForSale/);
+});
+
+// The bot posts to everyone following @openmkt.app. Where the item physically
+// is belongs on the listing page, not in a broadcast.
+test('the post never names where the seller is', () => {
+  const local = buildAnnouncement(listing()).text;
+  assert.doesNotMatch(local, /Austin/);
+  assert.doesNotMatch(local, /TX/);
+
+  const shop = buildAnnouncement(listing({ location: { isOnlineStore: true } })).text;
+  assert.doesNotMatch(shop, /Online/);
 });
 
 test('condition is dropped where it means nothing', () => {
