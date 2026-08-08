@@ -146,6 +146,19 @@ export async function addToFeedIndex(entry: FeedEntry): Promise<void> {
   await writeIndex(index);
 }
 
+/**
+ * The entry already indexed for this listing, if there is one.
+ *
+ * The notify endpoint takes no authentication — it is called from the seller's
+ * browser, which has no secret to hold — so it needs its own answer to "have I
+ * already done this?". Without it, replaying one legitimate request announces
+ * the same listing to the same followers as many times as it is sent.
+ */
+export async function findFeedEntry(listingUri: string): Promise<FeedEntry | undefined> {
+  const index = await readIndex();
+  return index.entries.find((e) => e.listingUri === listingUri);
+}
+
 export async function removeFromFeedIndex(listingUri: string): Promise<void> {
   const index = await readIndex();
   const before = index.entries.length;
