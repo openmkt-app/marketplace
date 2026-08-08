@@ -29,15 +29,6 @@ export async function getBotAgent() {
   return agent;
 }
 
-/** The thin payload the create-listing form sends, used only if the read fails. */
-type ListingData = {
-  title: string;
-  price: string;
-  category: string;
-  location: { state: string; county: string; locality: string; isOnlineStore?: boolean };
-  description?: string;
-};
-
 /**
  * The branded card: the listing drawn onto a 1200x800 image with its price,
  * category and a call to action, rather than the bare product photo.
@@ -106,15 +97,17 @@ async function uploadCardThumb(
  * Read the listing back from the seller's PDS so the announcement can describe
  * it properly.
  *
- * The form's own payload knows a title, a price and a location. The record
- * knows the seller's handle, the sale price, the condition and the photos —
- * all of which the post is better for. Falls back to the payload if the read
- * fails, because a plainer announcement beats none.
+ * Returns null when the record cannot be read, and the caller then posts
+ * nothing. This used to fall back to the payload the caller supplied, on the
+ * grounds that a plainer announcement beats none — which was true right up
+ * until you notice that the caller is an unauthenticated HTTP request. Anyone
+ * could hand this function a title and a price and have @openmkt.app read them
+ * out to its followers. The record is the only trustworthy source here, because
+ * it is the only one that had to be signed by the seller's own repo.
  */
 async function resolveAnnouncementListing(
   listingUri: string,
-  fallback: ListingData,
-): Promise<AnnouncementListing & { imageUrls?: { thumbnail: string; fullsize: string } }> {
+): Promise<(AnnouncementListing & { imageUrls?: { thumbnail: string; fullsize: string } }) | null> {
   try {
     const listing = await fetchListingById(listingUri);
 
@@ -143,9 +136,7 @@ async function resolveAnnouncementListing(
           ...full.location,
           // fetchListingById drops through the commerce layer, which spells the
           // flag differently on the way out depending on the record version.
-          isOnlineStore:
-            (full.location as { isOnlineStore?: boolean })?.isOnlineStore ??
-            fallback.location?.isOnlineStore,
+          isOnlineStore: (full.location as { isOnlineStore?: boolean })?.isOnlineStore,
         },
         // `handle.invalid` is what the network reports for an account whose
         // handle no longer resolves. Printing it would give the post a mention
@@ -160,28 +151,23 @@ async function resolveAnnouncementListing(
     });
   }
 
-  return {
-    title: fallback.title,
-    description: fallback.description,
-    price: fallback.price,
-    category: fallback.category,
-    location: fallback.location,
-  };
+  return null;
 }
 
-// Posts a marketplace announcement on behalf of the bot account.
-// Returns the AT URI of the created post, or null on failure.
-export async function createBotAnnouncementPost(
-  listingData: ListingData,
-  listingUri: string
-): Promise<string | null> {
-  // A development instance writes its listings to a collection nobody reads,
-  // but the announcement went to the real Bluesky regardless — @openmkt.app
-  // telling its followers about a listing that cannot be opened. The guard
-  // belongs here rather than in the route so any future caller inherits it.
+/**
+ * Posts a marketplace announcement on behalf of the bot account.
+ *
+ * Takes only the listing's AT URI. Everything the post says is read from the
+ * record that URI names — nothing reaches a timeline because a caller asked for
+ * it. Returns the AT URI of the created post, or null if it did not post.
+ */
+export async function createBotAnnouncementPost(listingUri: string): Promise<string | null> {
+  // Only the live site announces. A deploy preview reaches the same real
+  // followers the production site does, so the guard belongs here rather than
+  // in the route, where a future caller could forget it.
   if (!MAY_BROADCAST) {
-    logger.info('Skipped the bot announcement — not a production instance', {
-      meta: { listingUri, title: listingData.title },
+    logger.info('Skipped the bot announcement — this instance may not broadcast', {
+      meta: { listingUri },
     });
     return null;
   }
@@ -189,7 +175,13 @@ export async function createBotAnnouncementPost(
   try {
     const agent = await getBotAgent();
 
-    const { imageUrls, ...listing } = await resolveAnnouncementListing(listingUri, listingData);
+    const resolved = await resolveAnnouncementListing(listingUri);
+    if (!resolved) {
+      logger.warn('Not announcing: the listing record could not be read', { meta: { listingUri } });
+      return null;
+    }
+
+    const { imageUrls, ...listing } = resolved;
     const announcement = buildAnnouncement(listing);
 
     const listingUrl = `https://openmkt.app/listing/${encodeURIComponent(listingUri)}`;

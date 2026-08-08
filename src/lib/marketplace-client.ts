@@ -528,7 +528,7 @@ export class MarketplaceClient {
       // because the index still speaks v1 (flat price, US location object).
       const listingUri = (recordData as any).uri as string | undefined;
       if (listingUri) {
-        this.notifyFeedIndex(listingUri, listingDataWithoutImages);
+        this.notifyFeedIndex(listingUri);
       }
 
       return {
@@ -549,27 +549,17 @@ export class MarketplaceClient {
    * is a cache of what is in the repos, so a failed notification costs a slower
    * appearance, never the write itself.
    */
-  private notifyFeedIndex(
-    listingUri: string,
-    listingData: Partial<MarketplaceListing>,
-    action?: 'delete',
-  ): void {
+  private notifyFeedIndex(listingUri: string, action?: 'delete'): void {
+    // Only which listing. The title, price, category, location and
+    // hideFromFriends flag used to travel with this call and the server posted
+    // them; it now reads all of them from the record itself, which is the only
+    // copy the seller actually signed.
     fetch('/api/feed/notify-new-listing', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         listingUri,
         ...(action ? { action } : {}),
-        listingData: {
-          title: listingData.title || '',
-          price: listingData.price || '',
-          category: listingData.category || '',
-          location: listingData.location || { state: '', county: '', locality: '' },
-          description: listingData.description,
-          // The announcement decision is made server-side, so the flag has to
-          // travel with the notification.
-          hideFromFriends: listingData.hideFromFriends || false,
-        },
       }),
     }).catch(() => {});
   }
@@ -615,7 +605,7 @@ export class MarketplaceClient {
       logger.info(`Successfully deleted listing: ${uri}`);
 
       // Remove from feed index — fire-and-forget
-      this.notifyFeedIndex(uri, {}, 'delete');
+      this.notifyFeedIndex(uri, 'delete');
 
       // Invalidate cache
       this.listingsCache = null;
@@ -782,8 +772,8 @@ export class MarketplaceClient {
 
       // Point the index at the new URI. Order matters here too: add first, so
       // the listing is never missing from the feed in between.
-      this.notifyFeedIndex(newUri, listingDataWithoutImages);
-      this.notifyFeedIndex(uri, {}, 'delete');
+      this.notifyFeedIndex(newUri);
+      this.notifyFeedIndex(uri, 'delete');
 
       this.listingsCache = null;
       return { uri: newUri, cid: created.data?.cid, migrated: true };
@@ -1232,13 +1222,6 @@ export class MarketplaceClient {
           listingUri: uri,
           postUri: postResult.uri,
           source: 'user',
-          listingData: {
-            title: listingData.title,
-            price: listingData.price,
-            category: listingData.category,
-            location: listingData.location,
-            description: listingData.description,
-          },
         }),
       }).catch(() => {});
 
