@@ -409,7 +409,7 @@ export async function GET(request: NextRequest) {
             try {
                 const json = JSON.parse(match[1]);
                 const data = Array.isArray(json) ? json : [json];
-                let products: any[] = [];
+                const products: any[] = [];
                 const targetVariant = targetUrl.searchParams.get('variant');
 
                 data.forEach((item: any) => {
@@ -523,7 +523,7 @@ export async function GET(request: NextRequest) {
                 try {
                     const metaJson = JSON.parse(metaMatch[1]);
                     if (metaJson.product && metaJson.product.variants && metaJson.product.variants.length > 0) {
-                        let vPrice = metaJson.product.variants[0].price; // usually in cents
+                        const vPrice = metaJson.product.variants[0].price; // usually in cents
                         if (vPrice) {
                             price = (vPrice / 100).toFixed(2);
                         }

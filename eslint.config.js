@@ -20,4 +20,17 @@ export default [
       'react-hooks/exhaustive-deps': 'warn',
     },
   },
+  {
+    // The block above only matches js/jsx/ts/tsx, so a .cjs file fell through
+    // to the bare recommended set and was told off for using `require` — which
+    // is the whole point of the extension. The package is "type": "module", so
+    // .cjs is how a plain CommonJS script says so.
+    files: ['**/*.cjs'],
+    languageOptions: {
+      sourceType: 'commonjs',
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
 ]; 
