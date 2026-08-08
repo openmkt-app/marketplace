@@ -89,6 +89,13 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
       })
     : null;
 
+  // Whether a buy button is on the page. When it is, it is the action the
+  // buyer came for and contacting the seller steps back to an outline; when
+  // there is no link to buy through, contacting the seller *is* the action and
+  // keeps its full weight. Two solid full-width buttons side by side just
+  // compete, and the wrong one can win.
+  const hasBuyButton = !!listing.externalUrl && !!checkoutTrust;
+
   // Determine if we have formatted images to display
   const hasFormattedImages = listing.formattedImages && listing.formattedImages.length > 0;
 
@@ -635,16 +642,20 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
                         }
                       }}
                       disabled={isCheckingFollowStatus || isSendingInterest}
-                      className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold rounded-xl shadow-sm hover:shadow-md transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed"
+                      className={`w-full flex items-center justify-center gap-2 px-6 rounded-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed ${
+                        hasBuyButton
+                          ? 'py-3 bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold'
+                          : 'py-4 bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold shadow-sm hover:shadow-md transform hover:-translate-y-0.5 active:translate-y-0'
+                      }`}
                     >
                       {isSendingInterest ? (
                         <>
-                          <Loader2 size={24} className="animate-spin" />
+                          <Loader2 size={hasBuyButton ? 20 : 24} className="animate-spin" />
                           Sending...
                         </>
                       ) : (
                         <>
-                          <MessageCircle size={24} />
+                          <MessageCircle size={hasBuyButton ? 20 : 24} />
                           {listing.category === COMMISSION_CATEGORY_ID ? t('requestCommission') : t('imInterested')}
                         </>
                       )}
@@ -759,7 +770,11 @@ export default function ListingDetail({ listing, sellerProfile }: ListingDetailP
               <>
                 <Link
                   href="/login"
-                  className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
+                  className={`w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl transition-colors ${
+                    hasBuyButton
+                      ? 'bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white font-medium'
+                  }`}
                 >
                   <MessageCircle size={20} />
                   {t('loginToInterest')}
