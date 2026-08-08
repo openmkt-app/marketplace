@@ -585,7 +585,7 @@ export class MarketplaceClient {
       logger.info(`Attempting to delete listing: ${uri}`);
 
       // Parse URI to get repo, collection, and rkey
-      // URI format: at://did:plc:xxx/app.atprotomkt.marketplace.listing/rkey
+      // URI format: at://did:plc:xxx/<collection>/rkey
       const uriParts = uri.replace('at://', '').split('/');
 
       if (uriParts.length !== 3) {
@@ -1468,7 +1468,7 @@ export class MarketplaceClient {
       logger.info(`Fetching listing by URI: ${uri}`);
 
       // First, try to fetch it as a record directly (works for marketplace listings)
-      // URI format: at://did:plc:xxx/app.atprotomkt.marketplace.listing/rkey
+      // URI format: at://did:plc:xxx/<collection>/rkey
       const uriParts = uri.replace('at://', '').split('/');
       if (uriParts.length === 3) {
         const [repo, collection, rkey] = uriParts;

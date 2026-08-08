@@ -62,7 +62,7 @@ FEED_INDEX_SECRET=your-secret-here
 
 # Switch between production and dev lexicon collections
 # Production: app.openmkt.marketplace.listing
-# Development: app.atprotomkt.marketplace.listing
+# Development: app.openmkt.test.marketplace.listing
 NEXT_PUBLIC_MARKETPLACE_ENV=development
 
 # Optional

@@ -11,10 +11,8 @@ const PRODUCTION_SHOP = 'app.openmkt.commerce.shop';
 const PRODUCTION_GROUP = 'app.openmkt.commerce.productGroup';
 
 // Dev writes to a distinct NSID so test listings never land in the production
-// index, mirroring the reason the old app.atprotomkt.* split existed.
-//
-// TODO: confirm this name with Al. The old dev NSID borrowed a domain that is
-// no longer ours, which is not a good basis for NSID authority.
+// index. The v1 collection splits the same way and for the same shape of
+// reason — see the note in ../constants.
 const DEVELOPMENT_COMMERCE = 'app.openmkt.test.commerce.listing';
 const DEVELOPMENT_SHOP = 'app.openmkt.test.commerce.shop';
 const DEVELOPMENT_GROUP = 'app.openmkt.test.commerce.productGroup';

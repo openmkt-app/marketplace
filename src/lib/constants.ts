@@ -1,13 +1,25 @@
 // src/lib/constants.ts
 // Centralized constants for the marketplace application
 
-// Production uses app.openmkt.marketplace.listing
-// Development uses app.atprotomkt.marketplace.listing (to keep test data separate)
+// The v1 listing collection. Nothing writes v1 records any more — v2 took over
+// — so the only traffic here is reads, plus the delete that retires a record
+// once its seller upgrades it.
+//
+// The dev/prod split is still load-bearing, for a different reason than when it
+// was added. Upgrading a listing writes the v2 copy and then deletes the v1
+// original. Pointed at production, a local session that upgraded a listing
+// would put the replacement in the dev commerce collection and delete the real
+// record — the listing would disappear from the live site. Dev therefore reads
+// a collection of its own, which stays empty, so that path never starts.
+//
+// The dev NSID used to be app.atprotomkt.marketplace.listing, from a domain
+// that is no longer ours and so was never ours to name records under. It now
+// follows the same app.openmkt.test.* shape as the v2 dev collections.
 const PRODUCTION_COLLECTION = 'app.openmkt.marketplace.listing';
-const DEVELOPMENT_COLLECTION = 'app.atprotomkt.marketplace.listing';
+const DEVELOPMENT_COLLECTION = 'app.openmkt.test.marketplace.listing';
 
-// Use NEXT_PUBLIC_MARKETPLACE_ENV to switch between collections
-// Set to 'production' in production, anything else (or unset) uses development
+// Set NEXT_PUBLIC_MARKETPLACE_ENV to 'production' in production; anything else
+// (or unset) is development.
 export const MARKETPLACE_COLLECTION =
   process.env.NEXT_PUBLIC_MARKETPLACE_ENV === 'production'
     ? PRODUCTION_COLLECTION
