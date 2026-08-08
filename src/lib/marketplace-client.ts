@@ -1,6 +1,7 @@
 // src/lib/marketplace-client.ts
 import { Agent, AtpAgent, RichText } from '@atproto/api';
 import { generateImageUrls, compressImage } from './image-utils';
+import { buildListingHashtags } from './listing-hashtags';
 import logger from './logger';
 import { getKnownMarketplaceDIDs, addMarketplaceDID, ensureVerifiedSellersLoaded, getKnownPDS } from './marketplace-dids';
 
@@ -1141,46 +1142,14 @@ export class MarketplaceClient {
       // We use the encoded URI as the ID to ensure it can be resolved
       const listingUrl = `https://openmkt.app/listing/${encodeURIComponent(uri)}`;
 
-      // Category to Hashtag Mapping
-      const categoryHashtags: Record<string, string> = {
-        'antiques': '#Antiques #Vintage',
-        'apparel': '#Fashion #Thrifting',
-        'auto': '#CarParts #ProjectCar',
-        'baby': '#BabyGear #Parenting',
-        'books': '#BookSky #Books',
-        'business': '#SmallBiz #Office',
-        'cameras': '#Photography #CameraGear',
-        'cell_phones': '#Tech #Mobile',
-        'collectibles': '#Collectibles #RareFinds',
-        'computers': '#Tech #HomeLab',
-        'electronics': '#Tech #Gadgets',
-        'entertainment': '#BoardGames #Fun',
-        'free': '#FreeStuff #Giving',
-        'furniture': '#Furniture #InteriorDesign',
-        'garden': '#Gardening #PlantSky',
-        'health': '#Wellness #SelfCare',
-        'hobbies': '#Hobbies #Crafts',
-        'home_goods': '#HomeDecor #ThriftFinds',
-        'home_improvement': '#DIY #Renovation',
-        'kids': '#Kids #Toys',
-        'musical': '#Musicians #GearTalk',
-        'office': '#RemoteWork #Office',
-        'pets': '#PetSky #Pets',
-        'sporting': '#Sports #Outdoors',
-        'video_games': '#Gaming #RetroGaming',
-        'other': '#Misc'
-      };
-
-      // Get hashtags for the category
-      const tags = ['#OpenMarket'];
-      if (listingData.category && categoryHashtags[listingData.category]) {
-        tags.push(categoryHashtags[listingData.category]);
-      }
-
       // Handle Price and Text Logic
       const priceVal = parseFloat(listingData.price || '0');
       const isFree = !listingData.price || priceVal === 0;
       const isOnlineStore = listingData.location?.isOnlineStore === true;
+
+      // Shared with the bot's announcement, so both posts about the same
+      // listing land in the same tag feeds.
+      const tags = buildListingHashtags(listingData.category, { isFree, isOnlineStore });
 
       const formattedPrice = priceVal.toLocaleString('en-US', {
         minimumFractionDigits: 2,
@@ -1199,13 +1168,11 @@ export class MarketplaceClient {
       } else {
         // Personal listing format
         const askingLine = isFree ? "It's Free! 🎁" : `Asking ${priceStr}.`;
-        const forSaleTag = isFree ? "" : "#ForSale";
         const introLine = isFree ? `Giving away my ${listingData.title} 🎁` : `Selling my ${listingData.title} 📦`;
         embedAction = isFree ? "Giving Away" : "Selling";
 
-        if (forSaleTag) {
-          tags.push(forSaleTag);
-        }
+        // #ForSale comes from buildListingHashtags, which adds it under exactly
+        // this condition — a priced listing that is not a storefront item.
 
         // Format:
         // {IntroLine}
