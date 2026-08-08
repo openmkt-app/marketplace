@@ -30,9 +30,18 @@ h1, h2, h3, h4, h5, h6 {
   @apply text-text-primary;
 }
 
-/* Global link styles with improved contrast */
-a {
-  @apply text-primary-color hover:text-primary-light transition-colors font-medium;
+/* Global link styles with improved contrast.
+   Wrapped in :where() so the whole rule carries zero specificity. A plain text
+   link still picks up the blue, because nothing else claims its colour — but an
+   anchor styled as a button keeps the colour it sets for itself.
+   Without this, `a:hover` (0,1,1) outranked a button's own `text-white` (0,1,0)
+   and every anchor-button turned blue on hover. */
+:where(a) {
+  @apply text-primary-color transition-colors font-medium;
+}
+
+:where(a:hover) {
+  @apply text-primary-light;
 }
 
 /* Focus states for accessibility */
