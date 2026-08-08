@@ -20,6 +20,12 @@ export async function GET(req: NextRequest) {
       headers: {
         'Content-Type': 'image/jpeg',
         'Cache-Control': 'public, max-age=3600',
+        // Netlify's edge keys its cache on the path alone unless told
+        // otherwise, and every card this route returns is decided entirely by
+        // `uri`. Without this the first listing requested is served for every
+        // listing afterwards — which is exactly what happened: the guitar's
+        // card came back for the Migro licence.
+        'Netlify-Vary': 'query=uri',
       },
     });
   } catch (err) {
