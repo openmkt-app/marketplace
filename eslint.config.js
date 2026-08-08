@@ -4,6 +4,12 @@ import reactPlugin from 'eslint-plugin-react';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
 
 export default [
+  {
+    // Build output, not source. This lived only in the `--ignore-pattern` flag
+    // on the npm scripts, so a bare `eslint .` linted the whole of .next —
+    // 767 files instead of 197.
+    ignores: ['.next/**', 'out/**', 'build/**', 'coverage/**', 'next-env.d.ts'],
+  },
   ...tseslint.configs.recommended,
   {
     files: ['**/*.{js,jsx,ts,tsx}'],

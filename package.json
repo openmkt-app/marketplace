@@ -8,8 +8,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint --ext .js,.jsx,.ts,.tsx --ignore-pattern '.next/*' .",
-    "lint:fix": "eslint --ext .js,.jsx,.ts,.tsx --ignore-pattern '.next/*' --fix .",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "lexicon:validate": "node scripts/validate-lexicon.js"
   },
   "keywords": [],
