@@ -9,8 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           '/api/',
           '/admin/',
-          '/debug-dids',
-          '/test-listing',
           '/my-listings',
           '/create-listing',
           '/edit-listing/',
