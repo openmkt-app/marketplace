@@ -2,23 +2,23 @@
 // API route for admin moderation (flag/unflag listings as NSFW)
 
 import { NextRequest, NextResponse } from 'next/server';
-import { flagListing, unflagListing, isListingFlagged, ADMIN_HANDLE } from '@/lib/moderation';
+import { flagListing, unflagListing, isListingFlagged } from '@/lib/moderation';
+import { requireAdmin } from '@/lib/server/admin-auth';
+import { ADMIN_HANDLE } from '@/lib/constants';
 
 export async function POST(req: NextRequest) {
   try {
-    const { uri, action, handle } = await req.json();
+    const denied = requireAdmin(req);
+    if (denied) return denied;
 
-    // Only the admin handle can moderate
-    if (handle !== ADMIN_HANDLE) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+    const { uri, action } = await req.json();
 
     if (!uri || !action) {
       return NextResponse.json({ error: 'Missing uri or action' }, { status: 400 });
     }
 
     if (action === 'flag') {
-      flagListing(uri, handle);
+      flagListing(uri, ADMIN_HANDLE);
       return NextResponse.json({ success: true, flagged: true });
     } else if (action === 'unflag') {
       unflagListing(uri);

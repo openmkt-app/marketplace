@@ -26,10 +26,28 @@ export default function AdminDashboard() {
   const [feedSetupStatus, setFeedSetupStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [feedSetupMessage, setFeedSetupMessage] = useState('');
 
+  // --- Admin key ---
+  // Every write below is gated server-side by a shared secret. It is held only
+  // here, in this browser session — never in the shipped bundle — and sent as a
+  // bearer token. Set ADMIN_API_SECRET to the same value on the server.
+  const [adminKey, setAdminKey] = useState('');
+
   useEffect(() => {
     loadBanner();
     loadFeedStats();
+    setAdminKey(sessionStorage.getItem('admin-key') ?? '');
   }, []);
+
+  const saveAdminKey = (key: string) => {
+    setAdminKey(key);
+    if (key) sessionStorage.setItem('admin-key', key);
+    else sessionStorage.removeItem('admin-key');
+  };
+
+  const adminHeaders = () => ({
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${adminKey}`,
+  });
 
   // --- Banner handlers ---
   const loadBanner = async () => {
@@ -48,8 +66,8 @@ export default function AdminDashboard() {
     try {
       const res = await fetch('/api/admin/banner', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: bannerMessage, type: bannerType, handle: user.handle }),
+        headers: adminHeaders(),
+        body: JSON.stringify({ message: bannerMessage, type: bannerType }),
       });
       if (res.ok) {
         setActiveBanner({ message: bannerMessage.trim(), type: bannerType });
@@ -64,8 +82,7 @@ export default function AdminDashboard() {
     try {
       await fetch('/api/admin/banner', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ handle: user.handle }),
+        headers: adminHeaders(),
       });
       setActiveBanner(null);
     } catch {}
@@ -89,8 +106,8 @@ export default function AdminDashboard() {
     try {
       const res = await fetch('/api/feed/push-post', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ handle: user.handle, postUrl: postUrl.trim(), note: postNote.trim() || undefined }),
+        headers: adminHeaders(),
+        body: JSON.stringify({ postUrl: postUrl.trim(), note: postNote.trim() || undefined }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -116,8 +133,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch('/api/feed/setup', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ handle: user.handle }),
+        headers: adminHeaders(),
       });
       const data = await res.json();
       if (res.ok) {
@@ -145,6 +161,30 @@ export default function AdminDashboard() {
         <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
         <p className="text-slate-500 mt-1 text-sm">Manage site-wide settings and the Bluesky feed</p>
       </div>
+
+      {/* ── Admin key ────────────────────────────────── */}
+      <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+        <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">
+          Admin key
+        </h2>
+        <p className="text-sm text-slate-400 mb-4">
+          Required for every action below. Matches <code className="text-slate-500">ADMIN_API_SECRET</code> on
+          the server. Kept only in this browser session.
+        </p>
+        <div className="flex items-center gap-3">
+          <input
+            type="password"
+            value={adminKey}
+            onChange={e => saveAdminKey(e.target.value)}
+            placeholder="Paste the admin key"
+            autoComplete="off"
+            className="flex-1 max-w-md px-3 py-2 rounded-lg text-sm border border-slate-200 focus:border-slate-400 focus:outline-none"
+          />
+          <span className={`text-xs font-medium ${adminKey ? 'text-emerald-600' : 'text-slate-400'}`}>
+            {adminKey ? 'Key set' : 'No key'}
+          </span>
+        </div>
+      </section>
 
       {/* ── Alert Banner ─────────────────────────────── */}
       <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
