@@ -4,6 +4,7 @@ import { fetchListingById } from '@/lib/server/fetch-listing';
 import { getCategoryName } from '@/lib/category-utils';
 import { formatConditionForDisplay } from '@/lib/condition-utils';
 import ListingPageClient from './ListingPageClient';
+import { defaultOgImages, defaultTwitterImages } from '@/lib/site-metadata';
 
 type Props = {
   params: Promise<{ id: string; locale: string }>;
@@ -46,14 +47,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       type: 'website',
       url: canonicalUrl,
-      images: imageUrl ? [{ url: imageUrl, alt: listing.title }] : [],
+      // A listing with no photo still gets the house card rather than an
+      // imageless one, which unfurlers draw as a bare line of text.
+      images: imageUrl ? [{ url: imageUrl, alt: listing.title }] : defaultOgImages,
       siteName: 'Open Market',
     },
     twitter: {
-      card: imageUrl ? 'summary_large_image' : 'summary',
+      card: 'summary_large_image',
       title,
       description,
-      images: imageUrl ? [imageUrl] : [],
+      images: imageUrl ? [imageUrl] : defaultTwitterImages,
     },
     other: {
       'product:price:amount': listing.price.replace(/[^0-9.]/g, ''),
