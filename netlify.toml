@@ -2,5 +2,11 @@
   command = "npm run build"
   publish = ".next"
 
+# @bsky/jetstream declares node >=22.15.0 and means it: sealed archive segments
+# are zstd, and it reaches for node:zlib's zstd support, which landed in 22.15.
+# On an older runtime the reconcile job fails at the first segment download.
+[build.environment]
+  NODE_VERSION = "22.20.0"
+
 [[plugins]]
   package = "@netlify/plugin-nextjs"
