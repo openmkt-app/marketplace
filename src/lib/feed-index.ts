@@ -18,14 +18,8 @@ type FeedIndex = {
   updatedAt: string;
 };
 
-type IndexerCursor = {
-  cursor: number; // Unix microseconds (Jetstream time_us)
-  updatedAt: string;
-};
-
 const BLOB_STORE = 'feed-index';
 const FEED_ALL_KEY = 'feed:all';
-const CURSOR_KEY = 'indexer-cursor';
 const MAX_ENTRIES = 2000;
 
 // --- Netlify Blobs (production) ---
@@ -48,21 +42,6 @@ async function readIndexFromBlobs(): Promise<FeedIndex> {
 async function writeIndexToBlobs(index: FeedIndex): Promise<void> {
   const store = await getBlobStore();
   await store.setJSON(FEED_ALL_KEY, index);
-}
-
-async function readCursorFromBlobs(): Promise<number> {
-  try {
-    const store = await getBlobStore();
-    const data: IndexerCursor | null = await store.get(CURSOR_KEY, { type: 'json' });
-    return data?.cursor ?? 0;
-  } catch {
-    return 0;
-  }
-}
-
-async function writeCursorToBlobs(cursor: number): Promise<void> {
-  const store = await getBlobStore();
-  await store.setJSON(CURSOR_KEY, { cursor, updatedAt: new Date().toISOString() });
 }
 
 // --- File-based fallback (local dev) ---
@@ -90,27 +69,6 @@ async function writeIndexToFile(index: FeedIndex): Promise<void> {
   const dir = path.dirname(file);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(file, JSON.stringify(index, null, 2), 'utf-8');
-}
-
-async function readCursorFromFile(): Promise<number> {
-  const fs = await import('fs');
-  const file = await getDevFilePath('feed-cursor');
-  try {
-    if (!fs.existsSync(file)) return 0;
-    const data: IndexerCursor = JSON.parse(fs.readFileSync(file, 'utf-8'));
-    return data.cursor ?? 0;
-  } catch {
-    return 0;
-  }
-}
-
-async function writeCursorToFile(cursor: number): Promise<void> {
-  const fs = await import('fs');
-  const path = await import('path');
-  const file = await getDevFilePath('feed-cursor');
-  const dir = path.dirname(file);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(file, JSON.stringify({ cursor, updatedAt: new Date().toISOString() }, null, 2), 'utf-8');
 }
 
 // --- Public API ---
@@ -194,14 +152,6 @@ export async function getFeedPage(
       : undefined;
 
   return { entries: page, nextCursor };
-}
-
-export async function getIndexerCursor(): Promise<number> {
-  return isProduction ? readCursorFromBlobs() : readCursorFromFile();
-}
-
-export async function setIndexerCursor(cursor: number): Promise<void> {
-  return isProduction ? writeCursorToBlobs(cursor) : writeCursorToFile(cursor);
 }
 
 export async function getFeedStats(): Promise<{ count: number; updatedAt: string }> {
