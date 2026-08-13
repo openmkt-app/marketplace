@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { getInitialBrowseListings } from '@/lib/server/browse-ssr';
+import { defaultOgImages, defaultTwitterImages } from '@/lib/site-metadata';
 import BrowsePageClient from './BrowsePageClient';
 
 // Already dynamic by way of useSearchParams; stating it skips the static
@@ -26,6 +27,13 @@ export async function generateMetadata({
             type: 'website',
             url: 'https://openmkt.app/browse',
             siteName: 'Open Market',
+            images: defaultOgImages,
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: t('title'),
+            description: t('ogDescription'),
+            images: defaultTwitterImages,
         },
     };
 }

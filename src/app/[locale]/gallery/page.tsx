@@ -5,6 +5,7 @@ import { Palette } from 'lucide-react';
 import { getVerifiedSellers } from '@/lib/server/fetch-mall-sellers';
 import { filterArtistSellers, COMMISSION_CATEGORY_ID } from '@/lib/artist-store-utils';
 import GalleryGrid from './GalleryGrid';
+import { defaultOgImages, defaultTwitterImages } from '@/lib/site-metadata';
 
 export const revalidate = 60;
 
@@ -27,6 +28,13 @@ export async function generateMetadata({
       type: 'website',
       url: 'https://openmkt.app/gallery',
       siteName: 'Open Market',
+      images: defaultOgImages,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: t('title'),
+      description: t('ogDescription'),
+      images: defaultTwitterImages,
     },
   };
 }

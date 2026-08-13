@@ -8,6 +8,7 @@ import { NavbarFilterProvider } from '@/contexts/NavbarFilterContext'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import AlertBanner from '@/components/AlertBanner'
+import { defaultOgImages, defaultTwitterImages } from '@/lib/site-metadata'
 
 export async function generateMetadata({
   params,
@@ -22,10 +23,16 @@ export async function generateMetadata({
     openGraph: {
       title: t('title'),
       description: t('ogDescription'),
+      type: 'website',
+      url: 'https://openmkt.app',
+      siteName: 'Open Market',
+      images: defaultOgImages,
     },
     twitter: {
+      card: 'summary_large_image',
       title: t('title'),
       description: t('ogDescription'),
+      images: defaultTwitterImages,
     },
     alternates: {
       languages: Object.fromEntries(

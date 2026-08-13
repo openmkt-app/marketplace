@@ -5,6 +5,7 @@ import { fetchStoreByHandle } from '@/lib/server/fetch-store';
 import { isSellerExcluded } from '@/lib/excluded-sellers';
 import { getStoreName } from '@/lib/seller-display';
 import StorePageClient from './StorePageClient';
+import { defaultOgImages, defaultTwitterImages } from '@/lib/site-metadata';
 
 type Props = {
   params: Promise<{ handle: string; locale: string }>;
@@ -60,14 +61,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       type: 'profile',
       url: canonicalUrl,
-      images: profile.avatar ? [{ url: profile.avatar, alt: displayName }] : [],
+      // Falls back to the house card so a store without an avatar still
+      // unfurls with an image instead of a bare line of text.
+      images: profile.avatar ? [{ url: profile.avatar, alt: displayName }] : defaultOgImages,
       siteName: 'Open Market',
     },
     twitter: {
-      card: 'summary',
+      // An avatar is square, so it belongs in the small card; the house image
+      // is 1200x630 and belongs in the wide one.
+      card: profile.avatar ? 'summary' : 'summary_large_image',
       title,
       description,
-      images: profile.avatar ? [profile.avatar] : [],
+      images: profile.avatar ? [profile.avatar] : defaultTwitterImages,
     },
   };
 }
