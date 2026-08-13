@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { BskyAgent } from '@atproto/api';
 import { addToFeedIndex, removeFromFeedIndex, type FeedEntry } from '@/lib/feed-index';
-import { ADMIN_HANDLE } from '@/lib/moderation';
+import { requireAdmin } from '@/lib/server/admin-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,15 +64,14 @@ async function verifyPostExists(atUri: string): Promise<void> {
 }
 
 export async function POST(req: NextRequest) {
-  let body: { handle?: string; postUrl?: string; note?: string; action?: 'remove' };
+  const denied = requireAdmin(req);
+  if (denied) return denied;
+
+  let body: { postUrl?: string; note?: string; action?: 'remove' };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  if (body.handle !== ADMIN_HANDLE) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   if (!body.postUrl) {

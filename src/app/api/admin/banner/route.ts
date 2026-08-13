@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBanner, setBanner, clearBanner } from '@/lib/banner';
-import { ADMIN_HANDLE } from '@/lib/moderation';
+import { ADMIN_HANDLE } from '@/lib/constants';
+import { requireAdmin } from '@/lib/server/admin-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,11 +12,11 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, type, handle } = await req.json();
+    const denied = requireAdmin(req);
+    if (denied) return denied;
 
-    if (handle !== ADMIN_HANDLE) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+    const { message, type } = await req.json();
+
     if (!message?.trim()) {
       return NextResponse.json({ error: 'Missing message' }, { status: 400 });
     }
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
       message: message.trim(),
       type: type ?? 'warning',
       setAt: new Date().toISOString(),
-      setBy: handle,
+      setBy: ADMIN_HANDLE,
     });
 
     return NextResponse.json({ success: true });
@@ -35,10 +36,9 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const { handle } = await req.json();
-    if (handle !== ADMIN_HANDLE) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+    const denied = requireAdmin(req);
+    if (denied) return denied;
+
     await clearBanner();
     return NextResponse.json({ success: true });
   } catch {

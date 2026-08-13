@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBotAgent } from '@/lib/bot-client';
-import { ADMIN_HANDLE } from '@/lib/moderation';
+import { requireAdmin } from '@/lib/server/admin-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,16 +15,8 @@ const FEED_DEFINITION = {
 };
 
 export async function POST(req: NextRequest) {
-  let body: { handle?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  if (body.handle !== ADMIN_HANDLE) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const agent = await getBotAgent();
