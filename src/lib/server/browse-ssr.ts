@@ -14,11 +14,17 @@ import { refreshAppViewInBackground, type PublicListing } from '@/lib/mall-cache
  * without listings.
  *
  * A warm index answers in about 130ms; a cold tunnel to the NAS can take 2.7s.
- * This sits well below the cold case on purpose. Waiting longer would not
- * rescue it — it would just add the full delay to time-to-first-byte and still
- * fall through to the client fetch. The cost of being wrong is capped here.
+ * This used to sit at 800ms, below the cold case on purpose, because the wait
+ * was paid by a visitor waiting for the first byte.
+ *
+ * That reasoning came with the page rendering per request, and it no longer
+ * holds: /browse is prerendered and revalidated on a timer, so this runs on a
+ * background render roughly once a minute and nobody is waiting on it. What a
+ * short budget buys now is the opposite of what it used to — miss it on a cold
+ * tunnel and the empty grid is what gets cached and served to everyone for the
+ * next minute. So it sits above the cold case instead of below it.
  */
-const SSR_BUDGET_MS = 800;
+const SSR_BUDGET_MS = 4000;
 
 /**
  * How many listings to put in the HTML.

@@ -48,11 +48,14 @@ export type StoreListing = MarketplaceListing & {
 /**
  * How long a store page will wait on the index before reading the PDS instead.
  *
- * Matches the browse page's budget for the same reason: the index is fast when
- * warm and slow when cold, and waiting out the cold case only delays a fallback
- * that was going to run anyway.
+ * Above the cold-tunnel case rather than below it, which is the opposite of
+ * where this started. The fallback is not a cheap consolation: it costs a
+ * handle resolution, a PLC lookup and one request per collection, and it
+ * regularly ran three to ten seconds while the function sat there holding the
+ * request open. Giving the index long enough to actually answer is cheaper than
+ * the thing that runs when it does not.
  */
-const APPVIEW_BUDGET_MS = 1200;
+const APPVIEW_BUDGET_MS = 3500;
 
 /** Avatar URLs look like https://cdn.bsky.app/img/avatar/plain/did:plc:…/bafkrei…@jpeg */
 function extractAvatarCid(avatarUrl?: string): string | undefined {
