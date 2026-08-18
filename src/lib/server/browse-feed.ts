@@ -95,7 +95,11 @@ export async function getIndexedFeed(timeoutMs?: number, revalidate?: number): P
     const entry = getAppViewCacheEntry();
     if (entry) {
         if (entry.needsRefresh) {
-            refreshAppViewInBackground(() => fetchIndexedListings());
+            // Carries the caller's revalidate. A no-store fetch here happens
+            // inside the render, and Next treats that as the page opting out of
+            // being prerendered — "changed from static to dynamic at runtime" —
+            // even though this call is only warming the cache for the next one.
+            refreshAppViewInBackground(() => fetchIndexedListings(undefined, revalidate));
         }
         return {
             listings: entry.listings,

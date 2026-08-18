@@ -66,7 +66,7 @@ export async function getInitialBrowseListings(): Promise<PublicListing[]> {
             // paid for the tunnel handshake. Warm the cache without a deadline
             // so the next render on this instance is served from memory rather
             // than racing the same clock again.
-            refreshAppViewInBackground(() => fetchIndexedListings());
+            refreshAppViewInBackground(() => fetchIndexedListings(undefined, SSR_REVALIDATE_S));
             return [];
         }
 
