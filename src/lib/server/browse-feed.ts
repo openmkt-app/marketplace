@@ -64,9 +64,15 @@ export async function attachHandles(listings: any[]): Promise<any[]> {
     return listings.map(l => ({ ...l, authorHandle: resolved.get(l.authorDid) ?? l.authorDid }));
 }
 
-/** Query the index and shape the result for the UI. Null means it did not answer. */
-export async function fetchIndexedListings(timeoutMs?: number): Promise<PublicListing[] | null> {
-    const { listings } = await fetchListingsWithDiagnostics({ limit: FEED_LIMIT, timeoutMs });
+/**
+ * Query the index and shape the result for the UI. Null means it did not answer.
+ *
+ * `revalidate` is passed through to the fetch: the API route leaves it unset
+ * and gets an uncached read, while the /browse server render sets it so the
+ * page it seeds can itself be prerendered.
+ */
+export async function fetchIndexedListings(timeoutMs?: number, revalidate?: number): Promise<PublicListing[] | null> {
+    const { listings } = await fetchListingsWithDiagnostics({ limit: FEED_LIMIT, timeoutMs, revalidate });
     if (!listings) return null;
     return attachHandles(toLegacyListings(listings));
 }
@@ -83,7 +89,7 @@ export type FeedResult = {
  * Returns null if the index is off or did not answer, which callers treat as
  * "fall back" rather than as an error.
  */
-export async function getIndexedFeed(timeoutMs?: number): Promise<FeedResult | null> {
+export async function getIndexedFeed(timeoutMs?: number, revalidate?: number): Promise<FeedResult | null> {
     if (!isAppViewEnabled()) return null;
 
     const entry = getAppViewCacheEntry();
@@ -98,7 +104,7 @@ export async function getIndexedFeed(timeoutMs?: number): Promise<FeedResult | n
         };
     }
 
-    const listings = await fetchIndexedListings(timeoutMs);
+    const listings = await fetchIndexedListings(timeoutMs, revalidate);
     if (!listings) return null;
 
     setAppViewListingsCache(listings);

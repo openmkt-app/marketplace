@@ -1,14 +1,23 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { getInitialBrowseListings } from '@/lib/server/browse-ssr';
 import { defaultOgImages, defaultTwitterImages } from '@/lib/site-metadata';
 import BrowsePageClient from './BrowsePageClient';
 
-// Already dynamic by way of useSearchParams; stating it skips the static
-// prerender attempt at build time, which cannot reach the index and logs three
-// dynamic-server-usage errors on the way to falling back to an empty grid.
-export const dynamic = 'force-dynamic';
+// Rebuilt at most once a minute rather than on every request.
+//
+// This page was force-dynamic, which meant no cache anywhere: every crawler
+// sweep, every link unfurl, every bot cost a function invocation, and there
+// were far more of those than there were visitors. The filters live in
+// useSearchParams on the client, so the served shell is the same document for
+// everyone and the client fetches the filtered set after hydration — there is
+// nothing per-visitor in here to keep out of a shared cache.
+//
+// A listing therefore takes up to a minute to appear in or leave this page's
+// seed. The client fetch behind it is still live, so the grid a visitor ends
+// up looking at is current either way.
+export const revalidate = 60;
 
 export async function generateMetadata({
     params,
@@ -38,7 +47,17 @@ export async function generateMetadata({
     };
 }
 
-export default async function BrowsePage() {
+export default async function BrowsePage({
+    params,
+}: {
+    params: Promise<{ locale: string }>;
+}) {
+    // Opts this page out of reading the locale from a request header, which is
+    // what next-intl does otherwise and what silently made every page on the
+    // site render per request. Without this the revalidate above is inert.
+    const { locale } = await params;
+    setRequestLocale(locale);
+
     // Seeds the grid so the first screen of products is in the HTML, which lets
     // the browser start downloading their images immediately instead of waiting
     // for the bundle to load, hydrate and fetch. Empty on any failure or delay,

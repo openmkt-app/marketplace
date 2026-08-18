@@ -40,7 +40,18 @@ export async function GET(req: NextRequest) {
       { feed: feedItems, ...(nextCursor ? { cursor: nextCursor } : {}) },
       {
         headers: {
-          'Cache-Control': 'no-store',
+          // The AppView calls this every time anyone opens the feed, and it
+          // was no-store, so every one of those was a function invocation.
+          // A minute of edge cache costs the feed a minute of freshness and
+          // nothing else: a listing that appears 60s late in a reverse-chron
+          // feed is indistinguishable from one posted 60s later.
+          'Cache-Control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=300',
+          // Netlify's CDN keys on the path alone unless told otherwise, and
+          // this response is decided entirely by the query string — feed picks
+          // the generator, cursor picks the page. Without this the first page
+          // anyone asked for is served for every cursor, which silently breaks
+          // pagination for every reader. Bare `query` varies on all of them.
+          'Netlify-Vary': 'query',
           'Access-Control-Allow-Origin': '*',
         },
       }

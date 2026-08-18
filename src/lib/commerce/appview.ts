@@ -40,7 +40,12 @@ const DEFAULT_TIMEOUT_MS = 6000;
 
 type AppViewRecord = Record<string, any>;
 
-async function xrpc<T>(method: string, params: Record<string, string | number | undefined>, timeoutMs: number): Promise<T> {
+async function xrpc<T>(
+  method: string,
+  params: Record<string, string | number | undefined>,
+  timeoutMs: number,
+  revalidate?: number,
+): Promise<T> {
   const url = new URL(`${appViewUrl()}/xrpc/${method}`);
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== '') url.searchParams.set(k, String(v));
@@ -49,9 +54,16 @@ async function xrpc<T>(method: string, params: Record<string, string | number | 
   const res = await fetch(url, {
     signal: AbortSignal.timeout(timeoutMs),
     headers: { accept: 'application/json' },
-    // The index changes as the firehose delivers records; never serve a stale
-    // cached response from the fetch layer.
-    cache: 'no-store',
+    // The index changes as the firehose delivers records, so the default is to
+    // never serve a stale cached response.
+    //
+    // A caller that renders a cacheable page passes `revalidate` instead. That
+    // is not only about this fetch: a no-store fetch also opts the whole route
+    // out of static rendering, so leaving this unset on a page that wants to be
+    // prerendered silently makes it dynamic no matter what the page declares.
+    ...(revalidate === undefined
+      ? { cache: 'no-store' as const }
+      : { next: { revalidate } }),
   });
 
   if (!res.ok) throw new Error(`${method} -> HTTP ${res.status}`);
@@ -142,6 +154,12 @@ export type ListOptions = {
   /** Restrict to one seller — used by store pages. */
   did?: string;
   timeoutMs?: number;
+  /**
+   * Seconds this result may be reused for. Omitted means no-store, which is
+   * the right default for anything rendering per request; a page that wants to
+   * be prerendered has to set it, or its own revalidate will not take effect.
+   */
+  revalidate?: number;
 };
 
 /**
@@ -166,10 +184,10 @@ export async function fetchListings(options: ListOptions = {}): Promise<Listing[
 export async function fetchListingsWithDiagnostics(
   options: ListOptions = {},
 ): Promise<{ listings: Listing[] | null; error?: string; url?: string }> {
-  const { limit = 50, did, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
+  const { limit = 50, did, timeoutMs = DEFAULT_TIMEOUT_MS, revalidate } = options;
   const url = `${appViewUrl()}/xrpc/${NSID.listListings}`;
   try {
-    const data = await xrpc<{ records?: AppViewRecord[] }>(NSID.listListings, { limit, did }, timeoutMs);
+    const data = await xrpc<{ records?: AppViewRecord[] }>(NSID.listListings, { limit, did }, timeoutMs, revalidate);
     const listings = (data.records || [])
       .map(toListing)
       .filter((l): l is Listing => l !== null)

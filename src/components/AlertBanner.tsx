@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { X, AlertTriangle, AlertCircle, Info } from 'lucide-react';
 
@@ -30,19 +30,18 @@ const STYLES: Record<BannerType, { bg: string; text: string; icon: React.ReactNo
   },
 };
 
-export default function AlertBanner() {
-  const [banner, setBanner] = useState<BannerData | null>(null);
+/**
+ * The banner arrives as a prop from the layout, which already has it.
+ *
+ * It used to fetch /api/admin/banner from here, which meant every visitor on
+ * every page spent a function invocation to be told, almost always, that there
+ * is no banner. The layout is a server component and reads the same store for
+ * free, so the only thing this needs to stay a client component for is the
+ * dismiss button.
+ */
+export default function AlertBanner({ banner }: { banner: BannerData | null }) {
   const [dismissed, setDismissed] = useState(false);
   const t = useTranslations('common');
-
-  useEffect(() => {
-    fetch('/api/admin/banner')
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.banner) setBanner(data.banner);
-      })
-      .catch(() => {});
-  }, []);
 
   if (!banner || dismissed) return null;
 

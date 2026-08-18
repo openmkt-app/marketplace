@@ -30,6 +30,15 @@ const SSR_BUDGET_MS = 800;
 const SSR_LISTING_COUNT = 8;
 
 /**
+ * How long the index read behind this render may be reused for.
+ *
+ * Matches the revalidate on /browse, and has to be set to something: an
+ * uncached fetch here opts the whole page out of being prerendered, which is
+ * what kept /browse rendering per request for every crawler that touched it.
+ */
+const SSR_REVALIDATE_S = 60;
+
+/**
  * Drop every image but the first.
  *
  * A card shows one photo, but listings carry up to ten, and the two image
@@ -51,7 +60,7 @@ function trimToCardImage(listing: PublicListing): PublicListing {
  */
 export async function getInitialBrowseListings(): Promise<PublicListing[]> {
     try {
-        const feed = await getIndexedFeed(SSR_BUDGET_MS);
+        const feed = await getIndexedFeed(SSR_BUDGET_MS, SSR_REVALIDATE_S);
         if (!feed) {
             // Missing the budget usually means this instance started cold and
             // paid for the tunnel handshake. Warm the cache without a deadline

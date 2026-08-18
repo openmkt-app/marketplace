@@ -18,10 +18,10 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'flag') {
-      flagListing(uri, ADMIN_HANDLE);
+      await flagListing(uri, ADMIN_HANDLE);
       return NextResponse.json({ success: true, flagged: true });
     } else if (action === 'unflag') {
-      unflagListing(uri);
+      await unflagListing(uri);
       return NextResponse.json({ success: true, flagged: false });
     } else {
       return NextResponse.json({ error: 'Invalid action. Use "flag" or "unflag".' }, { status: 400 });
@@ -39,6 +39,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing uri param' }, { status: 400 });
   }
 
-  const flagged = isListingFlagged(uri);
+  const flagged = await isListingFlagged(uri);
   return NextResponse.json({ flagged });
 }
